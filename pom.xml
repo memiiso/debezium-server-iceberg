@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+
+<!--
+  ~ /*
+  ~  * Copyright memiiso Authors.
+  ~  *
+  ~  * Licensed under the Apache Software License version 2.0, available at http://www.apache.org/licenses/LICENSE-2.0
+  ~  */
+  -->
+
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.debezium</groupId>
+    <artifactId>debezium-server-iceberg</artifactId>
+    <name>Debezium Server Parent</name>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <revision>1.0.1-SNAPSHOT</revision>
+
+        <!-- Instruct the build to use only UTF-8 encoding for source code -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <release>8</release>
+
+        <version.s3>2.15.45</version.s3>
+        <version.debezium>1.4.0.Final</version.debezium>
+        <version.assembly.plugin>3.1.1</version.assembly.plugin>
+        <version.jackson>2.11.2</version.jackson>
+        <skipITs>true</skipITs>
+
+        <!-- Quarkus -->
+        <quarkus.version>1.11.0.Beta2</quarkus.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.debezium</groupId>
+                <artifactId>debezium-server</artifactId>
+                <version>${version.debezium}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.debezium</groupId>
+                <artifactId>debezium-server-batch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.debezium</groupId>
+                <artifactId>debezium-server-iceberg</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Upgrade jackson version for spark -->
+            <!-- Major dependencies -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${version.jackson}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-joda</artifactId>
+                <version>${version.jackson}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-yaml</artifactId>
+                <version>${version.jackson}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${version.jackson}</version>
+                <optional>true</optional>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${version.jackson}</version>
+                <optional>true</optional>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>debezium-server-iceberg-sink</module>
+        <module>debezium-server-dist</module>
+    </modules>
+
+</project>

@@ -1,0 +1,185 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "type": "struct",
+      "fields": [
+        {
+          "type": "struct",
+          "fields": [
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "id"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "name": "io.debezium.time.Date",
+              "version": 1,
+              "field": "order_date"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "purchaser"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "quantity"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "product_id"
+            }
+          ],
+          "optional": true,
+          "name": "testc.inventory.orders.Value",
+          "field": "before"
+        },
+        {
+          "type": "struct",
+          "fields": [
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "id"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "name": "io.debezium.time.Date",
+              "version": 1,
+              "field": "order_date"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "purchaser"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "quantity"
+            },
+            {
+              "type": "int32",
+              "optional": false,
+              "field": "product_id"
+            }
+          ],
+          "optional": true,
+          "name": "testc.inventory.orders.Value",
+          "field": "after"
+        },
+        {
+          "type": "struct",
+          "fields": [
+            {
+              "type": "string",
+              "optional": false,
+              "field": "version"
+            },
+            {
+              "type": "string",
+              "optional": false,
+              "field": "connector"
+            },
+            {
+              "type": "string",
+              "optional": false,
+              "field": "name"
+            },
+            {
+              "type": "int64",
+              "optional": false,
+              "field": "ts_ms"
+            },
+            {
+              "type": "string",
+              "optional": true,
+              "name": "io.debezium.data.Enum",
+              "version": 1,
+              "parameters": {
+                "allowed": "true,last,false"
+              },
+              "default": "false",
+              "field": "snapshot"
+            },
+            {
+              "type": "string",
+              "optional": false,
+              "field": "db"
+            },
+            {
+              "type": "string",
+              "optional": false,
+              "field": "schema"
+            },
+            {
+              "type": "string",
+              "optional": false,
+              "field": "table"
+            },
+            {
+              "type": "int64",
+              "optional": true,
+              "field": "txId"
+            },
+            {
+              "type": "int64",
+              "optional": true,
+              "field": "lsn"
+            },
+            {
+              "type": "int64",
+              "optional": true,
+              "field": "xmin"
+            }
+          ],
+          "optional": false,
+          "name": "io.debezium.connector.postgresql.Source",
+          "field": "source"
+        },
+        {
+          "type": "string",
+          "optional": false,
+          "field": "op"
+        },
+        {
+          "type": "int64",
+          "optional": true,
+          "field": "ts_ms"
+        },
+        {
+          "type": "struct",
+          "fields": [
+            {
+              "type": "string",
+              "optional": false,
+              "field": "id"
+            },
+            {
+              "type": "int64",
+              "optional": false,
+              "field": "total_order"
+            },
+            {
+              "type": "int64",
+              "optional": false,
+              "field": "data_collection_order"
+            }
+          ],
+          "optional": true,
+          "field": "transaction"
+        }
+      ],
+      "optional": false,
+      "name": "testc.inventory.orders.Envelope",
+      "field": "line"
+    }
+  ],
+  "optional": false
+}

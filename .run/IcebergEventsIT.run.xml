@@ -1,0 +1,28 @@
+<!--
+  ~ /*
+  ~  * Copyright memiiso Authors.
+  ~  *
+  ~  * Licensed under the Apache Software License version 2.0, available at http://www.apache.org/licenses/LICENSE-2.0
+  ~  */
+  -->
+
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="IcebergEventsIT" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+        <module name="debezium-server-iceberg-sink"/>
+        <extension name="coverage">
+            <pattern>
+                <option name="PATTERN" value="io.debezium.server.testresource.*"/>
+                <option name="ENABLED" value="true"/>
+            </pattern>
+        </extension>
+        <option name="PACKAGE_NAME" value="io.debezium.server.iceberg"/>
+        <option name="MAIN_CLASS_NAME" value="io.debezium.server.iceberg.IcebergEventsIT"/>
+        <option name="METHOD_NAME" value=""/>
+        <option name="TEST_OBJECT" value="class"/>
+        <option name="VM_PARAMETERS" value="-ea -Ddebezium.sink.type=icebergevents"/>
+        <option name="WORKING_DIRECTORY" value="$MODULE_DIR$"/>
+        <method v="2">
+            <option name="Make" enabled="true"/>
+        </method>
+    </configuration>
+</component>

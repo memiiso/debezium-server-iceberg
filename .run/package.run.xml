@@ -1,0 +1,36 @@
+<!--
+  ~ /*
+  ~  * Copyright memiiso Authors.
+  ~  *
+  ~  * Licensed under the Apache Software License version 2.0, available at http://www.apache.org/licenses/LICENSE-2.0
+  ~  */
+  -->
+
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="package" type="MavenRunConfiguration" factoryName="Maven" singleton="false">
+        <MavenSettings>
+            <option name="myGeneralSettings"/>
+            <option name="myRunnerSettings"/>
+            <option name="myRunnerParameters">
+                <MavenRunnerParameters>
+                    <option name="profiles">
+                        <set/>
+                    </option>
+                    <option name="goals">
+                        <list>
+                            <option value="package"/>
+                            <option value="-Passembly"/>
+                        </list>
+                    </option>
+                    <option name="pomFileName"/>
+                    <option name="profilesMap">
+                        <map/>
+                    </option>
+                    <option name="resolveToWorkspace" value="false"/>
+                    <option name="workingDirPath" value="$PROJECT_DIR$"/>
+                </MavenRunnerParameters>
+            </option>
+        </MavenSettings>
+        <method v="2"/>
+    </configuration>
+</component>
