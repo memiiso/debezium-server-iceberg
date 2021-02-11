@@ -18,6 +18,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
@@ -32,7 +33,6 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
-import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
@@ -59,9 +59,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
   Configuration hadoopConf = new Configuration();
-  @ConfigProperty(name = PROP_PREFIX + "catalog-impl" /* CatalogProperties.CATALOG_IMPL */, defaultValue = "hadoop")
-  String catalogImpl;
-  @ConfigProperty(name = PROP_PREFIX + "warehouse" /* CatalogProperties.WAREHOUSE_LOCATION */)
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
   @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
   String defaultFs;
@@ -71,6 +69,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   boolean eventSchemaEnabled;
 
   Catalog icebergCatalog;
+  Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   Deserializer<JsonNode> valDeserializer;
 
@@ -83,10 +82,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    // loop and set hadoopConf
+    // loop and set iceberg, hadoopConf
     for (String name : ConfigProvider.getConfig().getPropertyNames()) {
       if (name.startsWith(PROP_PREFIX)) {
         this.hadoopConf.set(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name, String.class));
+        icebergProperties.put(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name,
+            String.class));
         LOGGER.debug("Setting Hadoop Conf '{}' from application.properties!", name.substring(PROP_PREFIX.length()));
       }
     }
@@ -95,11 +96,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       warehouseLocation = defaultFs + "/iceberg_warehouse";
     }
 
-    icebergCatalog = new HadoopCatalog("iceberg", hadoopConf, warehouseLocation);
-    // @TODO iceberg 11 . make catalog dynamic using catalogImpl parametter!
-    // if (catalogImpl != null) {
-    // icebergCatalog = CatalogUtil.loadCatalog(catalogImpl, name, options, hadoopConf);
-    // }
+    icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
+
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
   }
@@ -151,7 +149,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         // get schema fom an event and create iceberg table
         icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
         if (icebergTable == null) {
-          LOGGER.warn("Iceberg table '{}' not found! Ignoring received data for the table} !", tableIdentifier);
+          LOGGER.warn("Iceberg table '{}' not found! Ignoring received data for the table!", tableIdentifier);
           continue;
         }
       }
@@ -204,7 +202,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     icebergTable.newAppend()
         .appendFile(dataFile)
         .commit();
-    LOGGER.info("Committed events to table! {}", icebergTable.location());
+    LOGGER.debug("Committed events to table! {}", icebergTable.location());
   }
 
 }

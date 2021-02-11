@@ -10,3 +10,14 @@ debezium.source.database.password=postgres
 debezium.source.database.dbname=postgres
 debezium.source.database.server.name=tutorial
 debezium.source.schema.include.list=inventory
+
+
+# ############ SET LOG LEVELS ############
+quarkus.log.level=INFO
+# Change this to set Spark log level
+quarkus.log.category."org.apache.spark".level=WARN
+# hadoop, parquet
+quarkus.log.category."org.apache.hadoop".level=WARN
+quarkus.log.category."org.apache.parquet".level=WARN
+# Ignore messages below warning level from Jetty, because it's a bit verbose
+quarkus.log.category."org.eclipse.jetty".level=WARN

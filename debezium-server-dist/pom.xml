@@ -30,6 +30,10 @@
             <artifactId>debezium-server-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -95,6 +99,7 @@
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-server-iceberg-sink</artifactId>
+                    <version>${revision}</version>
                 </dependency>
             </dependencies>
             <build>

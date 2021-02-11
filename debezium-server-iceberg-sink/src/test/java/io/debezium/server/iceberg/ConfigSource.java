@@ -47,7 +47,8 @@ public class ConfigSource extends TestConfigSource {
     s3Test.put("debezium.sink.iceberg.fs.s3a.secret.key", TestS3Minio.MINIO_SECRET_KEY);
     s3Test.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
     s3Test.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:9000"); // minio specific setting
-    s3Test.put("debezium.sink.iceberg.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem");
+    s3Test.put("debezium.sink.iceberg.type", "hadoop");
+    s3Test.put("debezium.sink.iceberg.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog");
 
     // enable disable schema
     s3Test.put("debezium.format.value.schemas.enable", "true");

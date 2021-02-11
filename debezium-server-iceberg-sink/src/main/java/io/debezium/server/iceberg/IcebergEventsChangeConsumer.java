@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
@@ -33,7 +34,6 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
-import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
@@ -77,13 +77,11 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
   Configuration hadoopConf = new Configuration();
-  @ConfigProperty(name = PROP_PREFIX + "catalog-impl" /* CatalogProperties.CATALOG_IMPL */, defaultValue = "hadoop")
-  String catalogImpl;
-  @ConfigProperty(name = PROP_PREFIX + "warehouse" /* CatalogProperties.WAREHOUSE_LOCATION */, defaultValue = "iceberg_warehouse")
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
   @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
   String defaultFs;
-
+  Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
 
@@ -96,10 +94,12 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    // loop and set hadoopConf
+    // loop and set iceberg, hadoopConf
     for (String name : ConfigProvider.getConfig().getPropertyNames()) {
       if (name.startsWith(PROP_PREFIX)) {
         this.hadoopConf.set(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name, String.class));
+        icebergProperties.put(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name,
+            String.class));
         LOGGER.debug("Setting Hadoop Conf '{}' from application.properties!", name.substring(PROP_PREFIX.length()));
       }
     }
@@ -108,18 +108,14 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       warehouseLocation = defaultFs + "/iceberg_warehouse";
     }
 
-    icebergCatalog = new HadoopCatalog("iceberg", hadoopConf, warehouseLocation);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
 
+    // create table if not exists
     if (!icebergCatalog.tableExists(TableIdentifier.of(TABLE_NAME))) {
       icebergCatalog.createTable(TableIdentifier.of(TABLE_NAME), TABLE_SCHEMA, TABLE_PARTITION);
     }
+    // load table
     eventTable = icebergCatalog.loadTable(TableIdentifier.of(TABLE_NAME));
-    // hadoopTables = new HadoopTables(hadoopConf);// do we need this ??
-    // @TODO iceberg 11 . make catalog dynamic using catalogImpl CatalogUtil!
-    // if (catalogImpl != null) {
-    // icebergCatalog = CatalogUtil.loadCatalog(catalogImpl, name, options, hadoopConf);
-    // }
-
   }
 
   // @PreDestroy

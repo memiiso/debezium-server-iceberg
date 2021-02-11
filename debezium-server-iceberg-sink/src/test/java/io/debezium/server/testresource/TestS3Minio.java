@@ -36,7 +36,7 @@ public class TestS3Minio implements QuarkusTestResourceLifecycleManager {
   public static final String MINIO_SECRET_KEY;
   protected static final Logger LOGGER = LoggerFactory.getLogger(TestS3Minio.class);
   static final int MINIO_DEFAULT_PORT = 9000;
-  static int MINIO_MAPPED_PORT;
+  public static int MINIO_MAPPED_PORT;
   static final String DEFAULT_IMAGE = "minio/minio:latest";
   static final String DEFAULT_STORAGE_DIRECTORY = "/data";
   static final String HEALTH_ENDPOINT = "/minio/health/ready";

@@ -58,8 +58,18 @@ public class IcebergIT extends BaseSparkIT {
   }
 
   private Dataset<Row> getTableData(String table) {
+    try {
+      spark.table("default." + table.replace(".", "-")).show();
+    } catch (Exception e) {
+      //
+    }
+    try {
+      spark.table("mycat.default." + table.replace(".", "-")).show();
+    } catch (Exception e) {
+      //
+    }
     Dataset<Row> ds = spark.read().format("iceberg")
-        .load(warehouseLocation + "/" + tablePrefix + table.replace(".", "-"))
+        .load("s3a://test-bucket/iceberg_warehouse/debezium-cdc-testc-inventory-products")
         .withColumn("input_file", functions.input_file_name());
     return ds;
   }
@@ -202,9 +212,11 @@ public class IcebergIT extends BaseSparkIT {
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show();
         return ds.groupBy("input_file").count().filter("count > 2").count() == 0
-            && ds.groupBy("input_file").count().filter("count <=2 ").count() > 1; // 4 and more rows
+            && ds.groupBy("input_file").count().filter("count <= 2").count() > 1; // 4 and more rows
       } catch (Exception e) {
+        e.printStackTrace();
         return false;
       }
     });
