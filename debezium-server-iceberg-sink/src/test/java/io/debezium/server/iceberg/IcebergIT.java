@@ -25,7 +25,6 @@ import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.types.Types;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -55,23 +54,6 @@ public class IcebergIT extends BaseSparkIT {
     // Testing.Debug.enable();
     Testing.Files.delete(ConfigSource.OFFSET_STORE_PATH);
     Testing.Files.createTestingFile(ConfigSource.OFFSET_STORE_PATH);
-  }
-
-  private Dataset<Row> getTableData(String table) {
-    try {
-      spark.table("default." + table.replace(".", "-")).show();
-    } catch (Exception e) {
-      //
-    }
-    try {
-      spark.table("mycat.default." + table.replace(".", "-")).show();
-    } catch (Exception e) {
-      //
-    }
-    Dataset<Row> ds = spark.read().format("iceberg")
-        .load("s3a://test-bucket/iceberg_warehouse/debezium-cdc-testc-inventory-products")
-        .withColumn("input_file", functions.input_file_name());
-    return ds;
   }
 
   private HadoopCatalog getIcebergCatalog() {
@@ -216,7 +198,7 @@ public class IcebergIT extends BaseSparkIT {
         return ds.groupBy("input_file").count().filter("count > 2").count() == 0
             && ds.groupBy("input_file").count().filter("count <= 2").count() > 1; // 4 and more rows
       } catch (Exception e) {
-        e.printStackTrace();
+        // e.printStackTrace();
         return false;
       }
     });

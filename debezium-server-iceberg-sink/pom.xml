@@ -24,35 +24,7 @@
         <!-- Debezium  -->
         <dependency>
             <groupId>io.debezium</groupId>
-            <artifactId>debezium-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-embedded</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.debezium</groupId>
             <artifactId>debezium-server-core</artifactId>
-        </dependency>
-
-        <!-- Quarkus extensions -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-smallrye-health</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-resteasy</artifactId>
         </dependency>
 
         <!-- Target systems -->
@@ -87,7 +59,18 @@
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
+                <!-- needed for quarkus jboss logging -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jul-to-slf4j</artifactId>
+                </exclusion>
             </exclusions>
+        </dependency>
+        <!-- needed for quarkus jboss logging -->
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jul-to-slf4j-stub</artifactId>
+            <version>1.0.1.Final</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>

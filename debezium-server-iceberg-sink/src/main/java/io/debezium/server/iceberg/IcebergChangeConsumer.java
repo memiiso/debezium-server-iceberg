@@ -59,8 +59,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
   Configuration hadoopConf = new Configuration();
-  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
-  String warehouseLocation;
+  //@ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
+  //String warehouseLocation;
   @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
   String defaultFs;
   @ConfigProperty(name = PROP_PREFIX + "table-prefix", defaultValue = "")
@@ -92,12 +92,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       }
     }
 
-    if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
-      warehouseLocation = defaultFs + "/iceberg_warehouse";
-    }
-
     icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
 
+//    if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
+//      warehouseLocation = defaultFs + "/iceberg_warehouse";
+//    }
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
   }
@@ -173,7 +172,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     FileAppender<Record> writer;
     try {
-      LOGGER.debug("Writing data to file: {}!", out);
+      LOGGER.info("Writing data to file: {}!", out);
       //BaseEqualityDeltaWriter.write
       //BaseEqualityDeltaWriter.deleteKey
       writer = Parquet.write(out)
@@ -189,7 +188,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new InterruptedException(e.getMessage());
     }
 
-    LOGGER.debug("Building DataFile!");
+    LOGGER.info("Creating iceberg DataFile!");
     DataFile dataFile = DataFiles.builder(icebergTable.spec())
         .withFormat(FileFormat.PARQUET)
         .withPath(out.location())
@@ -202,7 +201,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     icebergTable.newAppend()
         .appendFile(dataFile)
         .commit();
-    LOGGER.debug("Committed events to table! {}", icebergTable.location());
+    LOGGER.info("Committed events to table! {}", icebergTable.location());
   }
 
 }

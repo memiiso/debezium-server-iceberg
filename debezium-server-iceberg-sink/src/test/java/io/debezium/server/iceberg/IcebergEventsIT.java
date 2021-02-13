@@ -14,6 +14,7 @@ import io.debezium.server.testresource.TestS3Minio;
 import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
 import javax.inject.Inject;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(TestS3Minio.class)
 @QuarkusTestResource(TestDatabase.class)
+@TestProfile(IcebergEventsITTestResource.class)
 public class IcebergEventsIT extends BaseSparkIT {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
