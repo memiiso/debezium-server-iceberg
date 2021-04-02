@@ -59,19 +59,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  Configuration hadoopConf = new Configuration();
+  @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
+  boolean eventSchemaEnabled;
   @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   String tablePrefix;
-  @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
-  boolean eventSchemaEnabled;
-  // @TODO read "Namespace" as parameter fallback to default
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
+  @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
+  String catalogName;
 
+  Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
@@ -86,11 +87,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
+    // pass iceberg properties to iceberg and hadoop
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
     conf.forEach(this.icebergProperties::put);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
@@ -113,8 +115,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (IcebergUtil.hasSchema(jsonSchema)) {
         Schema schema = IcebergUtil.getIcebergSchema(jsonSchema.get("schema"));
         LOGGER.warn("Creating table '{}'\nWith schema:\n{}", tableIdentifier, schema.toString());
-        // @TODO get PK from schema and create iceberg RowIdentifier, and sort order
-        // @TODO use schema of key event to create primary key definition! for upsert feature
+        // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
+        // @TODO use schema of key event to create primary key definition! for upsert
         return icebergCatalog.createTable(tableIdentifier, schema);
       }
 
@@ -147,7 +149,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           continue;
         }
       }
-      // @TODO move to method
+      // @TODO move to seperate method
       ArrayList<Record> icebergRecords = new ArrayList<>();
       for (ChangeEvent<Object, Object> e : event.getValue()) {
         GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(icebergTable.schema(), valDeserializer.deserialize(e.destination(),

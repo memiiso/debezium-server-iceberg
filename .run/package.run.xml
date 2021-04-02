@@ -20,6 +20,7 @@
                         <list>
                             <option value="package"/>
                             <option value="-Passembly"/>
+                            <option value="-Dmaven.test.skip=true"/>
                         </list>
                     </option>
                     <option name="pomFileName"/>

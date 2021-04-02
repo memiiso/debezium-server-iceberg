@@ -56,8 +56,6 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Dependent
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
-  static final TableIdentifier TABLE_IDENTIFIER = TableIdentifier.of(Namespace.of("default"), "debezium_events");
-
   // @TODO add schema enabled flags! for key and value!
   // @TODO add flattened flag SMT unwrap! as bolean?
   // @TODO add event_destination and event_sink_timestamp to partition
@@ -69,6 +67,10 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       optional(3, "event_value", Types.StringType.get()),
       optional(4, "event_sink_timestamp", Types.TimestampType.withZone()));
   static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA).identity("event_destination").build();
+
+  @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
+  String warehouseLocation;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
@@ -76,10 +78,13 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
   Configuration hadoopConf = new Configuration();
-  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
-  String warehouseLocation;
-  @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
+  @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
+  @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
+  String catalogName;
+  private TableIdentifier tableIdentifier;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
@@ -93,6 +98,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
+    tableIdentifier = TableIdentifier.of(Namespace.of(namespace), "debezium_events");
+
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
     conf.forEach(this.icebergProperties::put);
@@ -101,14 +108,14 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       warehouseLocation = defaultFs + "/iceberg_warehouse";
     }
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 
     // create table if not exists
-    if (!icebergCatalog.tableExists(TABLE_IDENTIFIER)) {
-      icebergCatalog.createTable(TABLE_IDENTIFIER, TABLE_SCHEMA, TABLE_PARTITION);
+    if (!icebergCatalog.tableExists(tableIdentifier)) {
+      icebergCatalog.createTable(tableIdentifier, TABLE_SCHEMA, TABLE_PARTITION);
     }
     // load table
-    eventTable = icebergCatalog.loadTable(TABLE_IDENTIFIER);
+    eventTable = icebergCatalog.loadTable(tableIdentifier);
   }
 
   public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, LocalDateTime batchTime) {

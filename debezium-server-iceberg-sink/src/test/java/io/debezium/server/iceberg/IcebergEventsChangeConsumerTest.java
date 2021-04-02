@@ -53,5 +53,8 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
+
+    // @TODO test distinct destination number(number of replicated tables)
+    // @TODO destination(replicated table)
   }
 }
