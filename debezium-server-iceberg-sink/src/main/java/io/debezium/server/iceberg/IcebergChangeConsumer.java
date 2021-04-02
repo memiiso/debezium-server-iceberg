@@ -110,6 +110,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (IcebergUtil.hasSchema(jsonSchema)) {
         Schema schema = IcebergUtil.getIcebergSchema(jsonSchema.get("schema"));
         LOGGER.warn("Creating table '{}'\nWith schema:\n{}", tableIdentifier, schema.toString());
+        // @TODO get PK from schema and create iceberg RowIdentifier, and sort order
         // @TODO use schema of key event to create primary key definition! for upsert feature
         return icebergCatalog.createTable(tableIdentifier, schema);
       }
