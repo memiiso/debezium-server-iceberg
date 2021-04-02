@@ -35,14 +35,13 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   public static final String MINIO_SECRET_KEY = "12345678";
   protected static final Logger LOGGER = LoggerFactory.getLogger(S3Minio.class);
   static final int MINIO_DEFAULT_PORT = 9000;
-  static int MINIO_MAPPED_PORT;
   static final String DEFAULT_IMAGE = "minio/minio:latest";
   static final String DEFAULT_STORAGE_DIRECTORY = "/data";
   static final String HEALTH_ENDPOINT = "/minio/health/ready";
   public static MinioClient client;
 
 
-  private final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(DEFAULT_IMAGE))
+  static private final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(DEFAULT_IMAGE))
       .waitingFor(new HttpWaitStrategy()
           .forPath(HEALTH_ENDPOINT)
           .forPort(MINIO_DEFAULT_PORT)
@@ -107,9 +106,13 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     return objects;
   }
 
+  public static Integer getMappedPort() {
+    return container.getMappedPort(MINIO_DEFAULT_PORT);
+  }
+
   @Override
   public Map<String, String> start() {
-    this.container.start();
+    container.start();
 
     client = MinioClient.builder()
         .endpoint("http://" + container.getHost() + ":" + container.getMappedPort(MINIO_DEFAULT_PORT))
@@ -124,7 +127,6 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    MINIO_MAPPED_PORT = container.getMappedPort(MINIO_DEFAULT_PORT);
     LOGGER.info("Minio Started!");
     Map<String, String> params = new ConcurrentHashMap<>();
     params.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + container.getMappedPort(MINIO_DEFAULT_PORT).toString());

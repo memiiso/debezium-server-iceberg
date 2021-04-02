@@ -32,9 +32,8 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String POSTGRES_HOST = "localhost";
   public static final Integer POSTGRES_PORT_DEFAULT = 5432;
   private static final Logger LOGGER = LoggerFactory.getLogger(SourcePostgresqlDB.class);
-  public static Integer POSTGRES_PORT_MAPPED;
 
-  private GenericContainer<?> container;
+  private static GenericContainer<?> container;
 
   @Override
   public Map<String, String> start() {
@@ -47,7 +46,6 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
         .withEnv("LANG", "en_US.utf8")
         .withStartupTimeout(Duration.ofSeconds(30));
     container.start();
-    POSTGRES_PORT_MAPPED = container.getMappedPort(POSTGRES_PORT_DEFAULT);
 
     Map<String, String> params = new ConcurrentHashMap<>();
     params.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
@@ -69,7 +67,7 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
 
-      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + POSTGRES_PORT_MAPPED + "/" + POSTGRES_DBNAME;
+      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + getMappedPort() + "/" + POSTGRES_DBNAME;
       Class.forName("org.postgresql.Driver");
       Connection con = DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
       Statement st = con.createStatement();
@@ -79,6 +77,10 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
       LOGGER.error(query);
       throw e;
     }
+  }
+
+  public static Integer getMappedPort() {
+    return container.getMappedPort(POSTGRES_PORT_DEFAULT);
   }
 
 }

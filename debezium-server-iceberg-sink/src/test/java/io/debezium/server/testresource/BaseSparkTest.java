@@ -53,7 +53,7 @@ public class BaseSparkTest {
         .set("spark.hadoop.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY)
         .set("spark.hadoop.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY)
         // minio specific setting using minio as S3
-        .set("spark.hadoop.fs.s3a.endpoint", "http://localhost:" + S3Minio.MINIO_MAPPED_PORT)
+        .set("spark.hadoop.fs.s3a.endpoint", "http://localhost:" + S3Minio.getMappedPort())
         .set("spark.hadoop.fs.s3a.path.style.access", "true")
         .set("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 
@@ -63,8 +63,8 @@ public class BaseSparkTest {
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
         .set("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog")
         .set("spark.sql.catalog.spark_catalog.warehouse", "s3a://" + S3_BUCKET + "/iceberg_warehouse")
-        .set("spark.sql.warehouse.dir", "s3a://" + S3_BUCKET + "/iceberg_warehouse")
-    ;
+        .set("spark.sql.warehouse.dir", "s3a://" + S3_BUCKET + "/iceberg_warehouse");
+
     BaseSparkTest.spark = SparkSession
         .builder()
         .config(BaseSparkTest.sparkconf)

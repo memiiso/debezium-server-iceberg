@@ -35,9 +35,8 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String MYSQL_DATABASE = "inventory";
   public static final Integer MYSQL_PORT_DEFAULT = 3306;
   private static final Logger LOGGER = LoggerFactory.getLogger(SourceMysqlDB.class);
-  public static Integer MYSQL_PORT_MAPPED;
 
-  private GenericContainer<?> container;
+  private static GenericContainer<?> container;
 
   @Override
   public void stop() {
@@ -48,7 +47,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
-      String url = "jdbc:mysql://" + MYSQL_HOST + ":" + MYSQL_PORT_MAPPED + "/" + MYSQL_DATABASE + "?useSSL=false";
+      String url = "jdbc:mysql://" + MYSQL_HOST + ":" + getMappedPort() + "/" + MYSQL_DATABASE + "?useSSL=false";
       Class.forName("com.mysql.cj.jdbc.Driver");
       Connection con = DriverManager.getConnection(url, MYSQL_USER, MYSQL_PASSWORD);
       Statement st = con.createStatement();
@@ -69,7 +68,6 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
         .withEnv("MYSQL_ROOT_PASSWORD", MYSQL_ROOT_PASSWORD)
         .withStartupTimeout(Duration.ofSeconds(30));
     container.start();
-    MYSQL_PORT_MAPPED = container.getMappedPort(MYSQL_PORT_DEFAULT);
 
     Map<String, String> params = new ConcurrentHashMap<>();
     params.put("%mysql.debezium.source.database.hostname", MYSQL_HOST);
@@ -80,5 +78,8 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
     return params;
   }
 
+  public static Integer getMappedPort() {
+    return container.getMappedPort(MYSQL_PORT_DEFAULT);
+  }
 
 }
