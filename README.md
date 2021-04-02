@@ -68,7 +68,7 @@ static final Schema TABLE_SCHEMA=new Schema(
     required(1,"event_destination",Types.StringType.get(),"event destination"),
     optional(2,"event_key",Types.StringType.get()),
     optional(3,"event_value",Types.StringType.get()),
-    optional(4,"event_sink_timestamp",Types.TimestampType.withZone()));
+    optional(4, "event_sink_epoch_ms", Types.LongType.get()));
 static final PartitionSpec TABLE_PARTITION=PartitionSpec.builderFor(TABLE_SCHEMA).identity("event_destination").build();
 ```
 

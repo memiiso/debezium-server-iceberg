@@ -164,7 +164,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   private void appendTable(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
-    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET.toString().toLowerCase();
+    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
 
     FileAppender<Record> writer;
