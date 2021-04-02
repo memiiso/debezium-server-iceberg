@@ -68,6 +68,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String tablePrefix;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
   boolean eventSchemaEnabled;
+  // @TODO read "Namespace" as parameter fallback to default
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
 
   Catalog icebergCatalog;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
@@ -132,8 +135,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
       Table icebergTable;
-      final Schema tableSchema;
-      final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of("default"), tablePrefix + event.getKey());
+      final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
       try {
         // load iceberg table
         icebergTable = icebergCatalog.loadTable(tableIdentifier);
@@ -145,10 +147,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           continue;
         }
       }
-      tableSchema = icebergTable.schema();
+      // @TODO move to method
       ArrayList<Record> icebergRecords = new ArrayList<>();
       for (ChangeEvent<Object, Object> e : event.getValue()) {
-        GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(tableSchema, valDeserializer.deserialize(e.destination(),
+        GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(icebergTable.schema(), valDeserializer.deserialize(e.destination(),
             getBytes(e.value())));
         icebergRecords.add(icebergRecord);
         //committer.markProcessed(e); don't call events are shuffled!
