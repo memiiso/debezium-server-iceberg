@@ -9,11 +9,13 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.DebeziumServer;
-import io.debezium.server.testresource.TestDatabase;
-import io.debezium.server.testresource.TestS3Minio;
+import io.debezium.server.testresource.BaseSparkTest;
+import io.debezium.server.testresource.S3Minio;
+import io.debezium.server.testresource.SourcePostgresqlDB;
 import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
 import javax.inject.Inject;
@@ -37,9 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(TestS3Minio.class)
-@QuarkusTestResource(TestDatabase.class)
-public class IcebergIT extends BaseSparkIT {
+@QuarkusTestResource(S3Minio.class)
+@QuarkusTestResource(SourcePostgresqlDB.class)
+@TestProfile(IcebergChangeConsumerTestProfile.class)
+public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Inject
   DebeziumServer server;
@@ -71,7 +74,7 @@ public class IcebergIT extends BaseSparkIT {
 
   private org.apache.iceberg.Table getTable(String table) {
     HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(tablePrefix + table.replace(".", "-")));
+    return catalog.loadTable(TableIdentifier.of(table.replace(".", "-")));
   }
 
   @Test
@@ -95,7 +98,7 @@ public class IcebergIT extends BaseSparkIT {
         "            c_uuid UUID,\n" +
         "            c_bytea BYTEA\n" +
         "          );";
-    TestDatabase.runSQL(sql);
+    SourcePostgresqlDB.runSQL(sql);
     sql = "INSERT INTO inventory.table_datatypes (" +
         "c_id, " +
         "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamptz, " +
@@ -108,7 +111,7 @@ public class IcebergIT extends BaseSparkIT {
         "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea" +
         ")";
-    TestDatabase.runSQL(sql);
+    SourcePostgresqlDB.runSQL(sql);
 
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
@@ -135,18 +138,18 @@ public class IcebergIT extends BaseSparkIT {
       }
     });
 
-    TestDatabase.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1' WHERE ID = 1002 ;");
-    TestDatabase.runSQL("ALTER TABLE inventory.customers ADD test_varchar_column varchar(255);");
-    TestDatabase.runSQL("ALTER TABLE inventory.customers ADD test_boolean_column boolean;");
-    TestDatabase.runSQL("ALTER TABLE inventory.customers ADD test_date_column date;");
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1' WHERE ID = 1002 ;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_varchar_column varchar(255);");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_boolean_column boolean;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_date_column date;");
 
-    TestDatabase.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1'  WHERE id = 1002 ;");
-    TestDatabase.runSQL("ALTER TABLE inventory.customers ALTER COLUMN email DROP NOT NULL;");
-    TestDatabase.runSQL("INSERT INTO inventory.customers VALUES " +
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1'  WHERE id = 1002 ;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ALTER COLUMN email DROP NOT NULL;");
+    SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
         "(default,'SallyUSer2','Thomas',null,'value1',false, '2020-01-01');");
-    TestDatabase.runSQL("ALTER TABLE inventory.customers ALTER COLUMN last_name DROP NOT NULL;");
-    TestDatabase.runSQL("UPDATE inventory.customers SET last_name = NULL  WHERE id = 1002 ;");
-    TestDatabase.runSQL("DELETE FROM inventory.customers WHERE id = 1004 ;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ALTER COLUMN last_name DROP NOT NULL;");
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET last_name = NULL  WHERE id = 1002 ;");
+    SourcePostgresqlDB.runSQL("DELETE FROM inventory.customers WHERE id = 1004 ;");
 
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
@@ -172,8 +175,8 @@ public class IcebergIT extends BaseSparkIT {
         .addColumn("test_varchar_column", Types.StringType.get())
         .commit();
 
-    TestDatabase.runSQL("ALTER TABLE inventory.customers DROP COLUMN email;");
-    TestDatabase.runSQL("INSERT INTO inventory.customers VALUES " +
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers DROP COLUMN email;");
+    SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
         "(default,'User3','lastname_value3','test_varchar_value3',true, '2020-01-01'::DATE);");
 
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
@@ -189,25 +192,16 @@ public class IcebergIT extends BaseSparkIT {
   }
 
   @Test
-  public void testBatchSize() throws Exception {
+  public void testSimpleUpload() throws Exception {
     // test that max batch size is respected! `debezium.source.max.batch.size`
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         ds.show();
-        return ds.groupBy("input_file").count().filter("count > 2").count() == 0
-            && ds.groupBy("input_file").count().filter("count <= 2").count() > 1; // 4 and more rows
+        return ds.count() > 4;
       } catch (Exception e) {
-        // e.printStackTrace();
         return false;
       }
     });
-
-    getTableData("testc.inventory.customers").show();
-    getTableData("testc.inventory.customers").groupBy("input_file").count().show();
-    getTableData("testc.inventory.products").show();
-    getTableData("testc.inventory.orders").show();
-    // ignored table because of nested data
-    // getTableData("testc.inventory.geom").show();
   }
 }

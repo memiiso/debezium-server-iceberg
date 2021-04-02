@@ -7,7 +7,8 @@
   -->
 
 <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="IcebergIT" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <configuration default="false" name="IcebergEventsChangeConsumerTest" type="JUnit" factoryName="JUnit"
+                   nameIsGenerated="true">
         <module name="debezium-server-iceberg-sink"/>
         <extension name="coverage">
             <pattern>
@@ -16,10 +17,10 @@
             </pattern>
         </extension>
         <option name="PACKAGE_NAME" value="io.debezium.server.iceberg"/>
-        <option name="MAIN_CLASS_NAME" value="io.debezium.server.iceberg.IcebergIT"/>
+        <option name="MAIN_CLASS_NAME" value="io.debezium.server.iceberg.IcebergEventsChangeConsumerTest"/>
         <option name="METHOD_NAME" value=""/>
         <option name="TEST_OBJECT" value="class"/>
-        <option name="VM_PARAMETERS" value="-ea -Ddebezium.sink.type=iceberg"/>
+        <option name="VM_PARAMETERS" value="-ea -Ddebezium.sink.type=icebergevents"/>
         <option name="WORKING_DIRECTORY" value="$MODULE_DIR$"/>
         <method v="2">
             <option name="Make" enabled="true"/>

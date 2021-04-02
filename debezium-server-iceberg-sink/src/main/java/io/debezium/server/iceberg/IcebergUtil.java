@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
+import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,4 +176,18 @@ public class IcebergUtil {
     }
 
   }
+
+  public static Map<String, String> getConfigSubset(Config config, String prefix) {
+    final Map<String, String> ret = new HashMap<>();
+
+    for (String propName : config.getPropertyNames()) {
+      if (propName.startsWith(prefix)) {
+        final String newPropName = propName.substring(prefix.length());
+        ret.put(newPropName, config.getValue(propName, String.class));
+      }
+    }
+
+    return ret;
+  }
+
 }

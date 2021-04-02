@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
@@ -58,16 +59,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  Configuration hadoopConf = new Configuration();
-  //@ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
-  //String warehouseLocation;
-  @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
-  String defaultFs;
-  @ConfigProperty(name = PROP_PREFIX + "table-prefix", defaultValue = "")
-  String tablePrefix;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
   boolean eventSchemaEnabled;
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
+  String warehouseLocation;
+  @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
+  String defaultFs;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
+  String tablePrefix;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
+  @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
+  String catalogName;
 
+  Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
@@ -82,27 +87,19 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    // loop and set iceberg, hadoopConf
-    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
-      if (name.startsWith(PROP_PREFIX)) {
-        this.hadoopConf.set(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name, String.class));
-        icebergProperties.put(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name,
-            String.class));
-        LOGGER.debug("Setting Hadoop Conf '{}' from application.properties!", name.substring(PROP_PREFIX.length()));
-      }
-    }
+    // pass iceberg properties to iceberg and hadoop
+    Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
+    conf.forEach(this.hadoopConf::set);
+    conf.forEach(this.icebergProperties::put);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 
-//    if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
-//      warehouseLocation = defaultFs + "/iceberg_warehouse";
-//    }
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
   }
 
   public String map(String destination) {
-    return destination.replace(".", "-");
+    return destination.replace(".", "_");
   }
 
   private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
@@ -118,7 +115,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (IcebergUtil.hasSchema(jsonSchema)) {
         Schema schema = IcebergUtil.getIcebergSchema(jsonSchema.get("schema"));
         LOGGER.warn("Creating table '{}'\nWith schema:\n{}", tableIdentifier, schema.toString());
-        // @TODO use schema of key event to create primary key definition! for upsert feature
+        // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
+        // @TODO use schema of key event to create primary key definition! for upsert
         return icebergCatalog.createTable(tableIdentifier, schema);
       }
 
@@ -139,8 +137,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
       Table icebergTable;
-      final Schema tableSchema;
-      final TableIdentifier tableIdentifier = TableIdentifier.of(tablePrefix + event.getKey());
+      final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
       try {
         // load iceberg table
         icebergTable = icebergCatalog.loadTable(tableIdentifier);
@@ -152,10 +149,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           continue;
         }
       }
-      tableSchema = icebergTable.schema();
+      // @TODO move to seperate method
       ArrayList<Record> icebergRecords = new ArrayList<>();
       for (ChangeEvent<Object, Object> e : event.getValue()) {
-        GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(tableSchema, valDeserializer.deserialize(e.destination(),
+        GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(icebergTable.schema(), valDeserializer.deserialize(e.destination(),
             getBytes(e.value())));
         icebergRecords.add(icebergRecord);
         //committer.markProcessed(e); don't call events are shuffled!
@@ -167,7 +164,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   private void appendTable(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
-    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET.toString().toLowerCase();
+    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
 
     FileAppender<Record> writer;
