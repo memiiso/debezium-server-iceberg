@@ -22,17 +22,26 @@
 
     <properties>
         <assembly.descriptor>server-distribution</assembly.descriptor>
+        <quarkus.package.type>legacy-jar</quarkus.package.type>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-server-core</artifactId>
-            <scope>test</scope>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-micrometer</artifactId>
+            <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-resteasy-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-server-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
@@ -40,7 +49,7 @@
             <plugin>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
-                <version>${quarkus.version}</version>
+                <version>${version.quarkus}</version>
                 <executions>
                     <execution>
                         <goals>

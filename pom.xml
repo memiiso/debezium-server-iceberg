@@ -16,30 +16,43 @@
     <name>Debezium Server Parent</name>
     <version>${revision}</version>
     <packaging>pom</packaging>
+
     <properties>
         <revision>1.0.1-SNAPSHOT</revision>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.11</maven.compiler.source>
+        <maven.compiler.target>1.11</maven.compiler.target>
         <release>8</release>
+        <skipITs>true</skipITs>
 
+        <version.groovy>3.0.7</version.groovy>
         <version.s3>2.15.45</version.s3>
         <version.debezium>1.4.0.Final</version.debezium>
         <version.assembly.plugin>3.1.1</version.assembly.plugin>
-        <version.jackson>2.11.2</version.jackson>
+        <version.jackson>2.12.2</version.jackson>
         <version.iceberg>0.11.0</version.iceberg>
-        <skipITs>true</skipITs>
         <version.spark>3.0.1</version.spark>
         <version.hadoop>3.3.0</version.hadoop>
-
+        <!-- Debezium -->
+        <version.debezium>1.4.2.Final</version.debezium>
         <!-- Quarkus -->
-        <quarkus.version>1.11.0.Beta2</quarkus.version>
+        <version.quarkus>1.12.2.Final</version.quarkus>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- quarkus -->
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${version.quarkus}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- debezium server -->
             <dependency>
                 <groupId>io.debezium</groupId>
                 <artifactId>debezium-server</artifactId>
@@ -47,15 +60,27 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
             <dependency>
                 <groupId>io.debezium</groupId>
                 <artifactId>debezium-server-batch</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <!-- Debezium Scripting -->
             <dependency>
-                <groupId>io.debezium</groupId>
-                <artifactId>debezium-server-iceberg</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>${version.groovy}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-json</artifactId>
+                <version>${version.groovy}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-jsr223</artifactId>
+                <version>${version.groovy}</version>
             </dependency>
 
             <!-- Upgrade jackson version for spark -->
