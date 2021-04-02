@@ -9,8 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.TestConfigSource;
-import io.debezium.server.TestDatabase;
-import io.debezium.server.testresource.TestS3Minio;
+import io.debezium.server.testresource.S3Minio;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,8 +42,8 @@ public class ConfigSource extends TestConfigSource {
     s3Test.put("debezium.sink.iceberg.com.amazonaws.services.s3.enableV4", "true");
     s3Test.put("debezium.sink.iceberg.com.amazonaws.services.s3a.enableV4", "true");
     s3Test.put("debezium.sink.iceberg.fs.s3a.aws.credentials.provider", "com.amazonaws.auth.DefaultAWSCredentialsProviderChain");
-    s3Test.put("debezium.sink.iceberg.fs.s3a.access.key", TestS3Minio.MINIO_ACCESS_KEY);
-    s3Test.put("debezium.sink.iceberg.fs.s3a.secret.key", TestS3Minio.MINIO_SECRET_KEY);
+    s3Test.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
+    s3Test.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
     s3Test.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
     s3Test.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:9000"); // minio specific setting
     s3Test.put("debezium.sink.iceberg.type", "hadoop");
@@ -64,16 +63,15 @@ public class ConfigSource extends TestConfigSource {
     s3Test.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
     s3Test.put("debezium.source." + StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, OFFSET_STORE_PATH.toAbsolutePath().toString());
     s3Test.put("debezium.source.offset.flush.interval.ms", "0");
-    s3Test.put("debezium.source.database.hostname", TestDatabase.POSTGRES_HOST);
-    // this set by TestDatabase
-    s3Test.put("debezium.source.database.port", Integer.toString(5432));
-    s3Test.put("debezium.source.database.user", TestDatabase.POSTGRES_USER);
-    s3Test.put("debezium.source.database.password", TestDatabase.POSTGRES_PASSWORD);
-    s3Test.put("debezium.source.database.dbname", TestDatabase.POSTGRES_DBNAME);
-    s3Test.put("debezium.source.database.server.name", "testc");
     s3Test.put("debezium.source.schema.whitelist", "inventory");
     s3Test.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
         "inventory.geom,inventory.table_datatypes");
+
+    config.put("quarkus.log.level", "WARN");
+    s3Test.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
+    s3Test.put("quarkus.log.category.\"org.apache.hadoop\".level", "ERROR");
+    s3Test.put("quarkus.log.category.\"org.apache.parquet\".level", "WARN");
+    s3Test.put("quarkus.log.category.\"org.eclipse.jetty\".level", "WARN");
 
     config = s3Test;
   }

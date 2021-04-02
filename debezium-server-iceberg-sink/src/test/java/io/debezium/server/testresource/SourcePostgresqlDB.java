@@ -23,39 +23,20 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
-public class TestDatabase implements QuarkusTestResourceLifecycleManager {
+public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
 
   public static final String POSTGRES_USER = "postgres";
   public static final String POSTGRES_PASSWORD = "postgres";
   public static final String POSTGRES_DBNAME = "postgres";
-  public static final String POSTGRES_IMAGE = "debezium/example-postgres";
+  public static final String POSTGRES_IMAGE = "debezium/example-postgres:1.5";
   public static final String POSTGRES_HOST = "localhost";
   public static final Integer POSTGRES_PORT_DEFAULT = 5432;
-  private static final Logger LOGGER = LoggerFactory.getLogger(TestDatabase.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SourcePostgresqlDB.class);
   public static Integer POSTGRES_PORT_MAPPED;
 
   private GenericContainer<?> container;
 
-  public static void runSQL(String query) throws SQLException {
-    try {
-
-      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + POSTGRES_PORT_MAPPED + "/" + POSTGRES_DBNAME;
-      Connection con = DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
-      Statement st = con.createStatement();
-      st.execute(query);
-      con.close();
-    } catch (Exception e) {
-      LOGGER.error(query);
-      throw e;
-    }
-
-  }
-
   @Override
-  public void stop() {
-    container.stop();
-  }
-
   public Map<String, String> start() {
     container = new GenericContainer<>(POSTGRES_IMAGE)
         .waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*", 2))
@@ -75,6 +56,28 @@ public class TestDatabase implements QuarkusTestResourceLifecycleManager {
     params.put("debezium.source.database.password", POSTGRES_PASSWORD);
     params.put("debezium.source.database.dbname", POSTGRES_DBNAME);
     return params;
+  }
+
+  @Override
+  public void stop() {
+    if (container != null) {
+      container.stop();
+    }
+  }
+
+  public static void runSQL(String query) throws SQLException, ClassNotFoundException {
+    try {
+
+      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + POSTGRES_PORT_MAPPED + "/" + POSTGRES_DBNAME;
+      Class.forName("org.postgresql.Driver");
+      Connection con = DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
+      Statement st = con.createStatement();
+      st.execute(query);
+      con.close();
+    } catch (Exception e) {
+      LOGGER.error(query);
+      throw e;
+    }
   }
 
 }

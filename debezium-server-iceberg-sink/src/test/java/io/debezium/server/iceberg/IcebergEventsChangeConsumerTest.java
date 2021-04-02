@@ -9,8 +9,9 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.DebeziumServer;
-import io.debezium.server.testresource.TestDatabase;
-import io.debezium.server.testresource.TestS3Minio;
+import io.debezium.server.testresource.BaseSparkTest;
+import io.debezium.server.testresource.SourcePostgresqlDB;
+import io.debezium.server.testresource.S3Minio;
 import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -32,10 +33,10 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(TestS3Minio.class)
-@QuarkusTestResource(TestDatabase.class)
-@TestProfile(IcebergEventsITTestResource.class)
-public class IcebergEventsIT extends BaseSparkIT {
+@QuarkusTestResource(S3Minio.class)
+@QuarkusTestResource(SourcePostgresqlDB.class)
+@TestProfile(IcebergEventsChangeConsumerTestProfile.class)
+public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
   @Inject
@@ -48,7 +49,7 @@ public class IcebergEventsIT extends BaseSparkIT {
 
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        TestS3Minio.listFiles();
+        S3Minio.listFiles();
         Dataset<Row> ds = spark.read().format("iceberg")
             .load("s3a://test-bucket/iceberg_warehouse/debezium_events");
         ds.show();
@@ -57,6 +58,6 @@ public class IcebergEventsIT extends BaseSparkIT {
         return false;
       }
     });
-    TestS3Minio.listFiles();
+    S3Minio.listFiles();
   }
 }

@@ -13,7 +13,7 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 import java.util.HashMap;
 import java.util.Map;
 
-public class IcebergEventsITTestResource implements QuarkusTestProfile {
+public class IcebergEventsChangeConsumerTestProfile implements QuarkusTestProfile {
 
   //This method allows us to override configuration properties.
   @Override
