@@ -37,7 +37,6 @@ import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
-import org.apache.iceberg.relocated.com.google.common.collect.Maps;
 import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -59,7 +58,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   // @TODO add flattened flag SMT unwrap! as bolean?
   // @TODO add event_destination and event_sink_epoch_ms to partition
   static final Schema TABLE_SCHEMA = new Schema(
-      required(1, "event_destination", Types.StringType.get(), "event destination"),
+      required(1, "event_destination", Types.StringType.get()),
       optional(2, "event_key", Types.StringType.get()),
       // @TODO split to before after payload and source and schema
       // @TODO change strategy based on unwrap flag
@@ -118,12 +117,12 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   }
 
   public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, Instant batchTime) {
-    Map<String, Object> var1 = Maps.newHashMapWithExpectedSize(TABLE_SCHEMA.columns().size());
-    var1.put("event_destination", destination);
-    var1.put("event_key", getString(record.key()));
-    var1.put("event_value", getString(record.value()));
-    var1.put("event_sink_epoch_ms", batchTime.toEpochMilli());
-    return GenericRecord.create(TABLE_SCHEMA).copy(var1);
+    GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
+    rec.setField("event_destination", destination);
+    rec.setField("event_key", getString(record.key()));
+    rec.setField("event_value", getString(record.value()));
+    rec.setField("event_sink_epoch_ms", batchTime.toEpochMilli());
+    return rec;
   }
 
   public String map(String destination) {

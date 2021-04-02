@@ -43,38 +43,26 @@
             <artifactId>groovy-jsr223</artifactId>
         </dependency>
 
-        <!-- Aws -->
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>sdk-core</artifactId>
-            <version>${version.s3}</version>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>aws-core</artifactId>
-            <version>${version.s3}</version>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3</artifactId>
-            <version>${version.s3}</version>
-        </dependency>
-
         <!-- Iceberg  -->
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-api</artifactId>
-            <version>0.11.0</version>
+            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-core</artifactId>
-            <version>0.11.0</version>
+            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-parquet</artifactId>
-            <version>0.11.0</version>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-aws</artifactId>
+            <version>${version.iceberg}</version>
         </dependency>
 
         <!-- needed for quarkus jboss logging -->
