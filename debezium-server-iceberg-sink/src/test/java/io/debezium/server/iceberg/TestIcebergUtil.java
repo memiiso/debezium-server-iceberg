@@ -19,38 +19,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
-import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestIcebergUtil {
-
-  protected static final Logger LOGGER = LoggerFactory.getLogger(TestIcebergUtil.class);
-  final String serdeUpdate = Testing.Files.readResourceAsString("json/serde-update.json");
   final String serdeWithSchema = Testing.Files.readResourceAsString("json/serde-with-schema.json");
-  final String serdeWithSchema2 = Testing.Files.readResourceAsString("json/serde-with-schema2.json");
   final String unwrapWithSchema = Testing.Files.readResourceAsString("json/unwrap-with-schema.json");
 
   @Test
-  public void testNestedIcebergSchema() throws JsonProcessingException {
-    Schema s = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema"));
-    // StructType ss = ConsumerUtil.getEventSparkDfSchema(serdeWithSchema);
-    assertNotNull(s);
-    assertEquals(s.findField("ts_ms").fieldId(), 29);
-    assertEquals(s.findField(7).name(), "after");
-    assertTrue(s.asStruct().toString().contains("source: optional struct<"));
-    assertTrue(s.asStruct().toString().contains("after: optional struct<"));
-  }
-
-  @Test
-  public void testNestedIcebergSchema2() throws JsonProcessingException {
-    Schema s = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema2));
-    // assertEquals(s.asStruct().toString(), "xx");
-    assertTrue(s.asStruct().toString().contains("source: optional struct<"));
-    assertTrue(s.asStruct().toString().contains("after: optional struct<"));
+  public void testNestedJsonRecord() throws JsonProcessingException {
+    Exception exception = assertThrows(Exception.class, () -> IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema")));
+    assertEquals("Event schema containing nested data 'before' cannot process nested data!", exception.getMessage());
   }
 
   @Test
@@ -60,35 +40,6 @@ class TestIcebergUtil {
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), event);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
-  }
-
-  @Test
-  public void testNestedJsonRecord() throws IOException, InterruptedException {
-    JsonNode event = new ObjectMapper().readTree(serdeWithSchema).get("payload");
-    Schema schema = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema"));
-
-    System.out.println(schema.asStruct().field("before"));
-    System.out.println(schema.asStruct().fields());
-    System.out.println(schema.asStruct().field("id"));
-    System.out.println(
-        Types.StructType.of(schema.findField("before")).field("before")
-    );
-    fail();
-
-    assert schema != null;
-    GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), event);
-    System.out.println(record);
-    System.out.println(record.getField("after").toString());
-    System.out.println(record.getField("after").getClass().getSimpleName());
-    System.out.println(record.getClass().getSimpleName());
-
-    // unwrapped
-    JsonNode eventUw = new ObjectMapper().readTree(unwrapWithSchema).get("payload");
-    Schema schemaUw = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(unwrapWithSchema).get("schema"));
-
-    GenericRecord recordUw = IcebergUtil.getIcebergRecord(schemaUw.asStruct(), eventUw);
-
-    fail();
   }
 
   @Test

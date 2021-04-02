@@ -43,7 +43,7 @@
             <artifactId>groovy-jsr223</artifactId>
         </dependency>
 
-        <!-- Target systems -->
+        <!-- Aws -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sdk-core</artifactId>
@@ -60,44 +60,31 @@
             <version>${version.s3}</version>
         </dependency>
 
-        <!-- @TODO change spark scope to test and add iceberg runtime dependencies -->
-        <!-- https://mvnrepository.com/artifact/org.apache.parquet/parquet-common -->
+        <!-- Iceberg  -->
         <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.12</artifactId>
-            <version>${version.spark}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-                <!-- needed for quarkus jboss logging -->
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>jul-to-slf4j</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-api</artifactId>
+            <version>0.11.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-core</artifactId>
+            <version>0.11.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-parquet</artifactId>
+            <version>0.11.0</version>
+        </dependency>
+
         <!-- needed for quarkus jboss logging -->
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jul-to-slf4j-stub</artifactId>
             <version>1.0.1.Final</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.12</artifactId>
-            <version>${version.spark}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark3-runtime</artifactId>
-            <version>0.11.0</version>
-        </dependency>
+
+        <!-- Hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
@@ -123,9 +110,43 @@
             <artifactId>hadoop-aws</artifactId>
             <version>${version.hadoop}</version>
         </dependency>
-        <!-- END using spark sink -->
 
         <!-- Testing -->
+        <!-- spark for tests -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.12</artifactId>
+            <version>${version.spark}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <!-- needed for quarkus jboss logging -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jul-to-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.12</artifactId>
+            <version>${version.spark}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-spark3-runtime</artifactId>
+            <version>0.11.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>

@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
@@ -59,11 +60,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
   Configuration hadoopConf = new Configuration();
-  //@ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
-  //String warehouseLocation;
-  @ConfigProperty(name = PROP_PREFIX + "fs.defaultFS")
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
+  String warehouseLocation;
+  @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
-  @ConfigProperty(name = PROP_PREFIX + "table-prefix", defaultValue = "")
+  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   String tablePrefix;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
   boolean eventSchemaEnabled;
@@ -82,27 +83,18 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    // loop and set iceberg, hadoopConf
-    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
-      if (name.startsWith(PROP_PREFIX)) {
-        this.hadoopConf.set(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name, String.class));
-        icebergProperties.put(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name,
-            String.class));
-        LOGGER.debug("Setting Hadoop Conf '{}' from application.properties!", name.substring(PROP_PREFIX.length()));
-      }
-    }
+    Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
+    conf.forEach(this.hadoopConf::set);
+    conf.forEach(this.icebergProperties::put);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
 
-//    if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
-//      warehouseLocation = defaultFs + "/iceberg_warehouse";
-//    }
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
   }
 
   public String map(String destination) {
-    return destination.replace(".", "-");
+    return destination.replace(".", "_");
   }
 
   private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
@@ -140,7 +132,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
       Table icebergTable;
       final Schema tableSchema;
-      final TableIdentifier tableIdentifier = TableIdentifier.of(tablePrefix + event.getKey());
+      final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of("default"), tablePrefix + event.getKey());
       try {
         // load iceberg table
         icebergTable = icebergCatalog.loadTable(tableIdentifier);

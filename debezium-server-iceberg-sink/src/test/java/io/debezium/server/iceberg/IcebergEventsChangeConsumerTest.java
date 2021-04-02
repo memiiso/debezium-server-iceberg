@@ -10,9 +10,8 @@ package io.debezium.server.iceberg;
 
 import io.debezium.server.DebeziumServer;
 import io.debezium.server.testresource.BaseSparkTest;
-import io.debezium.server.testresource.SourcePostgresqlDB;
 import io.debezium.server.testresource.S3Minio;
-import io.debezium.util.Testing;
+import io.debezium.server.testresource.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -44,20 +43,15 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testIcebergEvents() throws Exception {
-    Testing.Print.enable();
     Assertions.assertEquals(sinkType, "icebergevents");
-
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        S3Minio.listFiles();
-        Dataset<Row> ds = spark.read().format("iceberg")
-            .load("s3a://test-bucket/iceberg_warehouse/debezium_events");
+        Dataset<Row> ds = spark.sql("SELECT * FROM default.debezium_events");
         ds.show();
         return ds.count() >= 4;
       } catch (Exception e) {
         return false;
       }
     });
-    S3Minio.listFiles();
   }
 }

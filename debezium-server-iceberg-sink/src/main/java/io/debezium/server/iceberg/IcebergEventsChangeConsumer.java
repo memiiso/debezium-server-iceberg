@@ -30,6 +30,7 @@ import javax.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
@@ -55,20 +56,18 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Dependent
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
-  static final String TABLE_NAME = "debezium_events";
+  static final TableIdentifier TABLE_IDENTIFIER = TableIdentifier.of(Namespace.of("default"), "debezium_events");
 
   // @TODO add schema enabled flags! for key and value!
   // @TODO add flattened flag SMT unwrap! as bolean?
-  // @TODO extract value from key and store only value -> event_key_value!
-  // @TODO add event_sink_timestamp to partition
+  // @TODO add event_destination and event_sink_timestamp to partition
   static final Schema TABLE_SCHEMA = new Schema(
       required(1, "event_destination", Types.StringType.get(), "event destination"),
       optional(2, "event_key", Types.StringType.get()),
-      optional(3, "event_key_value", Types.StringType.get()),
       // @TODO split to before after payload and source and schema
       // @TODO change strategy based on unwrap flag
-      optional(4, "event_value", Types.StringType.get()),
-      optional(5, "event_sink_timestamp", Types.TimestampType.withZone()));
+      optional(3, "event_value", Types.StringType.get()),
+      optional(4, "event_sink_timestamp", Types.TimestampType.withZone()));
   static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA).identity("event_destination").build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
@@ -94,15 +93,9 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    // loop and set iceberg, hadoopConf
-    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
-      if (name.startsWith(PROP_PREFIX)) {
-        this.hadoopConf.set(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name, String.class));
-        icebergProperties.put(name.substring(PROP_PREFIX.length()), ConfigProvider.getConfig().getValue(name,
-            String.class));
-        LOGGER.debug("Setting Hadoop Conf '{}' from application.properties!", name.substring(PROP_PREFIX.length()));
-      }
-    }
+    Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
+    conf.forEach(this.hadoopConf::set);
+    conf.forEach(this.icebergProperties::put);
 
     if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
       warehouseLocation = defaultFs + "/iceberg_warehouse";
@@ -111,35 +104,24 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     icebergCatalog = CatalogUtil.buildIcebergCatalog("iceberg", icebergProperties, hadoopConf);
 
     // create table if not exists
-    if (!icebergCatalog.tableExists(TableIdentifier.of(TABLE_NAME))) {
-      icebergCatalog.createTable(TableIdentifier.of(TABLE_NAME), TABLE_SCHEMA, TABLE_PARTITION);
+    if (!icebergCatalog.tableExists(TABLE_IDENTIFIER)) {
+      icebergCatalog.createTable(TABLE_IDENTIFIER, TABLE_SCHEMA, TABLE_PARTITION);
     }
     // load table
-    eventTable = icebergCatalog.loadTable(TableIdentifier.of(TABLE_NAME));
+    eventTable = icebergCatalog.loadTable(TABLE_IDENTIFIER);
   }
-
-  // @PreDestroy
-  // void close() {
-  // // try {
-  // // s3client.close();
-  // // }
-  // // catch (Exception e) {
-  // // LOGGER.error("Exception while closing S3 client: ", e);
-  // // }
-  // }
 
   public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, LocalDateTime batchTime) {
     Map<String, Object> var1 = Maps.newHashMapWithExpectedSize(TABLE_SCHEMA.columns().size());
     var1.put("event_destination", destination);
     var1.put("event_key", getString(record.key()));
-    var1.put("event_key_value", null); // @TODO extract key value!
     var1.put("event_value", getString(record.value()));
     var1.put("event_sink_timestamp", batchTime.atOffset(ZoneOffset.UTC));
     return GenericRecord.create(TABLE_SCHEMA).copy(var1);
   }
 
   public String map(String destination) {
-    return destination.replace(".", "-");
+    return destination.replace(".", "_");
   }
 
   @Override

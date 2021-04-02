@@ -127,11 +127,10 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     MINIO_MAPPED_PORT = container.getMappedPort(MINIO_DEFAULT_PORT);
     LOGGER.info("Minio Started!");
     Map<String, String> params = new ConcurrentHashMap<>();
-    params.put("debezium.sink.s3.endpoint-override", "http://localhost:" + container.getMappedPort(MINIO_DEFAULT_PORT).toString());
-    params.put("debezium.sink.batch.s3.endpoint-override", "http://localhost:" + container.getMappedPort(MINIO_DEFAULT_PORT).toString());
     params.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + container.getMappedPort(MINIO_DEFAULT_PORT).toString());
-    params.put("AWS_ACCESS_KEY_ID", MINIO_ACCESS_KEY);
-    params.put("AWS_SECRET_KEY", MINIO_SECRET_KEY);
+    params.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
+    params.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
+    params.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
 
     return params;
   }

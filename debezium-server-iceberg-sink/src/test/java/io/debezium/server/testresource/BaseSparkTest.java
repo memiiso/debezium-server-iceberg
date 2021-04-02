@@ -18,10 +18,9 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.functions;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeAll;
+import static io.debezium.server.iceberg.ConfigSource.S3_BUCKET;
 import static io.debezium.server.testresource.TestUtil.randomInt;
 import static io.debezium.server.testresource.TestUtil.randomString;
 
@@ -33,13 +32,11 @@ import static io.debezium.server.testresource.TestUtil.randomString;
 public class BaseSparkTest {
   protected static final SparkConf sparkconf = new SparkConf()
       .setAppName("CDC-S3-Batch-Spark-Sink")
-      .setMaster("local");
+      .setMaster("local[2]");
   private static final String SPARK_PROP_PREFIX = "debezium.sink.sparkbatch.";
   protected static SparkSession spark;
-  @ConfigProperty(name = "debezium.sink.batch.objectkey-prefix", defaultValue = "")
-  String objectKeyPrefix;
-  @ConfigProperty(name = "debezium.sink.sparkbatch.bucket-name", defaultValue = "")
-  String bucket;
+  // @ConfigProperty(name = "debezium.sink.iceberg.bucket-name", defaultValue = "")
+  String bucket = S3_BUCKET;
 
   static {
     Testing.Files.delete(ConfigSource.OFFSET_STORE_PATH);
@@ -50,20 +47,37 @@ public class BaseSparkTest {
   static void setup() {
     Map<String, String> appSparkConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), SPARK_PROP_PREFIX);
     appSparkConf.forEach(BaseSparkTest.sparkconf::set);
-    BaseSparkTest.sparkconf.set("spark.ui.enabled", "false");
+    sparkconf
+        .set("spark.ui.enabled", "false")
+        .set("spark.eventLog.enabled", "false")
+        .set("spark.hadoop.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY)
+        .set("spark.hadoop.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY)
+        // minio specific setting using minio as S3
+        .set("spark.hadoop.fs.s3a.endpoint", "http://localhost:" + S3Minio.MINIO_MAPPED_PORT)
+        .set("spark.hadoop.fs.s3a.path.style.access", "true")
+        .set("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 
+        // enable iceberg SQL Extensions
+        .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
+        .set("spark.sql.catalog.spark_catalog.type", "hadoop")
+        .set("spark.sql.catalog.spark_catalog.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog")
+        .set("spark.sql.catalog.spark_catalog.warehouse", "s3a://" + S3_BUCKET + "/iceberg_warehouse")
+        .set("spark.sql.warehouse.dir", "s3a://" + S3_BUCKET + "/iceberg_warehouse")
+    ;
     BaseSparkTest.spark = SparkSession
         .builder()
         .config(BaseSparkTest.sparkconf)
         .getOrCreate();
+
+    BaseSparkTest.spark.sparkContext().getConf().toDebugString();
+
   }
 
+  // @TODO fix! read as iceberg table using catalog
   public Dataset<Row> getTableData(String table) {
-    return spark.read().option("mergeSchema", "true")
-        .parquet(bucket + "/" + objectKeyPrefix + table + "/*")
-        .withColumn("input_file", functions.input_file_name());
+    return spark.sql("SELECT * FROM default.debeziumcdc_" + table.replace(".", "_"));
   }
-
 
   public static void PGCreateTestDataTable() throws Exception {
     // create test table
@@ -99,7 +113,6 @@ public class BaseSparkTest {
     } while (numInsert <= numRows);
     return numInsert;
   }
-
 
   public static void mysqlCreateTestDataTable() throws Exception {
     // create test table
