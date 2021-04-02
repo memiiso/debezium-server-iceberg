@@ -44,24 +44,29 @@
         </dependency>
 
         <!-- Iceberg  -->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.iceberg</groupId>-->
+        <!--            <artifactId>iceberg-api</artifactId>-->
+        <!--            <version>${version.iceberg}</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.iceberg</groupId>-->
+        <!--            <artifactId>iceberg-core</artifactId>-->
+        <!--            <version>${version.iceberg}</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.iceberg</groupId>-->
+        <!--            <artifactId>iceberg-parquet</artifactId>-->
+        <!--            <version>${version.iceberg}</version>-->
+        <!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.iceberg</groupId>-->
+        <!--            <artifactId>iceberg-aws</artifactId>-->
+        <!--            <version>${version.iceberg}</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-api</artifactId>
-            <version>${version.iceberg}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-core</artifactId>
-            <version>${version.iceberg}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-parquet</artifactId>
-            <version>${version.iceberg}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-aws</artifactId>
+            <artifactId>iceberg-spark3-runtime</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
 
@@ -128,12 +133,12 @@
             <version>${version.spark}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark3-runtime</artifactId>
-            <version>0.11.0</version>
-            <scope>test</scope>
-        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.iceberg</groupId>-->
+        <!--            <artifactId>iceberg-spark3-runtime</artifactId>-->
+        <!--            <version>0.11.0</version>-->
+        <!--            <scope>test</scope>-->
+        <!--        </dependency>-->
 
         <dependency>
             <groupId>io.quarkus</groupId>

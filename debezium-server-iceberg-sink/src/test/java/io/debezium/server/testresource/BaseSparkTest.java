@@ -138,6 +138,7 @@ public class BaseSparkTest {
 
   // @TODO fix! read as iceberg table using catalog
   public Dataset<Row> getTableData(String table) {
+    spark.sql("CLEAR CACHE");
     return spark.sql("SELECT * FROM default.debeziumcdc_" + table.replace(".", "_"));
   }
 

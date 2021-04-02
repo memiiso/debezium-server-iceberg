@@ -122,6 +122,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     rec.setField("event_key", getString(record.key()));
     rec.setField("event_value", getString(record.value()));
     rec.setField("event_sink_epoch_ms", batchTime.toEpochMilli());
+    // @TODO bring back event date time filed, use it for second partition
     return rec;
   }
 
@@ -155,6 +156,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   private void commitBatch(String destination, ArrayList<Record> icebergRecords) throws InterruptedException {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     // NOTE! manually setting partition directory here to destination
+    // @TODO use iceberg to do that if possible!
     OutputFile out = eventTable.io().newOutputFile(eventTable.locationProvider().newDataLocation("event_destination=" + destination + "/" + fileName));
 
     FileAppender<Record> writer;
