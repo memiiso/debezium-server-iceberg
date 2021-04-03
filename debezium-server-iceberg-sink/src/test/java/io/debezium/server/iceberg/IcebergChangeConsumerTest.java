@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.types.Types;
@@ -74,7 +75,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   private org.apache.iceberg.Table getTable(String table) {
     HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(table.replace(".", "-")));
+    return catalog.loadTable(TableIdentifier.of(Namespace.of("default"), "debeziumcdc_" + table.replace(".", "_")));
   }
 
   @Test
