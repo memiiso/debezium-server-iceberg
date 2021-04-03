@@ -16,12 +16,14 @@ import io.debezium.server.BaseChangeConsumer;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
+import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -71,6 +73,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
+  @ConfigProperty(name = "debezium.sink.iceberg.dynamic-wait", defaultValue = "true")
+  boolean dynamicWaitEnabled;
+  @Inject
+  BatchDynamicWait dynamicWait;
 
   Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
@@ -128,6 +134,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @Override
   public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
       throws InterruptedException {
+    Instant start = Instant.now();
 
     Map<String, ArrayList<ChangeEvent<Object, Object>>> result = records.stream()
         .collect(Collectors.groupingBy(
@@ -152,6 +159,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       appendTable(icebergTable, toIcebergRecords(icebergTable.schema(), event.getValue()));
     }
     committer.markBatchFinished();
+
+    if (dynamicWaitEnabled) {
+      dynamicWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
+    }
 
   }
 
