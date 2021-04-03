@@ -16,6 +16,8 @@ import io.debezium.server.BaseChangeConsumer;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,7 @@ import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.util.DateTimeUtil;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -54,13 +57,17 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Dependent
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
-  // @TODO add event_destination to partition
   static final Schema TABLE_SCHEMA = new Schema(
       required(1, "event_destination", Types.StringType.get()),
       optional(2, "event_key", Types.StringType.get()),
       optional(3, "event_value", Types.StringType.get()),
-      optional(4, "event_sink_epoch_ms", Types.LongType.get()));
-  static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA).identity("event_destination").build();
+      optional(4, "event_sink_epoch_ms", Types.LongType.get()),
+      optional(5, "event_sink_timestamptz", Types.TimestampType.withZone())
+  );
+  static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA)
+      .identity("event_destination")
+      .hour("event_sink_timestamptz")
+      .build();
 
   @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
@@ -112,13 +119,13 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     eventTable = icebergCatalog.loadTable(tableIdentifier);
   }
 
-  public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, Instant batchTime) {
+  public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {
     GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
     rec.setField("event_destination", destination);
     rec.setField("event_key", getString(record.key()));
     rec.setField("event_value", getString(record.value()));
-    rec.setField("event_sink_epoch_ms", batchTime.toEpochMilli());
-    // @TODO bring back event date time filed, use it for second partition
+    rec.setField("event_sink_epoch_ms", batchTime.toEpochSecond());
+    rec.setField("event_sink_timestamptz", batchTime);
     return rec;
   }
 
@@ -129,7 +136,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @Override
   public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
       throws InterruptedException {
-    Instant batchTime = Instant.now();
+    OffsetDateTime batchTime = OffsetDateTime.now(ZoneOffset.UTC);
 
     Map<String, ArrayList<ChangeEvent<Object, Object>>> result = records.stream()
         .collect(Collectors.groupingBy(
@@ -143,17 +150,24 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
           .map(e -> getIcebergRecord(destEvents.getKey(), e, batchTime))
           .collect(Collectors.toCollection(ArrayList::new));
 
-      commitBatch(destEvents.getKey(), destIcebergRecords);
+      commitBatch(destEvents.getKey(), batchTime, destIcebergRecords);
     }
     // committer.markProcessed(record);
     committer.markBatchFinished();
   }
 
-  private void commitBatch(String destination, ArrayList<Record> icebergRecords) throws InterruptedException {
+  private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) throws InterruptedException {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
-    // NOTE! manually setting partition directory here to destination
-    // @TODO use iceberg to do that if possible!
-    OutputFile out = eventTable.io().newOutputFile(eventTable.locationProvider().newDataLocation("event_destination=" + destination + "/" + fileName));
+
+    PartitionKey pk = new PartitionKey(TABLE_PARTITION, TABLE_SCHEMA);
+    Record pr = GenericRecord.create(TABLE_SCHEMA)
+        .copy("event_destination",
+            destination, "event_sink_timestamptz",
+            DateTimeUtil.microsFromTimestamptz(batchTime));
+    pk.partition(pr);
+
+    OutputFile out =
+        eventTable.io().newOutputFile(eventTable.locationProvider().newDataLocation(pk.toPath() + "/" + fileName));
 
     FileAppender<Record> writer;
     try {
@@ -171,10 +185,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       LOGGER.error("Failed committing events to iceberg table!", e);
       throw new InterruptedException(e.getMessage());
     }
-
-    PartitionKey pk = new PartitionKey(TABLE_PARTITION, TABLE_SCHEMA);
-    Record pr = GenericRecord.create(TABLE_SCHEMA).copy("event_destination", destination);
-    pk.partition(pr);
 
     DataFile dataFile = DataFiles.builder(eventTable.spec())
         .withFormat(FileFormat.PARQUET)
