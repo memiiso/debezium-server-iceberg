@@ -15,6 +15,7 @@ import io.debezium.server.BaseChangeConsumer;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
+import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.hadoop.conf.Configuration;
@@ -85,10 +87,16 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
+  @ConfigProperty(name = "debezium.sink.iceberg.dynamic-wait", defaultValue = "true")
+  boolean dynamicWaitEnabled;
+  @Inject
+  BatchDynamicWait dynamicWait;
+
   private TableIdentifier tableIdentifier;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
+
 
   @PostConstruct
   void connect() throws InterruptedException {
@@ -136,6 +144,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @Override
   public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
       throws InterruptedException {
+    Instant start = Instant.now();
+
     OffsetDateTime batchTime = OffsetDateTime.now(ZoneOffset.UTC);
 
     Map<String, ArrayList<ChangeEvent<Object, Object>>> result = records.stream()
@@ -154,6 +164,10 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     }
     // committer.markProcessed(record);
     committer.markBatchFinished();
+
+    if (dynamicWaitEnabled) {
+      dynamicWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
+    }
   }
 
   private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) throws InterruptedException {
