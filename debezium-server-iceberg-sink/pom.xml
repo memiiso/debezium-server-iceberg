@@ -69,6 +69,16 @@
             <artifactId>iceberg-spark3-runtime</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>bundle</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
 
         <!-- needed for quarkus jboss logging -->
         <dependency>
