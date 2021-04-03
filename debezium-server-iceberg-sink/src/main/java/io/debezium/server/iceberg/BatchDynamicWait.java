@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
+ * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)
  *
  * @author Ismail Simsek
  */
