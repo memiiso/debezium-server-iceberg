@@ -53,6 +53,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   String tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
   String warehouseLocation;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
 
   {
     // Testing.Debug.enable();
@@ -75,7 +77,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   private org.apache.iceberg.Table getTable(String table) {
     HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(Namespace.of("default"), "debeziumcdc_" + table.replace(".", "_")));
+    return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
   }
 
   @Test
