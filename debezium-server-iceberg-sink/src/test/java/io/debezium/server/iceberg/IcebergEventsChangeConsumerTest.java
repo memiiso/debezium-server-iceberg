@@ -79,12 +79,10 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
     Assertions.assertEquals(sinkType, "icebergevents");
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        Thread.sleep(10000);
-        spark.sql("CLEAR CACHE");
-        Dataset<Row> ds = spark.sql("SELECT * FROM default.debezium_events");
+        Dataset<Row> ds = spark.newSession().sql("SELECT * FROM default.debezium_events");
         ds.show();
         return ds.count() >= 5
-            && spark.sql("SELECT distinct event_destination  FROM default.debezium_events").count() >= 2;
+            && ds.select("event_destination").distinct().count() >= 2;
       } catch (Exception e) {
         return false;
       }
@@ -94,7 +92,6 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @Test
   // @TODO bring back date time filed, use it for partitioning data
   public void testAppend() throws InterruptedException {
-    try {
 
       Schema TABLE_SCHEMA = new Schema(
           required(1, "event_destination", Types.StringType.get()),
@@ -160,15 +157,8 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
           .commit();
       LOGGER.info("Committed events to table! {}", eventTable.location());
 
-      Thread.sleep(3000);
-      Dataset<Row> ds = spark.sql("SELECT * FROM default.debezium_events_test");
+    Dataset<Row> ds = spark.newSession().sql("SELECT * FROM default.debezium_events_test");
       ds.show();
-
-    } catch (Exception e) {
-      //
-    }
-    Thread.sleep(10000);
-    spark.sql("SELECT * FROM default.debezium_events").show();
   }
 
 }

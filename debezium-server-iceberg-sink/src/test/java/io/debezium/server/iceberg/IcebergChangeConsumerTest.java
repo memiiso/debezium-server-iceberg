@@ -114,7 +114,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        Thread.sleep(10000);
         Dataset<Row> df = getTableData("testc.inventory.table_datatypes");
         df.show();
         return df.where("c_text is null AND c_varchar is null AND c_int is null " +
@@ -131,8 +130,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   public void testIcebergConsumer() throws Exception {
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        Thread.sleep(10000);
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        //ds.show();
         return ds.count() >= 4;
       } catch (Exception e) {
         return false;
@@ -155,6 +154,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show();
         return ds.where("first_name == 'George__UPDATE1'").count() == 3
             && ds.where("first_name == 'SallyUSer2'").count() == 1
             && ds.where("last_name is null").count() == 1
@@ -182,8 +182,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        Thread.sleep(10000);
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show();
         return ds.where("first_name == 'User3'").count() == 1
             && ds.where("test_varchar_column == 'test_varchar_value3'").count() == 1;
       } catch (Exception e) {
@@ -197,7 +197,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   public void testSimpleUpload() throws Exception {
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
-        Thread.sleep(10000);
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         ds.show();
         return ds.count() >= 3;
