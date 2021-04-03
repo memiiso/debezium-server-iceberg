@@ -54,14 +54,10 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Dependent
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
-  // @TODO add schema enabled flags! for key and value!
-  // @TODO add flattened flag SMT unwrap! as bolean?
-  // @TODO add event_destination and event_sink_epoch_ms to partition
+  // @TODO add event_destination to partition
   static final Schema TABLE_SCHEMA = new Schema(
       required(1, "event_destination", Types.StringType.get()),
       optional(2, "event_key", Types.StringType.get()),
-      // @TODO split to before after payload and source and schema
-      // @TODO change strategy based on unwrap flag
       optional(3, "event_value", Types.StringType.get()),
       optional(4, "event_sink_epoch_ms", Types.LongType.get()));
   static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA).identity("event_destination").build();
@@ -122,6 +118,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     rec.setField("event_key", getString(record.key()));
     rec.setField("event_value", getString(record.value()));
     rec.setField("event_sink_epoch_ms", batchTime.toEpochMilli());
+    // @TODO bring back event date time filed, use it for second partition
     return rec;
   }
 
@@ -155,6 +152,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   private void commitBatch(String destination, ArrayList<Record> icebergRecords) throws InterruptedException {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     // NOTE! manually setting partition directory here to destination
+    // @TODO use iceberg to do that if possible!
     OutputFile out = eventTable.io().newOutputFile(eventTable.locationProvider().newDataLocation("event_destination=" + destination + "/" + fileName));
 
     FileAppender<Record> writer;

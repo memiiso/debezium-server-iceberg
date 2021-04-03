@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.types.Types;
@@ -52,6 +53,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   String tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
   String warehouseLocation;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
 
   {
     // Testing.Debug.enable();
@@ -74,7 +77,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   private org.apache.iceberg.Table getTable(String table) {
     HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(table.replace(".", "-")));
+    return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
   }
 
   @Test
@@ -112,7 +115,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea" +
         ")";
     SourcePostgresqlDB.runSQL(sql);
-
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.table_datatypes");
@@ -132,6 +134,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        //ds.show();
         return ds.count() >= 4;
       } catch (Exception e) {
         return false;
@@ -151,9 +154,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET last_name = NULL  WHERE id = 1002 ;");
     SourcePostgresqlDB.runSQL("DELETE FROM inventory.customers WHERE id = 1004 ;");
 
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show();
         return ds.where("first_name == 'George__UPDATE1'").count() == 3
             && ds.where("first_name == 'SallyUSer2'").count() == 1
             && ds.where("last_name is null").count() == 1
@@ -179,9 +183,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
         "(default,'User3','lastname_value3','test_varchar_value3',true, '2020-01-01'::DATE);");
 
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show();
         return ds.where("first_name == 'User3'").count() == 1
             && ds.where("test_varchar_column == 'test_varchar_value3'").count() == 1;
       } catch (Exception e) {
@@ -193,12 +198,11 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() throws Exception {
-    // test that max batch size is respected! `debezium.source.max.batch.size`
     Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         ds.show();
-        return ds.count() > 4;
+        return ds.count() >= 3;
       } catch (Exception e) {
         return false;
       }

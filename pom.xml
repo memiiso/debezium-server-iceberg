@@ -45,44 +45,49 @@
             <!-- parquet -->
             <dependency>
                 <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-avro</artifactId>
+                <artifactId>parquet-hadoop-bundle</artifactId>
                 <version>1.11.1</version>
             </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-column</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-common</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-encoding</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-format</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-format-structures</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-hadoop</artifactId>
-                <version>1.11.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-jackson</artifactId>
-                <version>1.11.1</version>
-            </dependency>
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-avro</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-column</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-common</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-encoding</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-format</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-format-structures</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-hadoop</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>org.apache.parquet</groupId>-->
+            <!--                <artifactId>parquet-jackson</artifactId>-->
+            <!--                <version>1.11.1</version>-->
+            <!--            </dependency>-->
             <!-- quarkus -->
             <dependency>
                 <groupId>io.quarkus</groupId>

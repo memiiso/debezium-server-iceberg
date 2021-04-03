@@ -149,18 +149,22 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           continue;
         }
       }
-      // @TODO move to seperate method
-      ArrayList<Record> icebergRecords = new ArrayList<>();
-      for (ChangeEvent<Object, Object> e : event.getValue()) {
-        GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(icebergTable.schema(), valDeserializer.deserialize(e.destination(),
-            getBytes(e.value())));
-        icebergRecords.add(icebergRecord);
-        //committer.markProcessed(e); don't call events are shuffled!
-      }
-
-      appendTable(icebergTable, icebergRecords);
+      appendTable(icebergTable, toIcebergRecords(icebergTable.schema(), event.getValue()));
     }
     committer.markBatchFinished();
+
+  }
+
+  private ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+
+    ArrayList<Record> icebergRecords = new ArrayList<>();
+    for (ChangeEvent<Object, Object> e : events) {
+      GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
+          getBytes(e.value())));
+      icebergRecords.add(icebergRecord);
+    }
+    return icebergRecords;
+
   }
 
   private void appendTable(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
