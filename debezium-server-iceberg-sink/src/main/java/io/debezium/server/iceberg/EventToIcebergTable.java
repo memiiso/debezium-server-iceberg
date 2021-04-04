@@ -79,7 +79,8 @@ public class EventToIcebergTable {
         LOGGER.trace("@TODO waiting spec v2");
         // @TODO use as PK / row identifier
       }
-      LOGGER.warn("Creating table '{}'\nWith\nschema:{}\n rowIdentifier:{}", tableIdentifier, schemaTable, schemaTablePrimaryKey);
+      LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schemaTable,
+          schemaTablePrimaryKey);
       return tb.create();
     }
     return null;
