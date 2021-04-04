@@ -70,6 +70,9 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       .identity("event_destination")
       .hour("event_sink_timestamptz")
       .build();
+  static final SortOrder TABLE_SORT_ORDER = SortOrder.builderFor(TABLE_SCHEMA)
+      .asc("event_sink_epoch_ms", NullOrder.NULLS_LAST)
+      .build();
 
   @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
@@ -121,7 +124,11 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     // create table if not exists
     if (!icebergCatalog.tableExists(tableIdentifier)) {
-      icebergCatalog.createTable(tableIdentifier, TABLE_SCHEMA, TABLE_PARTITION);
+      icebergCatalog
+          .buildTable(tableIdentifier, TABLE_SCHEMA)
+          .withPartitionSpec(TABLE_PARTITION)
+          .withSortOrder(TABLE_SORT_ORDER)
+          .create();
     }
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
