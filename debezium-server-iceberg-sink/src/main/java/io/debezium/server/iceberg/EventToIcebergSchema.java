@@ -12,7 +12,6 @@ import java.io.IOException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.iceberg.Schema;
-import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -28,8 +27,8 @@ public class EventToIcebergSchema {
   protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergSchema.class);
 
   private final Schema schema;
-  private final SortOrder sortOrder;
-  private final String primaryKey;
+  // @TODO align name to iceberg standard!
+  private final String rowIdentifier;
 
   public EventToIcebergSchema(byte[] event) throws IOException {
     // @TODO move schema extraction logic here?!
@@ -43,21 +42,15 @@ public class EventToIcebergSchema {
       schema = null;
     }
     // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
-    sortOrder = null;
-    // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
-    primaryKey = null;
+    rowIdentifier = null;
   }
 
   public Schema getSchema() {
     return schema;
   }
 
-  public SortOrder getSortOrder() {
-    return sortOrder;
-  }
-
-  public String getPrimaryKey() {
-    return primaryKey;
+  public String getRowIdentifier() {
+    return rowIdentifier;
   }
 
   private Schema getIcebergSchema(JsonNode eventSchema) {
@@ -71,13 +64,11 @@ public class EventToIcebergSchema {
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schema);
-      if (this.sortOrder != null) {
-        tb.withSortOrder(sortOrder);
-      }
-      if (this.primaryKey != null) {
+      if (this.rowIdentifier != null) {
         LOGGER.trace("@TODO waiting spec v2");
+        // + use it as sort order! tb.withSortOrder(sortOrder);
       }
-      LOGGER.warn("Creating table '{}'\nWith\nschema:{}\nsortOrder:{}", tableIdentifier, schema, sortOrder);
+      LOGGER.warn("Creating table '{}'\nWith\nschema:{}\n rowIdentifier:{}", tableIdentifier, schema, rowIdentifier);
       return tb.create();
     }
     return null;
