@@ -26,14 +26,14 @@ import org.slf4j.LoggerFactory;
  *
  * @author Ismail Simsek
  */
-public class EventToIcebergSchema {
-  protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergSchema.class);
+public class EventToIcebergTable {
+  protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergTable.class);
 
   private final Schema schemaTable;
   // @TODO align name to iceberg standard!
   private final Schema schemaTablePrimaryKey;
 
-  public EventToIcebergSchema(byte[] eventKey, byte[] eventVal) throws IOException {
+  public EventToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
     schemaTable = extractSchema(eventVal);
     schemaTablePrimaryKey = extractSchema(eventKey);
   }
