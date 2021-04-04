@@ -38,6 +38,11 @@ public class EventToIcebergTable {
     schemaTablePrimaryKey = extractSchema(eventKey);
   }
 
+  public EventToIcebergTable(byte[] eventVal) throws IOException {
+    schemaTable = extractSchema(eventVal);
+    schemaTablePrimaryKey = null;
+  }
+
   private Schema extractSchema(byte[] eventVal) throws IOException {
 
     JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
@@ -70,12 +75,11 @@ public class EventToIcebergTable {
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schemaTable);
       if (this.schemaTablePrimaryKey != null) {
+        SortOrder.Builder sob = SortOrder.builderFor(schemaTable);
         for (Types.NestedField coll : schemaTablePrimaryKey.columns()) {
-          tb.withSortOrder(
-              SortOrder.builderFor(schemaTable)
-                  .asc(coll.name(), NullOrder.NULLS_FIRST)
-                  .build());
+          sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
         }
+        tb.withSortOrder(sob.build());
         LOGGER.trace("@TODO waiting spec v2");
         // @TODO use as PK / row identifier
       }

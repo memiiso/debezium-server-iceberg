@@ -108,12 +108,15 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
-    if (eventSchemaEnabled) {
+    if (eventSchemaEnabled && event.value() != null) {
       try {
-        EventToIcebergTable eventSchema = new EventToIcebergTable(getBytes(event.key()),getBytes(event.value()));
+        EventToIcebergTable eventSchema = event.key() == null
+            ? new EventToIcebergTable(getBytes(event.value()))
+            : new EventToIcebergTable(getBytes(event.key()), getBytes(event.value()));
+
         return eventSchema.create(icebergCatalog, tableIdentifier);
       } catch (Exception e) {
-        LOGGER.warn("Failed creating iceberg table!", e);
+        LOGGER.warn("Failed creating iceberg table! {}", e.getMessage());
       }
     }
     return null;
