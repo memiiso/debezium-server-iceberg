@@ -72,21 +72,24 @@ public class EventToIcebergTable {
   }
 
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
+
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schemaTable);
+
       if (this.schemaTableRowKeyIdentifier != null) {
         SortOrder.Builder sob = SortOrder.builderFor(schemaTable);
         for (Types.NestedField coll : schemaTableRowKeyIdentifier.columns()) {
           sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
         }
         tb.withSortOrder(sob.build());
-        // @TODO use as PK / RowKeyIdentifier
-        LOGGER.trace("@TODO waiting spec v2");
+        // "@TODO waiting spec v2 // use as PK / RowKeyIdentifier
       }
+
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schemaTable,
           schemaTableRowKeyIdentifier);
       return tb.create();
     }
+
     return null;
   }
 
