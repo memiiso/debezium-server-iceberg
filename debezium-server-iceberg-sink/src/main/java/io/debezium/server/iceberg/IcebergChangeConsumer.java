@@ -27,7 +27,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
@@ -109,24 +108,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
-
-    if (!eventSchemaEnabled) {
-      return null;
-    }
-
-    try {
-      // Table not exists, try to create it using the schema of an event
-      JsonNode jsonSchema = new ObjectMapper().readTree(getBytes(event.value()));
-
-      if (IcebergUtil.hasSchema(jsonSchema)) {
-        Schema schema = IcebergUtil.getIcebergSchema(jsonSchema.get("schema"));
-        LOGGER.warn("Creating table '{}'\nWith schema:\n{}", tableIdentifier, schema.toString());
-        // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
-        // @TODO use schema of key event to create primary key definition! for upsert
-        return icebergCatalog.createTable(tableIdentifier, schema);
+    if (eventSchemaEnabled) {
+      try {
+        EventToIcebergSchema eventSchema = new EventToIcebergSchema(getBytes(event.value()));
+        return eventSchema.create(icebergCatalog, tableIdentifier);
+      } catch (Exception e) {
+        LOGGER.warn("Failed creating iceberg table!", e);
       }
-
-    } catch (Exception ignored) {
     }
     return null;
   }
