@@ -63,6 +63,7 @@ public class ConfigSource extends TestConfigSource {
     s3Test.put("quarkus.log.category.\"org.apache.hadoop\".level", "ERROR");
     s3Test.put("quarkus.log.category.\"org.apache.parquet\".level", "WARN");
     s3Test.put("quarkus.log.category.\"org.eclipse.jetty\".level", "WARN");
+    s3Test.put("quarkus.log.category.\"org.apache.iceberg\".level", "ERROR");
 
     config = s3Test;
   }
