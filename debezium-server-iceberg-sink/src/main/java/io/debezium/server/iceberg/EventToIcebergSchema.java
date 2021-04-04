@@ -11,10 +11,13 @@ package io.debezium.server.iceberg;
 import java.io.IOException;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.iceberg.NullOrder;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,31 +29,33 @@ import org.slf4j.LoggerFactory;
 public class EventToIcebergSchema {
   protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergSchema.class);
 
-  private final Schema schema;
+  private final Schema schemaTable;
   // @TODO align name to iceberg standard!
-  private final String rowIdentifier;
+  private final Schema schemaTablePrimaryKey;
 
-  public EventToIcebergSchema(byte[] event) throws IOException {
-    // @TODO move schema extraction logic here?!
-    // todo fix the logic of schema node checking - if
-    JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(event);
-    if (jsonEvent.has("schema")) {
-      schema = IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
-      LOGGER.debug("Extracted Iceberg schema: {}", schema);
-    } else {
-      LOGGER.trace("Event schema not found in the given event:!");
-      schema = null;
+  public EventToIcebergSchema(byte[] eventKey, byte[] eventVal) throws IOException {
+    schemaTable = extractSchema(eventVal);
+    schemaTablePrimaryKey = extractSchema(eventKey);
+  }
+
+  private Schema extractSchema(byte[] eventVal) throws IOException {
+
+    JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
+
+    if (IcebergUtil.hasSchema(jsonEvent)) {
+      return IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
     }
-    // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
-    rowIdentifier = null;
+
+    LOGGER.trace("Event schema not found in the given data:!");
+    return null;
   }
 
-  public Schema getSchema() {
-    return schema;
+  public Schema getSchemaTable() {
+    return schemaTable;
   }
 
-  public String getRowIdentifier() {
-    return rowIdentifier;
+  public Schema getSchemaTablePrimaryKey() {
+    return schemaTablePrimaryKey;
   }
 
   private Schema getIcebergSchema(JsonNode eventSchema) {
@@ -58,17 +63,23 @@ public class EventToIcebergSchema {
   }
 
   public boolean hasSchema() {
-    return schema != null;
+    return schemaTable != null;
   }
 
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
     if (this.hasSchema()) {
-      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schema);
-      if (this.rowIdentifier != null) {
+      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schemaTable);
+      if (this.schemaTablePrimaryKey != null) {
+        for (Types.NestedField coll : schemaTablePrimaryKey.columns()) {
+          tb.withSortOrder(
+              SortOrder.builderFor(schemaTable)
+                  .asc(coll.name(), NullOrder.NULLS_FIRST)
+                  .build());
+        }
         LOGGER.trace("@TODO waiting spec v2");
-        // + use it as sort order! tb.withSortOrder(sortOrder);
+        // @TODO use as PK / row identifier
       }
-      LOGGER.warn("Creating table '{}'\nWith\nschema:{}\n rowIdentifier:{}", tableIdentifier, schema, rowIdentifier);
+      LOGGER.warn("Creating table '{}'\nWith\nschema:{}\n rowIdentifier:{}", tableIdentifier, schemaTable, schemaTablePrimaryKey);
       return tb.create();
     }
     return null;
