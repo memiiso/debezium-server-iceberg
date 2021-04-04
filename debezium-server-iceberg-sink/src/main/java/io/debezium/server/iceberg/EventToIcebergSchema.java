@@ -32,9 +32,17 @@ public class EventToIcebergSchema {
   private final String primaryKey;
 
   public EventToIcebergSchema(byte[] event) throws IOException {
-    // @TODO move the logic here?!
-    schema = IcebergUtil.getIcebergSchema(IcebergUtil.jsonObjectMapper.readTree(event));
+    // @TODO move schema extraction logic here?!
+    // todo fix the logic of schema node checking - if
+    JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(event);
+    if (jsonEvent.has("schemas")) {
+      schema = IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
+    } else {
+      schema = null;
+    }
+    // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
     sortOrder = null;
+    // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
     primaryKey = null;
   }
 
@@ -61,8 +69,6 @@ public class EventToIcebergSchema {
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schema);
-      // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
-      // @TODO use schema of key event to create primary key definition! for upsert
       if (this.sortOrder != null) {
         tb.withSortOrder(sortOrder);
       }
