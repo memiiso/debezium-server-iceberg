@@ -35,9 +35,11 @@ public class EventToIcebergSchema {
     // @TODO move schema extraction logic here?!
     // todo fix the logic of schema node checking - if
     JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(event);
-    if (jsonEvent.has("schemas")) {
+    if (jsonEvent.has("schema")) {
       schema = IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
+      LOGGER.debug("Extracted Iceberg schema: {}", schema);
     } else {
+      LOGGER.trace("Event schema not found in the given event:!");
       schema = null;
     }
     // @TODO extract PK from schema and create iceberg RowIdentifier, and sort order
