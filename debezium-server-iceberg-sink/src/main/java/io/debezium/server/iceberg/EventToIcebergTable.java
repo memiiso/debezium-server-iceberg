@@ -30,17 +30,17 @@ public class EventToIcebergTable {
   protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergTable.class);
 
   private final Schema schemaTable;
-  // @TODO align name to iceberg standard!
-  private final Schema schemaTablePrimaryKey;
+  private final Schema schemaTableRowKeyIdentifier;
 
+  // @TODO add test with composite primary key!
   public EventToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
     schemaTable = extractSchema(eventVal);
-    schemaTablePrimaryKey = extractSchema(eventKey);
+    schemaTableRowKeyIdentifier = extractSchema(eventKey);
   }
 
   public EventToIcebergTable(byte[] eventVal) throws IOException {
     schemaTable = extractSchema(eventVal);
-    schemaTablePrimaryKey = null;
+    schemaTableRowKeyIdentifier = null;
   }
 
   private Schema extractSchema(byte[] eventVal) throws IOException {
@@ -59,8 +59,8 @@ public class EventToIcebergTable {
     return schemaTable;
   }
 
-  public Schema getSchemaTablePrimaryKey() {
-    return schemaTablePrimaryKey;
+  public Schema getSchemaTableRowKeyIdentifier() {
+    return schemaTableRowKeyIdentifier;
   }
 
   private Schema getIcebergSchema(JsonNode eventSchema) {
@@ -74,17 +74,17 @@ public class EventToIcebergTable {
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schemaTable);
-      if (this.schemaTablePrimaryKey != null) {
+      if (this.schemaTableRowKeyIdentifier != null) {
         SortOrder.Builder sob = SortOrder.builderFor(schemaTable);
-        for (Types.NestedField coll : schemaTablePrimaryKey.columns()) {
+        for (Types.NestedField coll : schemaTableRowKeyIdentifier.columns()) {
           sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
         }
         tb.withSortOrder(sob.build());
+        // @TODO use as PK / RowKeyIdentifier
         LOGGER.trace("@TODO waiting spec v2");
-        // @TODO use as PK / row identifier
       }
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schemaTable,
-          schemaTablePrimaryKey);
+          schemaTableRowKeyIdentifier);
       return tb.create();
     }
     return null;
