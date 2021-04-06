@@ -282,7 +282,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         .withPath(out.location())
         .withFileSizeInBytes(deleteWriter.length())
         //.withMetrics(deleteWriter.metrics()) //
-        //.withRecordCount(deleteWriter.count) // ??
+        //.withRecordCount(3) // ?? throws Exception! and its mandatory field!
         //.withSortOrder(icebergTable.sortOrder())
         .build();
   }

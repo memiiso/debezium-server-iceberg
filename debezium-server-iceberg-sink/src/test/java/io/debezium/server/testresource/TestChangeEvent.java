@@ -11,18 +11,16 @@ package io.debezium.server.testresource;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.RecordChangeEvent;
 
-import org.apache.kafka.connect.source.SourceRecord;
-
 public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEvent<V> {
 
   private final K key;
   private final V value;
-  private final SourceRecord sourceRecord;
+  private final String destination;
 
-  public TestChangeEvent(K key, V value, SourceRecord sourceRecord) {
+  public TestChangeEvent(K key, V value, String destination) {
     this.key = key;
     this.value = value;
-    this.sourceRecord = sourceRecord;
+    this.destination = destination;
   }
 
   @Override
@@ -42,15 +40,11 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   @Override
   public String destination() {
-    return sourceRecord.topic();
-  }
-
-  public SourceRecord sourceRecord() {
-    return sourceRecord;
+    return destination;
   }
 
   @Override
   public String toString() {
-    return "EmbeddedEngineChangeEvent [key=" + key + ", value=" + value + ", sourceRecord=" + sourceRecord + "]";
+    return "EmbeddedEngineChangeEvent [key=" + key + ", value=" + value + ", sourceRecord=" + destination + "]";
   }
 }
