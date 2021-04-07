@@ -180,13 +180,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   private ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
-    ArrayList<Record> icebergRecords = new ArrayList<>();
     ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
 
     for (ChangeEvent<Object, Object> e : events) {
       GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
           getBytes(e.value())));
-      icebergRecords.add(icebergRecord);
 
       // only replace it if its newer
       if (icebergRecordsmap.containsKey(e.key())) {
@@ -200,15 +198,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       }
 
     }
-    //return icebergRecords;
     return new ArrayList<>(icebergRecordsmap.values());
   }
 
-  // dedup
-  // @TODO add test table without PK {insert update delete}  ins del up on same record
-  // @TODO add test table with PK {insert update delete}
-  // @TODO add test table with PK {insert update delete} keep deletes = true
-  // @TODO make column and the value configurable
   private void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
 
     if (!upsertData || icebergTable.sortOrder().isUnsorted()) {

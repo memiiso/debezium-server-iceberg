@@ -38,6 +38,12 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
   @Inject
   IcebergChangeConsumer consumer;
 
+
+  // dedup
+  // @TODO add test table without PK {insert update delete}  ins del up on same record
+  // @TODO add test table with PK {insert update delete}
+  // @TODO add test table with PK {insert update delete} keep deletes = true
+  // @TODO make column and the value configurable
   @Test
   public void testSimpleUpsert() throws Exception {
 
