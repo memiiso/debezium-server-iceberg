@@ -149,7 +149,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(getCustomerRecordNoKey(1, "c", "user2", 1L));
     records.add(getCustomerRecordNoKey(1, "u", "user1", 2L));
     consumer.handleBatch(records, TestUtil.getCommitter());
-    Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_compositekey");
+    Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();
     Assertions.assertEquals(ds.count(), 3);
     Assertions.assertEquals(ds.where("id = 1").count(), 3);
@@ -159,7 +159,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(getCustomerRecordNoKey(1, "u", "user2", 1L));
     records.add(getCustomerRecordNoKey(1, "r", "user1", 3L));
     consumer.handleBatch(records, TestUtil.getCommitter());
-    ds = getTableData("testc.inventory.customers_upsert_compositekey");
+    ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();
     Assertions.assertEquals(ds.count(), 6);
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'c' AND first_name= 'user2'").count(), 2);
@@ -217,7 +217,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
         ".com\"," +
         "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
         "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
-    return new TestChangeEvent<>(null, val, "testc.inventory.customers_upsert_compositekey");
+    return new TestChangeEvent<>(null, val, "testc.inventory.customers_upsert_nokey");
   }
 
   private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation) {
