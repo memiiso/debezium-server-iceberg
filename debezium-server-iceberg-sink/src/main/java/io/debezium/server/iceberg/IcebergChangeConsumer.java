@@ -83,6 +83,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
   boolean upsertDataKeepDeletes;
 
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
+  String opColumn;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-source-ts-ms-column", defaultValue = "__source_ts_ms")
+  String sourceTsMsColumn;
+
   @Inject
   BatchDynamicWait dynamicWait;
   static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
@@ -168,14 +173,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   public int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
-    if (lhs.getField("__source_ts_ms").equals(rhs.getField("__source_ts_ms"))) {
+    if (lhs.getField(sourceTsMsColumn).equals(rhs.getField(sourceTsMsColumn))) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
       return Integer.compare(
-          cdcOperations.getOrDefault(lhs.getField("__op"), -1),
-          cdcOperations.getOrDefault(rhs.getField("__op"), -1)
+          cdcOperations.getOrDefault(lhs.getField(opColumn), -1),
+          cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
       );
     } else {
-      return Long.compare((Long) lhs.getField("__source_ts_ms"), (Long) rhs.getField("__source_ts_ms"));
+      return Long.compare((Long) lhs.getField(sourceTsMsColumn), (Long) rhs.getField(sourceTsMsColumn));
     }
   }
 
@@ -221,21 +226,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (upsertData && icebergTable.sortOrder().isUnsorted()) {
         LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
       }
-      // @TODO dont dedup
+
       ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
       DataFile dataFile = getDataFile(icebergTable, icebergRecords);
-      LOGGER.error("Committing new file as Append '{}' !", dataFile.path());
+      LOGGER.debug("Committing new file as Append '{}' !", dataFile.path());
       icebergTable.newAppend()
           .appendFile(dataFile)
           .commit();
 
     } else {
       // DO UPSERT >>> DELETE + INSERT
-      // @TODO do dedup
       ArrayList<Record> icebergRecords = toDeduppedIcebergRecords(icebergTable.schema(), events);
       DataFile dataFile = getDataFile(icebergTable, icebergRecords);
       DeleteFile deleteDataFile = getDeleteDataFile(icebergTable, icebergRecords);
-      LOGGER.error("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
+      LOGGER.debug("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
       RowDelta c = icebergTable
           .newRowDelta()
           .addRows(dataFile);
@@ -273,9 +277,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     List<Record> deleteRows = icebergRecords.stream()
         .filter(r ->
                 // anything is not an insert.
-                !r.getField("__op").equals("c")
+                !r.getField(opColumn).equals("c")
             // upsertDataKeepDeletes = false and its deleted record, which means delete deletes
-            // || !(upsertDataKeepDeletes && r.getField("__op").equals("d"))
+            // || !(upsertDataKeepDeletes && r.getField(opColumn).equals("d"))
         ).collect(Collectors.toList());
 
     if (deleteRows.size() == 0) {
@@ -352,7 +356,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
                 // if its upsert and upsertKeepDeletes = true
                 || upsertDataKeepDeletes
                 // if nothing above then exclude deletes
-                || !(r.getField("__op").equals("d")))
+                || !(r.getField(opColumn).equals("d")))
         .collect(Collectors.toList());
     try {
       LOGGER.debug("Writing data to file: {}!", out);

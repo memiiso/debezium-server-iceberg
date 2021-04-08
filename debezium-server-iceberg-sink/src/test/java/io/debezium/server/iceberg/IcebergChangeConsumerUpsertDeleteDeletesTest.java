@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(S3Minio.class)
 @QuarkusTestResource(SourcePostgresqlDB.class)
-@TestProfile(IcebergChangeConsumerUpsertTestProfile.class)
-public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
+public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
   @Inject
   IcebergChangeConsumer consumer;
@@ -41,7 +41,6 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
   @Test
   public void testSimpleUpsert() throws Exception {
 
-    // test simple inserts
     List<ChangeEvent<Object, Object>> records = new ArrayList<>();
     records.add(getCustomerRecord(1, "c"));
     records.add(getCustomerRecord(2, "c"));
@@ -62,9 +61,9 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.count(), 4);
+    Assertions.assertEquals(ds.count(), 3);
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'r'").count(), 1);
-    Assertions.assertEquals(ds.where("id = 2 AND __op= 'd'").count(), 1);
+    Assertions.assertEquals(ds.where("id = 2").count(), 0);
     Assertions.assertEquals(ds.where("id = 3 AND __op= 'u'").count(), 1);
     Assertions.assertEquals(ds.where("id = 3 AND first_name= 'UpdatednameV1'").count(), 1);
     Assertions.assertEquals(ds.where("id = 4 AND __op= 'c'").count(), 1);
@@ -76,8 +75,8 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(getCustomerRecord(3, "u", "UpdatednameV4", 3L));
     records.add(getCustomerRecord(4, "u", "Updatedname-4-V1", 4L));
     records.add(getCustomerRecord(4, "u", "Updatedname-4-V2", 5L));
-    records.add(getCustomerRecord(4, "r", "Updatedname-4-V3", 6L));
-    records.add(getCustomerRecord(5, "r", 7L));
+    records.add(getCustomerRecord(4, "d", "Updatedname-4-V3", 6L));
+    records.add(getCustomerRecord(5, "d", 7L));
     records.add(getCustomerRecord(6, "r", 8L));
     records.add(getCustomerRecord(6, "r", 9L));
     records.add(getCustomerRecord(6, "u", 10L));
@@ -85,10 +84,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.count(), 6);
+    Assertions.assertEquals(ds.count(), 3);
     Assertions.assertEquals(ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
-    Assertions.assertEquals(ds.where("id = 4 AND __op= 'r' AND first_name= 'Updatedname-4-V3'").count(), 1);
-    Assertions.assertEquals(ds.where("id = 5 AND __op= 'r' ").count(), 1);
+    Assertions.assertEquals(ds.where("id = 4 ").count(), 0);
+    Assertions.assertEquals(ds.where("id = 5 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
 
     // in case of duplicate records including epoch ts, its should keep latest one based on operation priority
@@ -101,13 +100,13 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.where("id = 3 AND __op= 'd' AND first_name= 'UpdatednameV5'").count(), 1);
+    Assertions.assertEquals(ds.where("id = 3 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 6 AND __op= 'r' AND first_name= 'Updatedname-6-V3'").count(), 1);
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
     records.add(getCustomerRecord(7, "u", 1L));
-    records.add(getCustomerRecord(7, "u", 2L));
+    records.add(getCustomerRecord(7, "d", 2L));
     records.add(getCustomerRecord(7, "r", 3L));
     records.add(getCustomerRecord(7, "u", "Updatedname-7-V1", 4L));
     consumer.handleBatch(records, TestUtil.getCommitter());
@@ -133,36 +132,15 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     Assertions.assertEquals(ds.where("id = 1").count(), 2);
 
     records.clear();
-    records.add(getCustomerRecordCompositeKey(1, "u", "user2", 1L));
+    records.add(getCustomerRecordCompositeKey(1, "u", "user1", 2L));
+    records.add(getCustomerRecordCompositeKey(1, "r", "user1", 3L));
+    records.add(getCustomerRecordCompositeKey(1, "d", "user1", 3L));
+    records.add(getCustomerRecordCompositeKey(1, "d", "user2", 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
-    Assertions.assertEquals(ds.count(), 2);
-    Assertions.assertEquals(ds.where("id = 1 AND __op= 'u' AND first_name= 'user2'").count(), 1);
-  }
-
-  @Test
-  public void testSimpleUpsertNoKey() throws Exception {
-    // when there is no PK it should fall back to append mode
-    List<ChangeEvent<Object, Object>> records = new ArrayList<>();
-    records.add(getCustomerRecordNoKey(1, "c", "user1", 1L));
-    records.add(getCustomerRecordNoKey(1, "c", "user2", 1L));
-    records.add(getCustomerRecordNoKey(1, "u", "user1", 2L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
-    Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_compositekey");
-    ds.show();
-    Assertions.assertEquals(ds.count(), 3);
-    Assertions.assertEquals(ds.where("id = 1").count(), 3);
-
-    records.clear();
-    records.add(getCustomerRecordNoKey(1, "c", "user2", 1L));
-    records.add(getCustomerRecordNoKey(1, "u", "user2", 1L));
-    records.add(getCustomerRecordNoKey(1, "r", "user1", 3L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
-    ds = getTableData("testc.inventory.customers_upsert_compositekey");
-    ds.show();
-    Assertions.assertEquals(ds.count(), 6);
-    Assertions.assertEquals(ds.where("id = 1 AND __op= 'c' AND first_name= 'user2'").count(), 2);
+    Assertions.assertEquals(ds.count(), 0);
+    Assertions.assertEquals(ds.where("first_name= 'user2'").count(), 0);
   }
 
   private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, String name, Long epoch) {
@@ -202,22 +180,6 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
         "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
         "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
     return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert_compositekey");
-  }
-
-  private TestChangeEvent<Object, Object> getCustomerRecordNoKey(Integer id, String operation, String name,
-                                                                 Long epoch) {
-
-    String val = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
-        "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
-        "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
-        "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
-        ".com\"," +
-        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
-        "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
-    return new TestChangeEvent<>(null, val, "testc.inventory.customers_upsert_compositekey");
   }
 
   private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation) {

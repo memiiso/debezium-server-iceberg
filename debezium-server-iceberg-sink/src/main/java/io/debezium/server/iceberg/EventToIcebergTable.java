@@ -29,7 +29,6 @@ public class EventToIcebergTable {
   private final Schema schemaTable;
   private final Schema schemaTableRowKeyIdentifier;
 
-  // @TODO add test with composite primary key!
   public EventToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
     schemaTable = extractSchema(eventVal);
     schemaTableRowKeyIdentifier = extractSchema(eventKey);
