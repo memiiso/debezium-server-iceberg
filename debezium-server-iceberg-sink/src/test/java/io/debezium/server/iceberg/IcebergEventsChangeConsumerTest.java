@@ -40,7 +40,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @Test
   public void testIcebergEvents() throws Exception {
     Assertions.assertEquals(sinkType, "icebergevents");
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = spark.newSession().sql("SELECT * FROM default.debezium_events");
         ds.show();
