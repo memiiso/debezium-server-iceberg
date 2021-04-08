@@ -179,7 +179,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
   }
 
+
   private ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+
+    ArrayList<Record> icebergRecords = new ArrayList<>();
+    for (ChangeEvent<Object, Object> e : events) {
+      GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
+          getBytes(e.value())));
+      icebergRecords.add(icebergRecord);
+    }
+
+    return icebergRecords;
+  }
+
+  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
     ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
 
     for (ChangeEvent<Object, Object> e : events) {
@@ -219,7 +232,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     } else {
       // DO UPSERT >>> DELETE + INSERT
       // @TODO do dedup
-      ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
+      ArrayList<Record> icebergRecords = toDeduppedIcebergRecords(icebergTable.schema(), events);
       DataFile dataFile = getDataFile(icebergTable, icebergRecords);
       DeleteFile deleteDataFile = getDeleteDataFile(icebergTable, icebergRecords);
       LOGGER.error("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
