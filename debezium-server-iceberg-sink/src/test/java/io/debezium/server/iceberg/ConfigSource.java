@@ -25,6 +25,8 @@ public class ConfigSource extends TestConfigSource {
   public ConfigSource() {
     // common sink conf
     s3Test.put("debezium.sink.type", "iceberg");
+    s3Test.put("debezium.sink.iceberg.upsert", "false");
+    s3Test.put("debezium.sink.iceberg.upsert-keep-deletes", "true");
 
     // ==== configure batch behaviour/size ====
     // Positive integer value that specifies the maximum size of each batch of events that should be processed during

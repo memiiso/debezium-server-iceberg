@@ -11,10 +11,7 @@ package io.debezium.server.iceberg;
 import java.io.IOException;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.iceberg.NullOrder;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.SortOrder;
-import org.apache.iceberg.Table;
+import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.types.Types;
@@ -32,7 +29,6 @@ public class EventToIcebergTable {
   private final Schema schemaTable;
   private final Schema schemaTableRowKeyIdentifier;
 
-  // @TODO add test with composite primary key!
   public EventToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
     schemaTable = extractSchema(eventVal);
     schemaTableRowKeyIdentifier = extractSchema(eventKey);
@@ -87,10 +83,21 @@ public class EventToIcebergTable {
 
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schemaTable,
           schemaTableRowKeyIdentifier);
-      return tb.create();
+      Table table = tb.create();
+      // @TODO remove once spec v2 released
+      return upgradeToFormatVersion2(table);
     }
 
     return null;
+  }
+
+  // @TODO remove once spec v2 released! upgrading table to V2
+  public Table upgradeToFormatVersion2(Table icebergTable) {
+    TableOperations ops = ((BaseTable) icebergTable).operations();
+    TableMetadata meta = ops.current();
+    ops.commit(ops.current(), meta.upgradeToFormatVersion(2));
+    icebergTable.refresh();
+    return icebergTable;
   }
 
 }

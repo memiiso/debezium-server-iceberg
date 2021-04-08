@@ -115,7 +115,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea" +
         ")";
     SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.table_datatypes");
         df.show();
@@ -131,7 +131,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testIcebergConsumer() throws Exception {
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         //ds.show();
@@ -198,7 +198,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() throws Exception {
-    Awaitility.await().atMost(Duration.ofSeconds(ConfigSource.waitForSeconds())).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         ds.show();

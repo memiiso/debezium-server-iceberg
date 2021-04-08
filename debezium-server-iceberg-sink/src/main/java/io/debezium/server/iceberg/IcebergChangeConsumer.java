@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
@@ -35,9 +36,11 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
+import org.apache.iceberg.deletes.EqualityDeleteWriter;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.util.ArrayUtil;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -74,8 +77,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String catalogName;
   @ConfigProperty(name = "debezium.sink.iceberg.dynamic-wait", defaultValue = "true")
   boolean dynamicWaitEnabled;
+
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
+  boolean upsertData;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
+  boolean upsertDataKeepDeletes;
+
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
+  String opColumn;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-source-ts-ms-column", defaultValue = "__source_ts_ms")
+  String sourceTsMsColumn;
+
   @Inject
   BatchDynamicWait dynamicWait;
+  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
 
   Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
@@ -147,7 +162,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           continue;
         }
       }
-      appendTable(icebergTable, toIcebergRecords(icebergTable.schema(), event.getValue()));
+      addToTable(icebergTable, event.getValue());
     }
     committer.markBatchFinished();
 
@@ -157,6 +172,19 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   }
 
+  public int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
+    if (lhs.getField(sourceTsMsColumn).equals(rhs.getField(sourceTsMsColumn))) {
+      // return (x < y) ? -1 : ((x == y) ? 0 : 1);
+      return Integer.compare(
+          cdcOperations.getOrDefault(lhs.getField(opColumn), -1),
+          cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
+      );
+    } else {
+      return Long.compare((Long) lhs.getField(sourceTsMsColumn), (Long) rhs.getField(sourceTsMsColumn));
+    }
+  }
+
+
   private ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
 
     ArrayList<Record> icebergRecords = new ArrayList<>();
@@ -165,19 +193,160 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           getBytes(e.value())));
       icebergRecords.add(icebergRecord);
     }
+
     return icebergRecords;
+  }
+
+  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+    ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
+
+    for (ChangeEvent<Object, Object> e : events) {
+      GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
+          getBytes(e.value())));
+
+      // only replace it if its newer
+      if (icebergRecordsmap.containsKey(e.key())) {
+
+        if (this.compareByTsThenOp(icebergRecordsmap.get(e.key()), icebergRecord) <= 0) {
+          icebergRecordsmap.put(e.key(), icebergRecord);
+        }
+
+      } else {
+        icebergRecordsmap.put(e.key(), icebergRecord);
+      }
+
+    }
+    return new ArrayList<>(icebergRecordsmap.values());
+  }
+
+  private void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+
+    if (!upsertData || icebergTable.sortOrder().isUnsorted()) {
+
+      if (upsertData && icebergTable.sortOrder().isUnsorted()) {
+        LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
+      }
+
+      ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
+      DataFile dataFile = getDataFile(icebergTable, icebergRecords);
+      LOGGER.debug("Committing new file as Append '{}' !", dataFile.path());
+      icebergTable.newAppend()
+          .appendFile(dataFile)
+          .commit();
+
+    } else {
+      // DO UPSERT >>> DELETE + INSERT
+      ArrayList<Record> icebergRecords = toDeduppedIcebergRecords(icebergTable.schema(), events);
+      DataFile dataFile = getDataFile(icebergTable, icebergRecords);
+      DeleteFile deleteDataFile = getDeleteDataFile(icebergTable, icebergRecords);
+      LOGGER.debug("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
+      RowDelta c = icebergTable
+          .newRowDelta()
+          .addRows(dataFile);
+
+      if (deleteDataFile != null) {
+        c.addDeletes(deleteDataFile)
+            .validateDeletedFiles();
+      }
+
+      c.commit();
+    }
+    LOGGER.info("Committed events to table! {}", icebergTable.location());
 
   }
 
-  private void appendTable(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
+  private List<Integer> getEqualityFieldIds(Table icebergTable) {
+    List<Integer> fieldIds = new ArrayList<>();
+
+    for (SortField f : icebergTable.sortOrder().fields()) {
+      fieldIds.add(f.sourceId());
+    }
+    return fieldIds;
+  }
+
+  private DeleteFile getDeleteDataFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
+
+    final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
+    OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
+    List<Integer> equalityDeleteFieldIds = getEqualityFieldIds(icebergTable);
+
+    EqualityDeleteWriter<Record> deleteWriter;
+
+    // anything is not an insert.
+    // upsertDataKeepDeletes = false, which means delete deletes
+    List<Record> deleteRows = icebergRecords.stream()
+        .filter(r ->
+                // anything is not an insert.
+                !r.getField(opColumn).equals("c")
+            // upsertDataKeepDeletes = false and its deleted record, which means delete deletes
+            // || !(upsertDataKeepDeletes && r.getField(opColumn).equals("d"))
+        ).collect(Collectors.toList());
+
+    if (deleteRows.size() == 0) {
+      return null;
+    }
+
+    try {
+      LOGGER.debug("Writing data to equality delete file: {}!", out);
+
+      deleteWriter = Parquet.writeDeletes(out)
+          .createWriterFunc(GenericParquetWriter::buildWriter)
+          .overwrite()
+          .rowSchema(icebergTable.sortOrder().schema())
+          .withSpec(icebergTable.spec())
+          .equalityFieldIds(equalityDeleteFieldIds)
+          //.withKeyMetadata() // ??
+          .metricsConfig(MetricsConfig.fromProperties(icebergTable.properties()))
+          // .withPartition() // ??
+          // @TODO add sort order v12 ??
+          .setAll(icebergTable.properties())
+          .buildEqualityWriter()
+      ;
+
+      try (Closeable toClose = deleteWriter) {
+        deleteWriter.deleteAll(deleteRows);
+      }
+
+    } catch (IOException e) {
+      throw new InterruptedException(e.getMessage());
+    }
+
+    LOGGER.debug("Creating iceberg equality delete file!");
+    // Equality delete files identify deleted rows in a collection of data files by one or more column values,
+    // and may optionally contain additional columns of the deleted row.
+    return FileMetadata.deleteFileBuilder(icebergTable.spec())
+        .ofEqualityDeletes(ArrayUtil.toIntArray(equalityDeleteFieldIds))
+        .withFormat(FileFormat.PARQUET)
+        .withPath(out.location())
+        .withFileSizeInBytes(deleteWriter.length())
+        //.withMetrics(deleteWriter.metrics()) //
+        .withRecordCount(deleteRows.size()) // its mandatory field! replace when with iceberg V 0.12
+        //.withSortOrder(icebergTable.sortOrder())
+        .build();
+  }
+
+  private DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
 
     FileAppender<Record> writer;
+    // if its append OR upsert with keep deletes then add all the records to data file
+    // if table has no PK - which means fall back to append
+    // if its upsert and upsertKeepDeletes = true
+    // if nothing above then exclude deletes
+    List<Record> newRecords = icebergRecords.stream()
+        .filter(r ->
+            // if its append OR upsert with keep deletes then add all the records to data file
+            !upsertData
+                // if table has no PK - which means fall back to append
+                || icebergTable.sortOrder().isUnsorted()
+                // if its upsert and upsertKeepDeletes = true
+                || upsertDataKeepDeletes
+                // if nothing above then exclude deletes
+                || !(r.getField(opColumn).equals("d")))
+        .collect(Collectors.toList());
     try {
-      LOGGER.info("Writing data to file: {}!", out);
-      //BaseEqualityDeltaWriter.write
-      //BaseEqualityDeltaWriter.deleteKey
+      LOGGER.debug("Writing data to file: {}!", out);
       writer = Parquet.write(out)
           .createWriterFunc(GenericParquetWriter::buildWriter)
           .forTable(icebergTable)
@@ -185,26 +354,21 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           .build();
 
       try (Closeable toClose = writer) {
-        writer.addAll(icebergRecords);
+        writer.addAll(newRecords);
       }
+
     } catch (IOException e) {
       throw new InterruptedException(e.getMessage());
     }
 
-    LOGGER.info("Creating iceberg DataFile!");
-    DataFile dataFile = DataFiles.builder(icebergTable.spec())
+    LOGGER.debug("Creating iceberg DataFile!");
+    return DataFiles.builder(icebergTable.spec())
         .withFormat(FileFormat.PARQUET)
         .withPath(out.location())
         .withFileSizeInBytes(writer.length())
         .withSplitOffsets(writer.splitOffsets())
         .withMetrics(writer.metrics())
         .build();
-
-    LOGGER.debug("Committing new file as newAppend '{}' !", dataFile.path());
-    icebergTable.newAppend()
-        .appendFile(dataFile)
-        .commit();
-    LOGGER.info("Committed events to table! {}", icebergTable.location());
   }
 
 }
