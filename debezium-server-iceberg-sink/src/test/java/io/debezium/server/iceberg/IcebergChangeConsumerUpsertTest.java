@@ -41,7 +41,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   // dedup
   // @TODO add test table without PK {insert update delete}  ins del up on same record
-  // @TODO add test table with PK {insert update delete}
+  // @TODO add test table with PK {insert update delete} delete deletes!
   // @TODO add test table with PK {insert update delete} keep deletes = true
   // @TODO make column and the value configurable
   @Test
@@ -76,27 +76,17 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     records.clear();
     // incase of duplicate records should only keep the latest
-    records.add(getCustomerRecord(3, "r", "UpdatednameV2"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(3, "u", "UpdatednameV3"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(3, "u", "UpdatednameV4"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(4, "u", "Updatedname-4-V1"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(4, "u", "Updatedname-4-V2"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(4, "r", "Updatedname-4-V3"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(5, "r"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(6, "r"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(6, "r"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(6, "u"));
-    Thread.sleep(10);
-    records.add(getCustomerRecord(6, "u", "Updatedname-6-V1"));
+    records.add(getCustomerRecord(3, "r", "UpdatednameV2", 1L));
+    records.add(getCustomerRecord(3, "u", "UpdatednameV3", 2L));
+    records.add(getCustomerRecord(3, "u", "UpdatednameV4", 3L));
+    records.add(getCustomerRecord(4, "u", "Updatedname-4-V1", 4L));
+    records.add(getCustomerRecord(4, "u", "Updatedname-4-V2", 5L));
+    records.add(getCustomerRecord(4, "r", "Updatedname-4-V3", 6L));
+    records.add(getCustomerRecord(5, "r", 7L));
+    records.add(getCustomerRecord(6, "r", 8L));
+    records.add(getCustomerRecord(6, "r", 9L));
+    records.add(getCustomerRecord(6, "u", 10L));
+    records.add(getCustomerRecord(6, "u", "Updatedname-6-V1", 11L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -109,10 +99,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     // in case of duplicate records including ts, its should keep based on operation priority
     // ("c", 1, "r", 2, "u", 3, "d", 4);
     records.clear();
-    records.add(getCustomerRecord(3, "d", "UpdatednameV5"));
-    records.add(getCustomerRecord(3, "u", "UpdatednameV6"));
-    records.add(getCustomerRecord(6, "c", "Updatedname-6-V2"));
-    records.add(getCustomerRecord(6, "r", "Updatedname-6-V3"));
+    records.add(getCustomerRecord(3, "d", "UpdatednameV5", 1L));
+    records.add(getCustomerRecord(3, "u", "UpdatednameV6", 1L));
+    records.add(getCustomerRecord(6, "c", "Updatedname-6-V2", 1L));
+    records.add(getCustomerRecord(6, "r", "Updatedname-6-V3", 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -121,7 +111,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   }
 
-  private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, String name) {
+  private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, String name, Long epoch) {
     String key = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false," + "\"field\":\"id\"}]," +
         "\"optional\":false,\"name\":\"testc.inventory.customers.Key\"}," +
         "\"payload\":{\"id\":" + id + "}}";
@@ -133,13 +123,22 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
         "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
         "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
         ".com\"," +
-        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + Instant.now().toEpochMilli() + "," +
+        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
         "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
     return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert");
   }
 
   private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation) {
-    return this.getCustomerRecord(id, operation, TestUtil.randomString(12));
+    return this.getCustomerRecord(id, operation, TestUtil.randomString(12), Instant.now().toEpochMilli());
+  }
+
+
+  private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, String name) {
+    return this.getCustomerRecord(id, operation, name, Instant.now().toEpochMilli());
+  }
+
+  private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, Long epoch) {
+    return this.getCustomerRecord(id, operation, TestUtil.randomString(12), epoch);
   }
 
 }
