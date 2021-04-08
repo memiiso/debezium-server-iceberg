@@ -289,19 +289,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     try {
       LOGGER.debug("Writing data to equality delete file: {}!", out);
 
-//      GenericAppenderFactory gaf = new GenericAppenderFactory(
-//          icebergTable.sortOrder().schema(), // FileAppender, data file appender schema! not used/relevant
-//          icebergTable.spec(), // PartitionSpec
-//          ArrayUtil.toIntArray(equalityDeleteFieldIds), // int[] equalityFieldIds,
-//          icebergTable.schema(), // Schema eqDeleteRowSchema
-//          null // Schema posDeleteRowSchema
-//      );
-//      gaf.newEqDeleteWriter(
-//          out,// EncryptedOutputFile file,
-//          FileFormat.PARQUET,// FileFormat format,
-//          icebergTable.sortOrder() // StructLike partition ???
-//      );
-
       deleteWriter = Parquet.writeDeletes(out)
           .createWriterFunc(GenericParquetWriter::buildWriter)
           .overwrite()
