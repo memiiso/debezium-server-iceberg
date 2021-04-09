@@ -5,12 +5,13 @@
 -----
 This project adds iceberg batch consumers
 to [debezium server](https://debezium.io/documentation/reference/operations/debezium-server.html). it could be used to
-replicate database data to iceberg table, without requiring Spark, Kafka or Streaming platform.
+replicate database changes to iceberg table, without requiring Spark, Kafka or Streaming platform.
 
 ## `iceberg` Consumer
 
 Appends json events to destination iceberg tables. Destination tables are created automatically if event and key schemas
-are enabled `debezium.format.value.schemas.enable=true`, `debezium.format.key.schemas.enable=true`
+enabled `debezium.format.value.schemas.enable=true`, `debezium.format.key.schemas.enable=true`
+when destination table is not exists Consumer will print a warning message and continue replication of other tables
 
 ### Upsert
 
@@ -19,15 +20,26 @@ do upsert, for the tables without Primary Key it falls back to append mode
 
 Setting `debezium.sink.iceberg.upsert=false` will change insert mode to append.
 
+#### Data Deduplication
+
+when iceberg consumer is doing upsert it does data deduplication for the batch, deduplication is done based
+on `__source_ts_ms` field and event type `__op`
+its is possible to change field using `debezium.sink.iceberg.upsert-source-ts-ms-column=__source_ts_ms`, Currently only
+Long field type supported
+
+operation type priorities are `{"c":1, "r":2, "u":3, "d":4}` when two record with same Key having same `__source_ts_ms`
+values then the record with higher `__op` priority is kept
+
 #### Keeping Deleted Records
 
 By default `debezium.sink.iceberg.upsert-keep-deletes=true` will keep deletes in the iceberg table, setting it to false
-will remove deleted records from the destination/iceberg table
+will remove deleted records from the iceberg table too. with this feature its possible to keep last version of the
+deleted record.
 
 ### Iceberg Table Names
 
-iceberg table names are created bt following rule : `table-namespace`
-.`table-prefix` `database.server.name`_`database`_`table`
+iceberg table names are created by following rule : `table-namespace`
+.`table-prefix``database.server.name`_`database`_`table`
 
 For example
 
