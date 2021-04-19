@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master ]
 
+env:
+  SPARK_LOCAL_IP: 127.0.0.1
+
 jobs:
   build:
     name: Main
