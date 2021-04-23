@@ -22,13 +22,13 @@ jobs:
           echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Build project
-        run: mvn -B package -Passembly --file pom.xml -Drevision=latest
+        run: mvn -B package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_BRANCH }}-latest
 
-      - name: Delete latest release
+      - name: Delete ${{ env.RELEASE_BRANCH }}-latest release
         uses: dev-drprasad/delete-tag-and-release@v0.1.3
         with:
           delete_release: true # default: false
-          tag_name: latest
+          tag_name: ${{ env.RELEASE_BRANCH }}-latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,9 +38,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: latest
-          tag_name: latest
-          body: release of master branch
+          name: Release ${{ env.RELEASE_BRANCH }}-latest
+          tag_name: ${{ env.RELEASE_BRANCH }}-latest
+          body: Release ${{ env.RELEASE_BRANCH }}-latest
           draft: false
           prerelease: false
-          files: debezium-server-dist/target/debezium-server-dist-latest.zip
+          files: debezium-server-dist/target/debezium-server-dist-${{ env.RELEASE_BRANCH }}-latest.zip
