@@ -36,7 +36,14 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
   public static final Integer MYSQL_PORT_DEFAULT = 3306;
   private static final Logger LOGGER = LoggerFactory.getLogger(SourceMysqlDB.class);
 
-  private static GenericContainer<?> container;
+  static private GenericContainer<?> container;
+
+  @Override
+  public void stop() {
+    if (container != null) {
+      container.stop();
+    }
+  }
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
@@ -49,17 +56,6 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
     } catch (Exception e) {
       LOGGER.error(query);
       throw e;
-    }
-  }
-
-  public static Integer getMappedPort() {
-    return container.getMappedPort(MYSQL_PORT_DEFAULT);
-  }
-
-  @Override
-  public void stop() {
-    if (container != null) {
-      container.stop();
     }
   }
 
@@ -81,5 +77,10 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
     params.put("%mysql.debezium.source.database.dbname", MYSQL_DATABASE);
     return params;
   }
+
+  public static Integer getMappedPort() {
+    return container.getMappedPort(MYSQL_PORT_DEFAULT);
+  }
+
 
 }
