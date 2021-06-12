@@ -52,7 +52,7 @@ public class ConfigSource extends TestConfigSource {
     // debezium unwrap message
     s3Test.put("debezium.transforms", "unwrap");
     s3Test.put("debezium.transforms.unwrap.type", "io.debezium.transforms.ExtractNewRecordState");
-    s3Test.put("debezium.transforms.unwrap.add.fields", "op,table,lsn,source.ts_ms,db");
+    s3Test.put("debezium.transforms.unwrap.add.fields", "op,table,source.ts_ms,db");
     s3Test.put("debezium.transforms.unwrap.delete.handling.mode", "rewrite");
 
     // DEBEZIUM SOURCE conf
