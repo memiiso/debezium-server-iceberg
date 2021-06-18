@@ -11,13 +11,33 @@ debezium.source.database.dbname=postgres
 debezium.source.database.server.name=tutorial
 debezium.source.schema.include.list=inventory
 
-# @TODO add defaults!!
-debezium.sink.iceberg.fs.defaultFS=xyz
-debezium.sink.batch.objectkey.mapper=xyz
-debezium.format.schemas.enable=xyz
-debezium.sink.batch.batchwriter=xyz
-debezium.sink.iceberg.warehouse=xyz
-debezium.transforms=xyz
+# configure batch behaviour/size
+debezium.source.max.batch.size=2048
+debezium.source.poll.interval.ms=10000 # 5 seconds!
 
+# enable schemas
+debezium.format.value.schemas.enable=true
+debezium.format.key.schemas.enable=true
 
-# @TODO add multiple example!!
+# debezium unwrap message
+debezium.transforms=unwrap
+debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
+debezium.transforms.unwrap.add.fields=op,table,lsn,source.ts_ms,db
+debezium.transforms.unwrap.delete.handling.mode=rewrite
+
+# iceberg settings
+debezium.sink.iceberg.upsert=false
+debezium.sink.iceberg.upsert-keep-deletes=true
+debezium.sink.iceberg.table-prefix=debeziumcdc_
+debezium.sink.iceberg.fs.defaultFS=s3a://S3_BUCKET
+debezium.sink.iceberg.warehouse=s3a://S3_BUCKET/iceberg_warehouse
+debezium.sink.iceberg.type=hadoop
+debezium.sink.iceberg.catalog-impl=org.apache.iceberg.hadoop.HadoopCatalog
+
+# set logging levels
+quarkus.log.level=INFO
+quarkus.log.category."io.debezium.server.iceberg".level=DEBUG
+quarkus.log.category."org.apache.hadoop".level=ERROR
+quarkus.log.category."org.apache.parquet".level=WARN
+quarkus.log.category."org.eclipse.jetty".level=WARN
+quarkus.log.category."org.apache.iceberg".level=ERROR

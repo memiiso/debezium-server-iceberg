@@ -125,9 +125,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
     if (eventSchemaEnabled && event.value() != null) {
       try {
-        EventToIcebergTable eventSchema = event.key() == null
-            ? new EventToIcebergTable(getBytes(event.value()))
-            : new EventToIcebergTable(getBytes(event.key()), getBytes(event.value()));
+        DebeziumToIcebergTable eventSchema = event.key() == null
+            ? new DebeziumToIcebergTable(getBytes(event.value()))
+            : new DebeziumToIcebergTable(getBytes(event.key()), getBytes(event.value()));
 
         return eventSchema.create(icebergCatalog, tableIdentifier);
       } catch (Exception e) {
@@ -163,6 +163,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         }
       }
       addToTable(icebergTable, event.getValue());
+    }
+    // workaround! somehow offset is not saved to file unless we call committer.markProcessed
+    // even its should be saved to file periodically
+    for (ChangeEvent<Object, Object> record : records) {
+      LOGGER.trace("Processed event '{}'", record);
+      committer.markProcessed(record);
     }
     committer.markBatchFinished();
 

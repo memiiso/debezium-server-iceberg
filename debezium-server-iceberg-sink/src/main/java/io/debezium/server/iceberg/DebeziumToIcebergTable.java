@@ -23,20 +23,20 @@ import org.slf4j.LoggerFactory;
  *
  * @author Ismail Simsek
  */
-public class EventToIcebergTable {
-  protected static final Logger LOGGER = LoggerFactory.getLogger(EventToIcebergTable.class);
+public class DebeziumToIcebergTable {
+  protected static final Logger LOGGER = LoggerFactory.getLogger(DebeziumToIcebergTable.class);
 
-  private final Schema schemaTable;
-  private final Schema schemaTableRowKeyIdentifier;
+  private final Schema tableSchema;
+  private final Schema tableRowIdentifierSchema;
 
-  public EventToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
-    schemaTable = extractSchema(eventVal);
-    schemaTableRowKeyIdentifier = extractSchema(eventKey);
+  public DebeziumToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
+    tableSchema = extractSchema(eventVal);
+    tableRowIdentifierSchema = extractSchema(eventKey);
   }
 
-  public EventToIcebergTable(byte[] eventVal) throws IOException {
-    schemaTable = extractSchema(eventVal);
-    schemaTableRowKeyIdentifier = null;
+  public DebeziumToIcebergTable(byte[] eventVal) throws IOException {
+    tableSchema = extractSchema(eventVal);
+    tableRowIdentifierSchema = null;
   }
 
   private Schema extractSchema(byte[] eventVal) throws IOException {
@@ -51,12 +51,12 @@ public class EventToIcebergTable {
     return null;
   }
 
-  public Schema getSchemaTable() {
-    return schemaTable;
+  public Schema getTableSchema() {
+    return tableSchema;
   }
 
-  public Schema getSchemaTableRowKeyIdentifier() {
-    return schemaTableRowKeyIdentifier;
+  public Schema getTableRowIdentifierSchema() {
+    return tableRowIdentifierSchema;
   }
 
   private Schema getIcebergSchema(JsonNode eventSchema) {
@@ -64,25 +64,25 @@ public class EventToIcebergTable {
   }
 
   public boolean hasSchema() {
-    return schemaTable != null;
+    return tableSchema != null;
   }
 
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
 
     if (this.hasSchema()) {
-      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.schemaTable);
+      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.tableSchema);
 
-      if (this.schemaTableRowKeyIdentifier != null) {
-        SortOrder.Builder sob = SortOrder.builderFor(schemaTable);
-        for (Types.NestedField coll : schemaTableRowKeyIdentifier.columns()) {
+      if (this.tableRowIdentifierSchema != null) {
+        SortOrder.Builder sob = SortOrder.builderFor(tableSchema);
+        for (Types.NestedField coll : tableRowIdentifierSchema.columns()) {
           sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
         }
         tb.withSortOrder(sob.build());
         // "@TODO waiting spec v2 // use as PK / RowKeyIdentifier
       }
 
-      LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schemaTable,
-          schemaTableRowKeyIdentifier);
+      LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, tableSchema,
+          tableRowIdentifierSchema);
       Table table = tb.create();
       // @TODO remove once spec v2 released
       return upgradeToFormatVersion2(table);

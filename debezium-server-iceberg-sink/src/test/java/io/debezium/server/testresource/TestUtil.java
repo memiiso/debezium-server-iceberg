@@ -45,6 +45,16 @@ public class TestUtil {
       public synchronized void markBatchFinished() throws InterruptedException {
         return;
       }
+
+      @Override
+      public void markProcessed(Object record, DebeziumEngine.Offsets sourceOffsets) throws InterruptedException {
+        return;
+      }
+
+      @Override
+      public DebeziumEngine.Offsets buildOffsets() {
+        return null;
+      }
     };
   }
 

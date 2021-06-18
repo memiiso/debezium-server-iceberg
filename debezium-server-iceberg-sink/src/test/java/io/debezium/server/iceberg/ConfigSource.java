@@ -9,7 +9,9 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.TestConfigSource;
+import io.debezium.util.Testing;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,8 +23,10 @@ public class ConfigSource extends TestConfigSource {
   public static final String S3_BUCKET = "test-bucket";
 
   final Map<String, String> s3Test = new HashMap<>();
+  public static final Path HISTORY_FILE = Testing.Files.createTestingPath("dbhistory.txt").toAbsolutePath();
 
   public ConfigSource() {
+    s3Test.put("quarkus.profile", "postgresql");
     // common sink conf
     s3Test.put("debezium.sink.type", "iceberg");
     s3Test.put("debezium.sink.iceberg.upsert", "false");
@@ -48,15 +52,16 @@ public class ConfigSource extends TestConfigSource {
     // debezium unwrap message
     s3Test.put("debezium.transforms", "unwrap");
     s3Test.put("debezium.transforms.unwrap.type", "io.debezium.transforms.ExtractNewRecordState");
-    s3Test.put("debezium.transforms.unwrap.add.fields", "op,table,lsn,source.ts_ms");
-    s3Test.put("debezium.transforms.unwrap.add.headers", "db");
+    s3Test.put("debezium.transforms.unwrap.add.fields", "op,table,source.ts_ms,db");
     s3Test.put("debezium.transforms.unwrap.delete.handling.mode", "rewrite");
 
     // DEBEZIUM SOURCE conf
     s3Test.put("debezium.source." + StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, OFFSET_STORE_PATH.toAbsolutePath().toString());
+    s3Test.put("debezium.source.database.history", "io.debezium.relational.history.FileDatabaseHistory");
+    s3Test.put("debezium.source.database.history.file.filename", HISTORY_FILE.toAbsolutePath().toString());
     s3Test.put("debezium.source.offset.flush.interval.ms", "60000");
     s3Test.put("debezium.source.database.server.name", "testc");
-    s3Test.put("debezium.source.schema.whitelist", "inventory");
+    s3Test.put("%postgresql.debezium.source.schema.whitelist", "inventory");
     s3Test.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
         "inventory.geom,inventory.table_datatypes,inventory.test_date_table");
 
