@@ -112,6 +112,7 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-aws</artifactId>
             <version>${version.hadoop}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Testing -->
