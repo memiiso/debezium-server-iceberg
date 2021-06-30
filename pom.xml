@@ -37,9 +37,9 @@
         <version.awssdk>2.16.34</version.awssdk>
         <version.parquet>1.11.1</version.parquet>
         <!-- Debezium -->
-        <version.debezium>1.5.2.Final</version.debezium>
+        <version.debezium>1.6.0.Final</version.debezium>
         <!-- Quarkus -->
-        <version.quarkus>1.13.7.Final</version.quarkus>
+        <version.quarkus>2.0.0.Final</version.quarkus>
     </properties>
 
     <dependencyManagement>
@@ -63,47 +63,6 @@
                 <artifactId>parquet-hadoop-bundle</artifactId>
                 <version>${version.parquet}</version>
             </dependency>
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-avro</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-column</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-common</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-encoding</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-format</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-format-structures</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-hadoop</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!--            <dependency>-->
-            <!--                <groupId>org.apache.parquet</groupId>-->
-            <!--                <artifactId>parquet-jackson</artifactId>-->
-            <!--                <version>1.11.1</version>-->
-            <!--            </dependency>-->
-            <!-- quarkus -->
             <dependency>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-bom</artifactId>
