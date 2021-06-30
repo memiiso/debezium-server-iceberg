@@ -44,26 +44,6 @@
         </dependency>
 
         <!-- Iceberg  -->
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.iceberg</groupId>-->
-        <!--            <artifactId>iceberg-api</artifactId>-->
-        <!--            <version>${version.iceberg}</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.iceberg</groupId>-->
-        <!--            <artifactId>iceberg-core</artifactId>-->
-        <!--            <version>${version.iceberg}</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.iceberg</groupId>-->
-        <!--            <artifactId>iceberg-parquet</artifactId>-->
-        <!--            <version>${version.iceberg}</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.iceberg</groupId>-->
-        <!--            <artifactId>iceberg-aws</artifactId>-->
-        <!--            <version>${version.iceberg}</version>-->
-        <!--        </dependency>-->
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-spark3-runtime</artifactId>
@@ -71,9 +51,30 @@
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
-            <artifactId>bundle</artifactId>
+            <artifactId>glue</artifactId>
             <version>${version.awssdk}</version>
         </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kms</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${version.awssdk}</version>
+        </dependency>
+
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>url-connection-client</artifactId>
@@ -112,6 +113,7 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-aws</artifactId>
             <version>${version.hadoop}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Testing -->
@@ -143,12 +145,6 @@
             <version>${version.spark}</version>
             <scope>test</scope>
         </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>org.apache.iceberg</groupId>-->
-        <!--            <artifactId>iceberg-spark3-runtime</artifactId>-->
-        <!--            <version>0.11.0</version>-->
-        <!--            <scope>test</scope>-->
-        <!--        </dependency>-->
 
         <dependency>
             <groupId>io.quarkus</groupId>
