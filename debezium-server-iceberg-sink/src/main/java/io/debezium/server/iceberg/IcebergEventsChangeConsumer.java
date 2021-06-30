@@ -95,7 +95,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @Inject
   BatchDynamicWait dynamicWait;
 
-  private TableIdentifier tableIdentifier;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
@@ -110,7 +109,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    tableIdentifier = TableIdentifier.of(Namespace.of(namespace), "debezium_events");
+    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), "debezium_events");
 
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
