@@ -12,6 +12,7 @@ import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 import io.debezium.server.BaseChangeConsumer;
+import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -90,10 +91,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
-  @ConfigProperty(name = "debezium.sink.iceberg.dynamic-wait", defaultValue = "true")
-  boolean dynamicWaitEnabled;
   @Inject
-  BatchDynamicWait dynamicWait;
+  InterfaceBatchSizeWait batchSizeWait;
 
   private TableIdentifier tableIdentifier;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
@@ -132,6 +131,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     }
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
+    batchSizeWait.initizalize();
   }
 
   public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {
@@ -172,9 +172,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     // committer.markProcessed(record);
     committer.markBatchFinished();
 
-    if (dynamicWaitEnabled) {
-      dynamicWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
-    }
+    batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
+
   }
 
   private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) throws InterruptedException {

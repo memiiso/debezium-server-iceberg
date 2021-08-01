@@ -194,6 +194,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       }
     });
 
+    S3Minio.listFiles();
+
   }
 
   @Test

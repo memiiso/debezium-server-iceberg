@@ -6,15 +6,17 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.batchsizewait;
 
 import java.util.IntSummaryStatistics;
 import java.util.LinkedList;
 import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Alternative;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.debezium.config.CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE;
 
 /**
  * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)
@@ -22,19 +24,20 @@ import org.slf4j.LoggerFactory;
  * @author Ismail Simsek
  */
 @Dependent
-public class BatchDynamicWait {
-  protected static final Logger LOGGER = LoggerFactory.getLogger(BatchDynamicWait.class);
+@Alternative
+public class DynamicBatchSizeWait implements InterfaceBatchSizeWait {
+  protected static final Logger LOGGER = LoggerFactory.getLogger(DynamicBatchSizeWait.class);
 
-  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "2048")
+  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = DEFAULT_MAX_BATCH_SIZE + "")
   Integer maxBatchSize;
 
-  @ConfigProperty(name = "debezium.sink.batch.dynamic-wait.max-wait-ms", defaultValue = "300000")
+  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait.max-wait-ms", defaultValue = "300000")
   Integer maxWaitMs;
 
   LinkedList<Integer> batchSizeHistory = new LinkedList<Integer>();
   LinkedList<Integer> sleepMsHistory = new LinkedList<Integer>();
 
-  public BatchDynamicWait() {
+  public DynamicBatchSizeWait() {
     batchSizeHistory.add(1);
     batchSizeHistory.add(1);
     batchSizeHistory.add(1);
@@ -77,19 +80,17 @@ public class BatchDynamicWait {
     sleepMsHistory.add(Math.min(Math.max(sleepMs, 100), maxWaitMs));
     sleepMsHistory.removeFirst();
 
-    LOGGER.debug("Calculating Wait delay\nmax.batch.size={}\npoll.interval.ms={}\nbatchSizeHistory{}\nsleepMsHistory" +
-            "{}\nval{}",
-        maxBatchSize,
-        maxWaitMs,
-        batchSizeHistory, sleepMsHistory, sleepMsHistory.getLast());
+    LOGGER.debug("Calculating Wait delay\n" +
+            "max.batch.size={}\npoll.interval.ms={}\nbatchSizeHistory{}\nsleepMsHistory{}\nval{}",
+        maxBatchSize, maxWaitMs, batchSizeHistory, sleepMsHistory, sleepMsHistory.getLast());
 
     return sleepMsHistory.getLast();
   }
 
-  public void waitMs(Integer numRecords, Integer processingTimeMs) throws InterruptedException {
-    int sleepMs = Math.max(getWaitMs(numRecords) - processingTimeMs, 0);
+  public void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException {
+    int sleepMs = Math.max(getWaitMs(numRecordsProcessed) - processingTimeMs, 0);
     if (sleepMs > 2000) {
-      LOGGER.info("Waiting {} ms", sleepMs);
+      LOGGER.debug("Waiting {} ms", sleepMs);
       Thread.sleep(sleepMs);
     }
   }

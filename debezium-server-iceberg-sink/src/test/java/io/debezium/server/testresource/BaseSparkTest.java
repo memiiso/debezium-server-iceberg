@@ -87,11 +87,18 @@ public class BaseSparkTest {
   }
 
   public static int PGLoadTestDataTable(int numRows) throws Exception {
+    return PGLoadTestDataTable(numRows, false);
+  }
+
+  public static int PGLoadTestDataTable(int numRows, boolean addRandomDelay) throws Exception {
     int numInsert = 0;
     do {
 
       new Thread(() -> {
         try {
+          if (addRandomDelay) {
+            Thread.sleep(randomInt(20000, 100000));
+          }
           String sql = "INSERT INTO inventory.test_date_table (c_id, c_text, c_varchar ) " +
               "VALUES ";
           StringBuilder values = new StringBuilder("\n(" + randomInt(15, 32) + ", '" + randomString(524) + "', '" + randomString(524) + "')");
