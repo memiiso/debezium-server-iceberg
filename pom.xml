@@ -28,12 +28,11 @@
         <skipITs>true</skipITs>
 
         <version.groovy>3.0.7</version.groovy>
-        <version.debezium>1.5.0.Final</version.debezium>
         <version.assembly.plugin>3.1.1</version.assembly.plugin>
         <version.jackson>2.12.2</version.jackson>
         <version.iceberg>0.11.1</version.iceberg>
-        <version.spark>3.0.2</version.spark>
-        <version.hadoop>3.3.0</version.hadoop>
+        <version.spark>3.0.3</version.spark>
+        <version.hadoop>3.3.1</version.hadoop>
         <version.awssdk>2.16.88</version.awssdk>
         <version.parquet>1.11.1</version.parquet>
         <!-- Debezium -->
