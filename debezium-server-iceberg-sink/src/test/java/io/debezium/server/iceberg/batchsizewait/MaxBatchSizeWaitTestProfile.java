@@ -28,7 +28,7 @@ public class MaxBatchSizeWaitTestProfile implements QuarkusTestProfile {
     //config.put("debezium.source.poll.interval.ms", "1000");
     config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "5000");
     config.put("debezium.sink.batch.batch-size-wait.wait-interval-ms", "1000");
-    config.put("quarkus.log.category.\"io.debezium.server.batch.batchsizewait\".level", "DEBUG");
+    config.put("quarkus.log.category.\"io.debezium.server.iceberg.batchsizewait\".level", "DEBUG");
     return config;
   }
 }
