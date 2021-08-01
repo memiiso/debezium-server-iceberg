@@ -255,7 +255,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
       c.commit();
     }
-    LOGGER.info("Committed events to table! {}", icebergTable.location());
+    LOGGER.info("Committed {} events to table! {}", events.size(),icebergTable.location());
 
   }
 

@@ -219,7 +219,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     eventTable.newAppend()
         .appendFile(dataFile)
         .commit();
-    LOGGER.info("Committed events to table! {}", eventTable.location());
+    LOGGER.info("Committed {} events to table! {}", icebergRecords.size(), eventTable.location());
   }
 
 }
