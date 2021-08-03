@@ -11,7 +11,7 @@ package io.debezium.server.iceberg.batchsizewait;
 import java.util.IntSummaryStatistics;
 import java.util.LinkedList;
 import javax.enterprise.context.Dependent;
-import javax.enterprise.inject.Alternative;
+import javax.inject.Named;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import static io.debezium.config.CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE;
  * @author Ismail Simsek
  */
 @Dependent
-@Alternative
+@Named("DynamicBatchSizeWait")
 public class DynamicBatchSizeWait implements InterfaceBatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(DynamicBatchSizeWait.class);
 

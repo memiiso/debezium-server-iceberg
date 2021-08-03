@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class DynamicBatchSizeWaitTest {
 
   @Inject
-  InterfaceBatchSizeWait waitBatchSize;
+  DynamicBatchSizeWait waitBatchSize;
 
   @ConfigProperty(name = "debezium.source.poll.interval.ms", defaultValue = "1000")
   Integer pollIntervalMs;

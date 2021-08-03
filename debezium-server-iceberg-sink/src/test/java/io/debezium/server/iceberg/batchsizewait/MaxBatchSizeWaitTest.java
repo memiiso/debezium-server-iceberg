@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 @TestProfile(MaxBatchSizeWaitTestProfile.class)
 class MaxBatchSizeWaitTest extends BaseSparkTest {
   @Inject
-  InterfaceBatchSizeWait waitBatchSize;
+  MaxBatchSizeWait waitBatchSize;
   @ConfigProperty(name = "debezium.source.poll.interval.ms", defaultValue = "1000")
   Integer pollIntervalMs;
   @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "1000")

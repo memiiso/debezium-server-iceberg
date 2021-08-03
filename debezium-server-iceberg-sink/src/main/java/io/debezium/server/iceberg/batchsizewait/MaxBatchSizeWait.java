@@ -13,8 +13,8 @@ import io.debezium.config.CommonConnectorConfig;
 import io.debezium.server.iceberg.DebeziumMetrics;
 
 import javax.enterprise.context.Dependent;
-import javax.enterprise.inject.Alternative;
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * @author Ismail Simsek
  */
 @Dependent
-@Alternative
+@Named("MaxBatchSizeWait")
 public class MaxBatchSizeWait implements InterfaceBatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MaxBatchSizeWait.class);
 

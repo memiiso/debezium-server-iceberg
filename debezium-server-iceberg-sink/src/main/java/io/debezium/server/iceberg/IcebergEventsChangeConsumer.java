@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
@@ -28,6 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.literal.NamedLiteral;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -91,7 +95,12 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
+  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
+  String batchSizeWaitName;
+
   @Inject
+  @Any
+  Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
 
   private TableIdentifier tableIdentifier;
@@ -131,7 +140,16 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     }
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
+
+    Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
+    if (instance.isAmbiguous()) {
+      throw new DebeziumException("Multiple batch size wait class named '" + batchSizeWaitName + "' were found");
+    } else if (instance.isUnsatisfied()) {
+      throw new DebeziumException("No batch size wait class named '" + batchSizeWaitName + "' is available");
+    }
+    batchSizeWait = instance.get();
     batchSizeWait.initizalize();
+    LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
 
   public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {

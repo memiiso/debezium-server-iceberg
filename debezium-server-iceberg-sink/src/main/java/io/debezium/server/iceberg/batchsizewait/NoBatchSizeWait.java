@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 import javax.enterprise.context.Dependent;
-import javax.enterprise.inject.Default;
+import javax.inject.Named;
 
 /**
  * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)
@@ -17,7 +17,7 @@ import javax.enterprise.inject.Default;
  * @author Ismail Simsek
  */
 @Dependent
-@Default
+@Named("NoBatchSizeWait")
 public class NoBatchSizeWait implements InterfaceBatchSizeWait {
 
   public void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) {

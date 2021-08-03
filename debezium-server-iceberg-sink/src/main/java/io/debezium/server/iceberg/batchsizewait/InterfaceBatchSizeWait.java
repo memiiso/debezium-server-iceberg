@@ -8,14 +8,11 @@
 
 package io.debezium.server.iceberg.batchsizewait;
 
-import javax.enterprise.context.Dependent;
-
 /**
  * Implementation of the consumer that delivers the messages into Amazon S3 destination.
  *
  * @author Ismail Simsek
  */
-@Dependent
 public interface InterfaceBatchSizeWait {
 
   default void initizalize() {

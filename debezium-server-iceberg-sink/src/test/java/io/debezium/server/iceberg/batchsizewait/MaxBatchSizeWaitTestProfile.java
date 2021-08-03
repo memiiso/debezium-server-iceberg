@@ -19,7 +19,7 @@ public class MaxBatchSizeWaitTestProfile implements QuarkusTestProfile {
   public Map<String, String> getConfigOverrides() {
     Map<String, String> config = new HashMap<>();
     // wait
-    config.put("quarkus.arc.selected-alternatives", "MaxBatchSizeWait");
+    config.put("debezium.sink.batch.batch-size-wait", "MaxBatchSizeWait");
     config.put("debezium.sink.batch.metrics.snapshot-mbean", "debezium.postgres:type=connector-metrics,context=snapshot,server=testc");
     config.put("debezium.sink.batch.metrics.streaming-mbean", "debezium.postgres:type=connector-metrics,context=streaming,server=testc");
     config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
