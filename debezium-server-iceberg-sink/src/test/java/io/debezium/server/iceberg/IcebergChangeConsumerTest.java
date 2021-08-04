@@ -32,6 +32,7 @@ import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
+import static io.debezium.server.iceberg.IcebergUtil.getConfigurationAsMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -71,7 +72,9 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
             ConfigProvider.getConfig().getValue(name, String.class));
       }
     }
-    HadoopCatalog icebergCatalog = new HadoopCatalog("iceberg", hadoopConf, warehouseLocation);
+    HadoopCatalog icebergCatalog = new HadoopCatalog();
+    icebergCatalog.setConf(hadoopConf);
+    icebergCatalog.initialize("iceberg", getConfigurationAsMap(hadoopConf));
     return icebergCatalog;
   }
 

@@ -17,6 +17,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
@@ -189,5 +190,14 @@ public class IcebergUtil {
 
     return ret;
   }
+
+  public static Map<String, String> getConfigurationAsMap(Configuration conf) {
+    Map<String, String> config = new HashMap<String, String>();
+    for (Map.Entry<String, String> entry : conf) {
+      config.put(entry.getKey(), entry.getValue());
+    }
+    return config;
+  }
+
 
 }
