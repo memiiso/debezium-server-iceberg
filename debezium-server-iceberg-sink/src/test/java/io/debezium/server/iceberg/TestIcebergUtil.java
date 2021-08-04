@@ -11,14 +11,11 @@ package io.debezium.server.iceberg;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.util.Testing;
 
-import java.io.IOException;
 import java.util.Collections;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.data.GenericRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,6 +30,7 @@ class TestIcebergUtil {
     assertEquals("Event schema containing nested data 'before' cannot process nested data!", exception.getMessage());
   }
 
+  /*
   @Test
   public void testUnwrapJsonRecord() throws IOException, InterruptedException {
     JsonNode event = new ObjectMapper().readTree(unwrapWithSchema).get("payload");
@@ -41,6 +39,7 @@ class TestIcebergUtil {
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
   }
+  */
 
   @Test
   public void valuePayloadWithSchemaAsJsonNode() {

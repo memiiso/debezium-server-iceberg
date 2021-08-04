@@ -141,7 +141,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     return destination.replace(".", "_");
   }
 
-  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) throws IOException {
+  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) throws Exception {
     if (eventSchemaEnabled && event.value() != null) {
       DebeziumToIcebergTable eventSchema = event.key() == null
           ? new DebeziumToIcebergTable(getBytes(event.value()))
@@ -172,8 +172,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       } catch (org.apache.iceberg.exceptions.NoSuchTableException e) {
         // get schema fom an event and create iceberg table
         try {
-          icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
-        } catch (IOException e2) {
+          createIcebergTable(tableIdentifier, event.getValue().get(0));
+          icebergTable = icebergCatalog.loadTable(tableIdentifier);
+        } catch (Exception e2) {
           e.printStackTrace();
           throw new InterruptedException("Failed to create iceberg table, " + e2.getMessage());
         }

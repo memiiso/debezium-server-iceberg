@@ -34,12 +34,12 @@ public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
   protected static final ObjectMapper jsonObjectMapper = new ObjectMapper();
 
-  public static Schema getIcebergSchema(JsonNode eventSchema) {
+  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema) {
     LOGGER.debug(eventSchema.toString());
     return getIcebergSchema(eventSchema, "", -1);
   }
 
-  public static Schema getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
+  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
     List<Types.NestedField> schemaColumns = new ArrayList<>();
     String schemaType = eventSchema.get("type").textValue();
     LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
@@ -96,7 +96,7 @@ public class IcebergUtil {
           break;
       }
     }
-    return new Schema(schemaColumns);
+    return schemaColumns;
   }
 
   public static boolean hasSchema(JsonNode jsonNode) {
