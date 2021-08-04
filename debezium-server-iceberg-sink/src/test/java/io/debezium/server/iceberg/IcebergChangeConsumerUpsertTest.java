@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.engine.ChangeEvent;
-import io.debezium.server.testresource.*;
+import io.debezium.server.iceberg.testresources.*;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;

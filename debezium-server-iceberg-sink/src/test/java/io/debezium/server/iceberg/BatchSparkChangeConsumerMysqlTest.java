@@ -8,9 +8,9 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.testresource.BaseSparkTest;
-import io.debezium.server.testresource.S3Minio;
-import io.debezium.server.testresource.SourceMysqlDB;
+import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;

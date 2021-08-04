@@ -6,7 +6,7 @@
  *
  */
 
-package io.debezium.server.testresource;
+package io.debezium.server.iceberg.testresources;
 
 import io.debezium.server.iceberg.ConfigSource;
 import io.minio.ListObjectsArgs;

@@ -8,11 +8,13 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
+import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -23,6 +25,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Any;
+import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.literal.NamedLiteral;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -75,8 +80,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
-  @ConfigProperty(name = "debezium.sink.iceberg.dynamic-wait", defaultValue = "true")
-  boolean dynamicWaitEnabled;
 
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsertData;
@@ -88,8 +91,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-source-ts-ms-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
 
+  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
+  String batchSizeWaitName;
+
   @Inject
-  BatchDynamicWait dynamicWait;
+  @Any
+  Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
+  InterfaceBatchSizeWait batchSizeWait;
   static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
 
   Configuration hadoopConf = new Configuration();
@@ -116,6 +124,16 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
+
+    Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
+    if (instance.isAmbiguous()) {
+      throw new DebeziumException("Multiple batch size wait class named '" + batchSizeWaitName + "' were found");
+    } else if (instance.isUnsatisfied()) {
+      throw new DebeziumException("No batch size wait class named '" + batchSizeWaitName + "' is available");
+    }
+    batchSizeWait = instance.get();
+    batchSizeWait.initizalize();
+    LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
 
   public String map(String destination) {
@@ -172,9 +190,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
     committer.markBatchFinished();
 
-    if (dynamicWaitEnabled) {
-      dynamicWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
-    }
+    batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
 
   }
 
@@ -257,7 +273,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
       c.commit();
     }
-    LOGGER.info("Committed events to table! {}", icebergTable.location());
+    LOGGER.info("Committed {} events to table! {}", events.size(),icebergTable.location());
 
   }
 
