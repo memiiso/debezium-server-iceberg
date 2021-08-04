@@ -118,10 +118,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea" +
         ")";
     SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.table_datatypes");
-        df.show();
+        df.show(true);
         return df.where("c_text is null AND c_varchar is null AND c_int is null " +
             "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
             "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +

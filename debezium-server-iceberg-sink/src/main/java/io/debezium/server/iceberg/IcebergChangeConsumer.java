@@ -141,17 +141,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     return destination.replace(".", "_");
   }
 
-  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
+  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) throws IOException {
     if (eventSchemaEnabled && event.value() != null) {
-      try {
-        DebeziumToIcebergTable eventSchema = event.key() == null
-            ? new DebeziumToIcebergTable(getBytes(event.value()))
-            : new DebeziumToIcebergTable(getBytes(event.key()), getBytes(event.value()));
+      DebeziumToIcebergTable eventSchema = event.key() == null
+          ? new DebeziumToIcebergTable(getBytes(event.value()))
+          : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
 
-        return eventSchema.create(icebergCatalog, tableIdentifier);
-      } catch (Exception e) {
-        LOGGER.warn("Failed creating iceberg table! {}", e.getMessage());
-      }
+      return eventSchema.create(icebergCatalog, tableIdentifier);
     }
     return null;
   }
@@ -175,10 +171,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         icebergTable = icebergCatalog.loadTable(tableIdentifier);
       } catch (org.apache.iceberg.exceptions.NoSuchTableException e) {
         // get schema fom an event and create iceberg table
-        icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
-        if (icebergTable == null) {
-          LOGGER.warn("Iceberg table '{}' not found! Ignoring received data for the table!", tableIdentifier);
-          continue;
+        try {
+          icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
+        } catch (IOException e2) {
+          e.printStackTrace();
+          throw new InterruptedException("Failed to create iceberg table, " + e2.getMessage());
         }
       }
       addToTable(icebergTable, event.getValue());

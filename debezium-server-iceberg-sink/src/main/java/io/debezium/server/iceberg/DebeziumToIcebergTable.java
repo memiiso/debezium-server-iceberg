@@ -32,9 +32,9 @@ public class DebeziumToIcebergTable {
   private final Schema tableSchema;
   private final Schema tableRowIdentifierSchema;
 
-  public DebeziumToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
+  public DebeziumToIcebergTable(byte[] eventVal, byte[] eventKey) throws IOException {
     tableSchema = extractSchema(eventVal);
-    tableRowIdentifierSchema = (eventVal == null) ? null : extractSchema(eventKey);
+    tableRowIdentifierSchema = (eventKey == null) ? null : extractSchema(eventKey);
   }
 
   public DebeziumToIcebergTable(byte[] eventVal) throws IOException {
@@ -51,18 +51,6 @@ public class DebeziumToIcebergTable {
 
     LOGGER.trace("Event schema not found in the given data:!");
     return null;
-  }
-
-  public Schema getTableSchema() {
-    return tableSchema;
-  }
-
-  public Schema getTableRowIdentifierSchema() {
-    return tableRowIdentifierSchema;
-  }
-
-  private Schema getIcebergSchema(JsonNode eventSchema) {
-    return IcebergUtil.getIcebergSchema(eventSchema);
   }
 
   public boolean hasSchema() {

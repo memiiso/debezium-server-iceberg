@@ -33,7 +33,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
 
 
   @Test
-  public void testPerformance() throws Exception {
+  public void testBatchsizeWait() throws Exception {
     int iteration = 100;
     PGCreateTestDataTable();
     for (int i = 0; i <= iteration; i++) {
