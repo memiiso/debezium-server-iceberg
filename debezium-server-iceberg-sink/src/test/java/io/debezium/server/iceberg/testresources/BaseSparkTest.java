@@ -142,7 +142,7 @@ public class BaseSparkTest {
   }
 
   public Dataset<Row> getTableData(String table) {
-    return spark.newSession().sql("SELECT * FROM default.debeziumcdc_" + table.replace(".", "_"));
+    return spark.newSession().sql("SELECT input_file_name() as input_file, * FROM default.debeziumcdc_" + table.replace(".", "_"));
   }
 
 }

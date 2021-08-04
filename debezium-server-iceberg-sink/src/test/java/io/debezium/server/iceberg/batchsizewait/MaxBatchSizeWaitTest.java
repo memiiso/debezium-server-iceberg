@@ -42,10 +42,10 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.test_date_table");
-        df.createOrReplaceTempView("test_date_table_batch_size");
+        df.createOrReplaceGlobalTempView("test_date_table_batch_size");
         df = spark
-            .sql("SELECT substring(input_file,101,36) as input_file, " +
-                "count(*) as batch_size FROM test_date_table_batch_size group " +
+            .sql("SELECT substring(input_file,94,60) as input_file, " +
+                "count(*) as batch_size FROM global_temp.test_date_table_batch_size group " +
                 "by 1");
         df.show(false);
         return df.filter("batch_size = " + maxBatchSize).count() >= 5;
