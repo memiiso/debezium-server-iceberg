@@ -33,6 +33,8 @@ import javax.inject.Named;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
@@ -45,7 +47,6 @@ import org.apache.iceberg.deletes.EqualityDeleteWriter;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
-import org.apache.iceberg.util.ArrayUtil;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.eclipse.microprofile.config.ConfigProvider;
@@ -277,20 +278,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   }
 
-  private List<Integer> getEqualityFieldIds(Table icebergTable) {
-    List<Integer> fieldIds = new ArrayList<>();
-
-    for (SortField f : icebergTable.sortOrder().fields()) {
-      fieldIds.add(f.sourceId());
-    }
-    return fieldIds;
-  }
-
   private DeleteFile getDeleteDataFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
 
     final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
-    List<Integer> equalityDeleteFieldIds = getEqualityFieldIds(icebergTable);
+    Set<Integer> equalityDeleteFieldIds = icebergTable.schema().identifierFieldIds();
 
     EqualityDeleteWriter<Record> deleteWriter;
 
@@ -316,11 +308,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
           .overwrite()
           .rowSchema(icebergTable.sortOrder().schema())
           .withSpec(icebergTable.spec())
-          .equalityFieldIds(equalityDeleteFieldIds)
-          //.withKeyMetadata() // ??
+          .equalityFieldIds(Lists.newArrayList(icebergTable.schema().identifierFieldIds()))
           .metricsConfig(MetricsConfig.fromProperties(icebergTable.properties()))
-          // .withPartition() // ??
-          // @TODO add sort order v12 ??
+          .withSortOrder(icebergTable.sortOrder())
           .setAll(icebergTable.properties())
           .buildEqualityWriter()
       ;
@@ -337,13 +327,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     // Equality delete files identify deleted rows in a collection of data files by one or more column values,
     // and may optionally contain additional columns of the deleted row.
     return FileMetadata.deleteFileBuilder(icebergTable.spec())
-        .ofEqualityDeletes(ArrayUtil.toIntArray(equalityDeleteFieldIds))
+        .ofEqualityDeletes(Ints.toArray(icebergTable.schema().identifierFieldIds()))
         .withFormat(FileFormat.PARQUET)
         .withPath(out.location())
         .withFileSizeInBytes(deleteWriter.length())
-        //.withMetrics(deleteWriter.metrics()) //
-        .withRecordCount(deleteRows.size()) // its mandatory field! replace when with iceberg V 0.12
-        //.withSortOrder(icebergTable.sortOrder())
+        .withFileSizeInBytes(deleteWriter.length())
+        .withRecordCount(deleteRows.size())
+        .withSortOrder(icebergTable.sortOrder())
         .build();
   }
 
