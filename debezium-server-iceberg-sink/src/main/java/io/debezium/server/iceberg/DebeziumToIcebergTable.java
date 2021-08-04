@@ -11,7 +11,10 @@ package io.debezium.server.iceberg;
 import java.io.IOException;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.iceberg.*;
+import org.apache.iceberg.NullOrder;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.types.Types;
@@ -31,12 +34,11 @@ public class DebeziumToIcebergTable {
 
   public DebeziumToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
     tableSchema = extractSchema(eventVal);
-    tableRowIdentifierSchema = extractSchema(eventKey);
+    tableRowIdentifierSchema = (eventVal == null) ? null : extractSchema(eventKey);
   }
 
   public DebeziumToIcebergTable(byte[] eventVal) throws IOException {
-    tableSchema = extractSchema(eventVal);
-    tableRowIdentifierSchema = null;
+    this(eventVal, null);
   }
 
   private Schema extractSchema(byte[] eventVal) throws IOException {
@@ -67,37 +69,39 @@ public class DebeziumToIcebergTable {
     return tableSchema != null;
   }
 
+  private SortOrder getSortOrder() {
+    SortOrder so = SortOrder.unsorted();
+
+    if (this.tableRowIdentifierSchema != null) {
+      SortOrder.Builder sob = SortOrder.builderFor(tableSchema);
+      for (Types.NestedField coll : tableRowIdentifierSchema.columns()) {
+        sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
+      }
+      so = sob.build();
+    }
+
+    return so;
+  }
+
   public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
 
     if (this.hasSchema()) {
-      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.tableSchema);
-
-      if (this.tableRowIdentifierSchema != null) {
-        SortOrder.Builder sob = SortOrder.builderFor(tableSchema);
-        for (Types.NestedField coll : tableRowIdentifierSchema.columns()) {
-          sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
-        }
-        tb.withSortOrder(sob.build());
-        // "@TODO waiting spec v2 // use as PK / RowKeyIdentifier
-      }
+      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.tableSchema)
+          .withProperty("format-version", "2")
+          .withSortOrder(getSortOrder());
 
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, tableSchema,
           tableRowIdentifierSchema);
+
       Table table = tb.create();
-      // @TODO remove once spec v2 released
-      return upgradeToFormatVersion2(table);
+      if (tableRowIdentifierSchema != null) {
+        table.updateSchema().setIdentifierFields(tableRowIdentifierSchema.identifierFieldNames()).commit();
+      }
+
+      return table;
     }
 
     return null;
-  }
-
-  // @TODO remove once spec v2 released! upgrading table to V2
-  public Table upgradeToFormatVersion2(Table icebergTable) {
-    TableOperations ops = ((BaseTable) icebergTable).operations();
-    TableMetadata meta = ops.current();
-    ops.commit(ops.current(), meta.upgradeToFormatVersion(2));
-    icebergTable.refresh();
-    return icebergTable;
   }
 
 }
