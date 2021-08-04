@@ -6,7 +6,7 @@
  *
  */
 
-package io.debezium.server.testresource;
+package io.debezium.server.iceberg.testresources;
 
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;

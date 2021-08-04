@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.batchsizewait;
 
-import io.debezium.server.testresource.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 
