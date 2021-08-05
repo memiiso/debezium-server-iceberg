@@ -27,7 +27,7 @@ class TestIcebergUtil {
   @Test
   public void testNestedJsonRecord() throws JsonProcessingException {
     Exception exception = assertThrows(Exception.class, () -> IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema")));
-    assertEquals("Event schema containing nested data 'before' cannot process nested data!", exception.getMessage());
+    assertTrue(exception.getMessage().contains("nested data type"));
   }
 
   /*

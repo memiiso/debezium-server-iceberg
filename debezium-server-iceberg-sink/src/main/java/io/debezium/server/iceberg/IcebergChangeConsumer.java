@@ -172,8 +172,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       } catch (org.apache.iceberg.exceptions.NoSuchTableException e) {
         // get schema fom an event and create iceberg table
         try {
-          createIcebergTable(tableIdentifier, event.getValue().get(0));
-          icebergTable = icebergCatalog.loadTable(tableIdentifier);
+          icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
         } catch (Exception e2) {
           e.printStackTrace();
           throw new InterruptedException("Failed to create iceberg table, " + e2.getMessage());

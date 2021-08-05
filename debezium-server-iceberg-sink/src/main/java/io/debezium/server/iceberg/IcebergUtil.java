@@ -83,8 +83,8 @@ public class IcebergUtil {
           //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
           //break;
         case "struct":
-          throw new RuntimeException("Event schema containing nested data '" + fieldName + "' cannot process nested" +
-              " data!");
+          throw new RuntimeException("Field:'" + fieldName + "' has nested data type, " +
+              "nested data types are not supported by consumer");
 //          //recursive call
 //          Schema subSchema = SchemaUtil.getIcebergSchema(jsonSchemaFieldNode, fieldName, ++columnId);
 //          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema.columns())));
