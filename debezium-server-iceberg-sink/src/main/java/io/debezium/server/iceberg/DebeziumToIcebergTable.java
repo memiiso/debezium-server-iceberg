@@ -9,10 +9,7 @@
 package io.debezium.server.iceberg;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.iceberg.NullOrder;
@@ -85,19 +82,25 @@ public class DebeziumToIcebergTable {
 
     Set<Integer> identifierFieldIds = new HashSet<>();
 
-    for (Types.NestedField ic : this.tableRowIdentifierColumns) {
+    ListIterator<Types.NestedField> idIterator = this.tableRowIdentifierColumns.listIterator();
+    while (idIterator.hasNext()) {
+      Types.NestedField ic = idIterator.next();
       boolean found = false;
 
-      for (Types.NestedField tc : this.tableColumns) {
+      ListIterator<Types.NestedField> colsIterator = this.tableColumns.listIterator();
+      while (colsIterator.hasNext()) {
+        Types.NestedField tc = colsIterator.next();
         if (Objects.equals(tc.name(), ic.name())) {
           identifierFieldIds.add(tc.fieldId());
+          // set columns as required its part of identifier filed
+          colsIterator.set(tc.asRequired());
           found = true;
           break;
         }
       }
 
       if (!found) {
-        throw new ValidationException("Table Row identifier field `"+ic.name()+"` not found in table columns");
+        throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
       }
 
     }
