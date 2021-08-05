@@ -34,12 +34,12 @@ public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
   protected static final ObjectMapper jsonObjectMapper = new ObjectMapper();
 
-  public static Schema getIcebergSchema(JsonNode eventSchema) {
+  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema) {
     LOGGER.debug(eventSchema.toString());
     return getIcebergSchema(eventSchema, "", -1);
   }
 
-  public static Schema getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
+  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
     List<Types.NestedField> schemaColumns = new ArrayList<>();
     String schemaType = eventSchema.get("type").textValue();
     LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
@@ -83,8 +83,8 @@ public class IcebergUtil {
           //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
           //break;
         case "struct":
-          throw new RuntimeException("Event schema containing nested data '" + fieldName + "' cannot process nested" +
-              " data!");
+          throw new RuntimeException("Field:'" + fieldName + "' has nested data type, " +
+              "nested data types are not supported by consumer");
 //          //recursive call
 //          Schema subSchema = SchemaUtil.getIcebergSchema(jsonSchemaFieldNode, fieldName, ++columnId);
 //          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema.columns())));
@@ -96,7 +96,7 @@ public class IcebergUtil {
           break;
       }
     }
-    return new Schema(schemaColumns);
+    return schemaColumns;
   }
 
   public static boolean hasSchema(JsonNode jsonNode) {

@@ -33,7 +33,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
 
 
   @Test
-  public void testPerformance() throws Exception {
+  public void testBatchsizeWait() throws Exception {
     int iteration = 100;
     PGCreateTestDataTable();
     for (int i = 0; i <= iteration; i++) {
@@ -47,7 +47,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
             .sql("SELECT substring(input_file,94,60) as input_file, " +
                 "count(*) as batch_size FROM global_temp.test_date_table_batch_size group " +
                 "by 1");
-        df.show(false);
+        //df.show(false);
         return df.filter("batch_size = " + maxBatchSize).count() >= 5;
       } catch (Exception e) {
         return false;

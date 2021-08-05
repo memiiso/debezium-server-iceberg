@@ -46,7 +46,6 @@ public class BatchSparkChangeConsumerMysqlTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.customers");
-        df.show(false);
         return df.filter("id is not null").count() >= 4;
       } catch (Exception e) {
         return false;

@@ -9,11 +9,17 @@
 package io.debezium.server.iceberg;
 
 import java.io.IOException;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.iceberg.*;
+import org.apache.iceberg.NullOrder;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.exceptions.ValidationException;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableSet;
 import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,20 +32,19 @@ import org.slf4j.LoggerFactory;
 public class DebeziumToIcebergTable {
   protected static final Logger LOGGER = LoggerFactory.getLogger(DebeziumToIcebergTable.class);
 
-  private final Schema tableSchema;
-  private final Schema tableRowIdentifierSchema;
+  private final List<Types.NestedField> tableColumns;
+  private final List<Types.NestedField> tableRowIdentifierColumns;
 
-  public DebeziumToIcebergTable(byte[] eventKey, byte[] eventVal) throws IOException {
-    tableSchema = extractSchema(eventVal);
-    tableRowIdentifierSchema = extractSchema(eventKey);
+  public DebeziumToIcebergTable(byte[] eventVal, byte[] eventKey) throws IOException {
+    tableColumns = extractSchema(eventVal);
+    tableRowIdentifierColumns = (eventKey == null) ? null : extractSchema(eventKey);
   }
 
   public DebeziumToIcebergTable(byte[] eventVal) throws IOException {
-    tableSchema = extractSchema(eventVal);
-    tableRowIdentifierSchema = null;
+    this(eventVal, null);
   }
 
-  private Schema extractSchema(byte[] eventVal) throws IOException {
+  private List<Types.NestedField> extractSchema(byte[] eventVal) throws IOException {
 
     JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
 
@@ -51,53 +56,74 @@ public class DebeziumToIcebergTable {
     return null;
   }
 
-  public Schema getTableSchema() {
-    return tableSchema;
-  }
-
-  public Schema getTableRowIdentifierSchema() {
-    return tableRowIdentifierSchema;
-  }
-
-  private Schema getIcebergSchema(JsonNode eventSchema) {
-    return IcebergUtil.getIcebergSchema(eventSchema);
-  }
-
   public boolean hasSchema() {
-    return tableSchema != null;
+    return tableColumns != null;
   }
 
-  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
+  private SortOrder getSortOrder(Schema schema) {
+    SortOrder so = SortOrder.unsorted();
 
-    if (this.hasSchema()) {
-      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, this.tableSchema);
+    if (this.tableRowIdentifierColumns != null) {
+      SortOrder.Builder sob = SortOrder.builderFor(schema);
+      for (Types.NestedField coll : tableRowIdentifierColumns) {
+        sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
+      }
+      so = sob.build();
+    }
 
-      if (this.tableRowIdentifierSchema != null) {
-        SortOrder.Builder sob = SortOrder.builderFor(tableSchema);
-        for (Types.NestedField coll : tableRowIdentifierSchema.columns()) {
-          sob = sob.asc(coll.name(), NullOrder.NULLS_FIRST);
+    return so;
+  }
+
+  private Set<Integer> getRowIdentifierFieldIds() throws Exception {
+
+    if (this.tableRowIdentifierColumns == null) {
+      return ImmutableSet.of();
+    }
+
+    Set<Integer> identifierFieldIds = new HashSet<>();
+
+    ListIterator<Types.NestedField> idIterator = this.tableRowIdentifierColumns.listIterator();
+    while (idIterator.hasNext()) {
+      Types.NestedField ic = idIterator.next();
+      boolean found = false;
+
+      ListIterator<Types.NestedField> colsIterator = this.tableColumns.listIterator();
+      while (colsIterator.hasNext()) {
+        Types.NestedField tc = colsIterator.next();
+        if (Objects.equals(tc.name(), ic.name())) {
+          identifierFieldIds.add(tc.fieldId());
+          // set columns as required its part of identifier filed
+          colsIterator.set(tc.asRequired());
+          found = true;
+          break;
         }
-        tb.withSortOrder(sob.build());
-        // "@TODO waiting spec v2 // use as PK / RowKeyIdentifier
       }
 
-      LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, tableSchema,
-          tableRowIdentifierSchema);
-      Table table = tb.create();
-      // @TODO remove once spec v2 released
-      return upgradeToFormatVersion2(table);
+      if (!found) {
+        throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
+      }
+
+    }
+
+    return identifierFieldIds;
+  }
+
+  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) throws Exception {
+
+    Schema schema = new Schema(this.tableColumns, getRowIdentifierFieldIds());
+
+    if (this.hasSchema()) {
+      Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, schema)
+          .withProperty("format-version", "2")
+          .withSortOrder(getSortOrder(schema));
+
+      LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
+          schema.identifierFieldNames());
+
+      return tb.create();
     }
 
     return null;
-  }
-
-  // @TODO remove once spec v2 released! upgrading table to V2
-  public Table upgradeToFormatVersion2(Table icebergTable) {
-    TableOperations ops = ((BaseTable) icebergTable).operations();
-    TableMetadata meta = ops.current();
-    ops.commit(ops.current(), meta.upgradeToFormatVersion(2));
-    icebergTable.refresh();
-    return icebergTable;
   }
 
 }

@@ -59,7 +59,10 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.source.database.server.name", "testc");
     config.put("%postgresql.debezium.source.schema.whitelist", "inventory");
     config.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
-        "inventory.geom,inventory.table_datatypes,inventory.test_date_table");
+        "inventory.table_datatypes,inventory.test_date_table");
+    config.put("%postgresql.debezium.source.database.whitelist", "inventory");
+    config.put("%mysql.debezium.source.table.whitelist", "inventory.customers");
+    config.put("debezium.source.include.schema.changes", "false");
 
     config.put("quarkus.log.level", "INFO");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
