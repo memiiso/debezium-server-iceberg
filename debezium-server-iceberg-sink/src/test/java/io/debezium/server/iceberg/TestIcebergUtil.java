@@ -11,11 +11,16 @@ package io.debezium.server.iceberg;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.util.Testing;
 
+import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.data.GenericRecord;
+import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,16 +35,16 @@ class TestIcebergUtil {
     assertTrue(exception.getMessage().contains("nested data type"));
   }
 
-  /*
   @Test
   public void testUnwrapJsonRecord() throws IOException, InterruptedException {
     JsonNode event = new ObjectMapper().readTree(unwrapWithSchema).get("payload");
-    Schema schema = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(unwrapWithSchema).get("schema"));
+    List<Types.NestedField> fileds = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(unwrapWithSchema)
+        .get("schema"));
+    Schema schema = new Schema(fileds);
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), event);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
   }
-  */
 
   @Test
   public void valuePayloadWithSchemaAsJsonNode() {
