@@ -122,7 +122,7 @@ public class DebeziumToIcebergTable {
       return tb.create();
     }
 
-    return null;
+    throw new Exception("Failed to create table "+ tableIdentifier);
   }
 
 }
