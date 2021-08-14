@@ -61,7 +61,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
         objects.add(item);
       }
     } catch (Exception e) {
-      LOGGER.info("Failed listing bucket");
+      e.printStackTrace();
     }
     return objects;
   }
@@ -71,11 +71,11 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     try {
       List<Bucket> bucketList = client.listBuckets();
       for (Bucket bucket : bucketList) {
-        LOGGER.info("Bucket:{} ROOT", bucket.name());
+        System.out.printf("Bucket:%s ROOT",  bucket.name());
         Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucket.name()).recursive(true).build());
         for (Result<Item> result : results) {
           Item item = result.get();
-          LOGGER.info("Bucket:{} Item:{} Size:{}", bucket.name(), item.objectName(), item.size());
+          System.out.printf("Bucket:%s Item:%s Size:%s", bucket.name(), item.objectName(), item.size());
         }
       }
     } catch (Exception e) {

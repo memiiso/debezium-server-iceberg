@@ -18,6 +18,8 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import javax.inject.Inject;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +34,6 @@ import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
-import static io.debezium.server.iceberg.IcebergUtil.getConfigurationAsMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -74,7 +75,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     }
     HadoopCatalog icebergCatalog = new HadoopCatalog();
     icebergCatalog.setConf(hadoopConf);
-    icebergCatalog.initialize("iceberg", getConfigurationAsMap(hadoopConf));
+
+    Map<String, String> configMap = new HashMap<>();
+    hadoopConf.forEach(e-> configMap.put(e.getKey(), e.getValue()));
+    icebergCatalog.initialize("iceberg", configMap);
     return icebergCatalog;
   }
 

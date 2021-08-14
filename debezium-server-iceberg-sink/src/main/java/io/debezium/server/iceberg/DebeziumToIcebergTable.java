@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
  *
  * @author Ismail Simsek
  */
@@ -123,7 +122,7 @@ public class DebeziumToIcebergTable {
       return tb.create();
     }
 
-    return null;
+    throw new Exception("Failed to create table "+ tableIdentifier);
   }
 
 }

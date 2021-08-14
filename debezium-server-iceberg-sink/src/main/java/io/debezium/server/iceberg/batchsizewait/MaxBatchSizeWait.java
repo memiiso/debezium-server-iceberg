@@ -40,48 +40,41 @@ public class MaxBatchSizeWait implements InterfaceBatchSizeWait {
   int waitIntervalMs;
 
   @Inject
-  DebeziumMetrics debeziumMetrics;
+  DebeziumMetrics dbzMetrics;
 
   @Override
   public void initizalize() throws DebeziumException {
     assert waitIntervalMs < maxWaitMs : "`wait-interval-ms` cannot be bigger than `max-wait-ms`";
-    debeziumMetrics.initizalize();
+    dbzMetrics.initizalize();
   }
-
-//  log warning!
-//  if (streamingSecondsBehindSource > 30 * 60) { // behind 30 minutes
-//    LOGGER.warn("Streaming {} is behind by {} seconds, QueueCurrentSize:{}, QueueTotalCapacity:{}, " +
-//            "SnapshotCompleted:{}",
-//        numRecordsProcessed, streamingQueueCurrentSize, maxQueueSize, streamingSecondsBehindSource, snapshotCompleted
-//    );
-//  }
 
   @Override
   public void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException {
 
-    if (debeziumMetrics.snapshotRunning()) {
+    // don't wait if snapshot process is running
+    if (dbzMetrics.snapshotRunning()) {
       return;
     }
 
-    final int streamingQueueCurrentSize = debeziumMetrics.streamingQueueCurrentSize();
-    final int streamingSecondsBehindSource = (int) (debeziumMetrics.streamingMilliSecondsBehindSource() / 1000);
-    final boolean snapshotCompleted = debeziumMetrics.snapshotCompleted();
-
     LOGGER.debug("Processed {}, QueueCurrentSize:{}, QueueTotalCapacity:{}, SecondsBehindSource:{}, SnapshotCompleted:{}",
-        numRecordsProcessed, streamingQueueCurrentSize, maxQueueSize, streamingSecondsBehindSource, snapshotCompleted
+        numRecordsProcessed,
+        dbzMetrics.streamingQueueCurrentSize(),
+        maxQueueSize,
+        (int) (dbzMetrics.streamingMilliSecondsBehindSource() / 1000),
+        dbzMetrics.snapshotCompleted()
     );
 
     int totalWaitMs = 0;
-    while (totalWaitMs < maxWaitMs && debeziumMetrics.streamingQueueCurrentSize() < maxBatchSize) {
+    while (totalWaitMs < maxWaitMs && dbzMetrics.streamingQueueCurrentSize() < maxBatchSize) {
       totalWaitMs += waitIntervalMs;
       LOGGER.debug("Sleeping {} Milliseconds, QueueCurrentSize:{} < maxBatchSize:{}",
-          waitIntervalMs, debeziumMetrics.streamingQueueCurrentSize(), maxBatchSize);
+          waitIntervalMs, dbzMetrics.streamingQueueCurrentSize(), maxBatchSize);
 
       Thread.sleep(waitIntervalMs);
     }
 
     LOGGER.debug("Total wait {} Milliseconds, QueueCurrentSize:{} < maxBatchSize:{}",
-        totalWaitMs, debeziumMetrics.streamingQueueCurrentSize(), maxBatchSize);
+        totalWaitMs, dbzMetrics.streamingQueueCurrentSize(), maxBatchSize);
 
   }
 

@@ -56,7 +56,7 @@ import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
+ * Implementation of the consumer that delivers the messages to iceberg table.
  *
  * @author Ismail Simsek
  */
@@ -112,10 +112,12 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   @PostConstruct
   void connect() throws InterruptedException {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.value={" + valueFormat + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
+      throw new InterruptedException("debezium.format.value={" + valueFormat + "} not supported, " +
+          "Supported (debezium.format.value=*) formats are {json,}!");
     }
     if (!keyFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
+      throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported, " +
+          "Supported (debezium.format.key=*) formats are {json,}!");
     }
 
     tableIdentifier = TableIdentifier.of(Namespace.of(namespace), "debezium_events");
@@ -233,11 +235,11 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
         .withPartition(pk)
         .build();
 
-    LOGGER.debug("Appending new file '{}' !", dataFile.path());
+    LOGGER.debug("Appending new file '{}'", dataFile.path());
     eventTable.newAppend()
         .appendFile(dataFile)
         .commit();
-    LOGGER.info("Committed {} events to table! {}", icebergRecords.size(), eventTable.location());
+    LOGGER.info("Committed {} events to table {}", icebergRecords.size(), eventTable.location());
   }
 
 }
