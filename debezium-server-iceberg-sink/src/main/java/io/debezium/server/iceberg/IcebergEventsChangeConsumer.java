@@ -56,7 +56,7 @@ import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
+ * Implementation of the consumer that delivers the messages to iceberg table.
  *
  * @author Ismail Simsek
  */

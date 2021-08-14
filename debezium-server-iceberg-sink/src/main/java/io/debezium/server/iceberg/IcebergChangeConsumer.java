@@ -55,7 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
+ * Implementation of the consumer that delivers the messages to iceberg tables.
  *
  * @author Ismail Simsek
  */
@@ -65,6 +65,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
@@ -81,26 +82,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
   String catalogName;
-
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsertData;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
   boolean upsertDataKeepDeletes;
-
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
   String opColumn;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-source-ts-ms-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
-
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
-
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
-  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
-
   Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
@@ -195,10 +190,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   public int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
     if (lhs.getField(sourceTsMsColumn).equals(rhs.getField(sourceTsMsColumn))) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      return Integer.compare(
-          cdcOperations.getOrDefault(lhs.getField(opColumn), -1),
-          cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
-      );
+      return
+          cdcOperations.getOrDefault(lhs.getField(opColumn), -1)
+              .compareTo(
+                  cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
+              )
+          ;
     } else {
       return Long.compare((Long) lhs.getField(sourceTsMsColumn), (Long) rhs.getField(sourceTsMsColumn));
     }
@@ -271,7 +268,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
       c.commit();
     }
-    LOGGER.info("Committed {} events to table! {}", events.size(),icebergTable.location());
+    LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
 
   }
 

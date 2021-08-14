@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)
  *
  * @author Ismail Simsek
  */

@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import static io.debezium.config.CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE;
 
 /**
- * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)
+ * Optimizes batch size around 85%-90% of max,batch.size by dynamically calculating sleep(ms)
  *
  * @author Ismail Simsek
  */

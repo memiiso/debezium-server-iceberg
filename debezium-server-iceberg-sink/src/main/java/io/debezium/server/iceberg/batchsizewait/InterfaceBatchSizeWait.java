@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 /**
- * Implementation of the consumer that delivers the messages into Amazon S3 destination.
+ * Implementation of the consumer that delivers the messages to iceberg tables.
  *
  * @author Ismail Simsek
  */
@@ -18,6 +18,7 @@ public interface InterfaceBatchSizeWait {
   default void initizalize() {
   }
 
-  void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException;
+  default void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException{
+  }
 
 }
