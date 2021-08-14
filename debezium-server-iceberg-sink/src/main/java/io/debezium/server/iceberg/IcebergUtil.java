@@ -109,23 +109,23 @@ public class IcebergUtil {
     return IcebergUtil.getIcebergRecord(schema.asStruct(), data);
   }
 
-  public static GenericRecord getIcebergRecord(Types.StructType nestedField, JsonNode data) throws InterruptedException {
+  public static GenericRecord getIcebergRecord(Types.StructType tableFields, JsonNode data) throws InterruptedException {
     Map<String, Object> mappedResult = new HashMap<>();
-    LOGGER.debug("Processing nested field : " + nestedField);
+    LOGGER.debug("Processing nested field:{}", tableFields);
 
-    for (Types.NestedField field : nestedField.fields()) {
+    for (Types.NestedField field : tableFields.fields()) {
       if (data == null || !data.has(field.name()) || data.get(field.name()) == null) {
         mappedResult.put(field.name(), null);
         continue;
       }
       jsonToGenericRecord(mappedResult, field, data.get(field.name()));
     }
-    return GenericRecord.create(nestedField).copy(mappedResult);
+    return GenericRecord.create(tableFields).copy(mappedResult);
   }
 
   private static void jsonToGenericRecord(Map<String, Object> mappedResult, Types.NestedField field,
                                           JsonNode node) throws InterruptedException {
-    LOGGER.debug("Processing Field:" + field.name() + " Type:" + field.type());
+    LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
 
     switch (field.type().typeId()) {
       case INTEGER: // int 4 bytes
