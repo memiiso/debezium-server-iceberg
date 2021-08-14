@@ -45,7 +45,7 @@
         <!-- Debezium -->
         <version.debezium>1.7.0.Alpha1</version.debezium>
         <!-- Quarkus -->
-        <version.quarkus>2.1.2.Final</version.quarkus>
+        <version.quarkus>2.0.3.Final</version.quarkus>
     </properties>
 
     <dependencyManagement>
