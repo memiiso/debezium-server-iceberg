@@ -119,6 +119,7 @@ public class IcebergUtil {
       }
       mappedResult.put(field.name(), jsonToGenericRecordVal(field, data.get(field.name())));
     }
+
     return GenericRecord.create(tableFields).copy(mappedResult);
   }
 
