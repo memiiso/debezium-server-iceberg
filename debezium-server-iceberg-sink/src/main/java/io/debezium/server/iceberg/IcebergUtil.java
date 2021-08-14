@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author Ismail Simsek
  */
 public class IcebergUtil {
@@ -118,47 +117,47 @@ public class IcebergUtil {
         mappedResult.put(field.name(), null);
         continue;
       }
-      jsonToGenericRecord(mappedResult, field, data.get(field.name()));
+      mappedResult.put(field.name(), jsonToGenericRecordVal(field, data.get(field.name())));
     }
     return GenericRecord.create(tableFields).copy(mappedResult);
   }
 
-  private static void jsonToGenericRecord(Map<String, Object> mappedResult, Types.NestedField field,
-                                          JsonNode node) throws InterruptedException {
+  private static Object jsonToGenericRecordVal(Types.NestedField field,
+                                               JsonNode node) throws InterruptedException {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
-
+    final Object val;
     switch (field.type().typeId()) {
       case INTEGER: // int 4 bytes
-        mappedResult.put(field.name(), node.isNull() ? null : node.asInt());
+        val = node.isNull() ? null : node.asInt();
         break;
       case LONG: // long 8 bytes
-        mappedResult.put(field.name(), node.isNull() ? null : node.asLong());
+        val = node.isNull() ? null : node.asLong();
         break;
       case FLOAT: // float is represented in 32 bits,
-        mappedResult.put(field.name(), node.isNull() ? null : node.floatValue());
+        val = node.isNull() ? null : node.floatValue();
         break;
       case DOUBLE: // double is represented in 64 bits
-        mappedResult.put(field.name(), node.isNull() ? null : node.asDouble());
+        val = node.isNull() ? null : node.asDouble();
         break;
       case BOOLEAN:
-        mappedResult.put(field.name(), node.isNull() ? null : node.asBoolean());
+        val = node.isNull() ? null : node.asBoolean();
         break;
       case STRING:
-        mappedResult.put(field.name(), node.asText(null));
+        val = node.asText(null);
         break;
       case BINARY:
         try {
-          mappedResult.put(field.name(), node.isNull() ? null : ByteBuffer.wrap(node.binaryValue()));
+          val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
           LOGGER.error("Failed converting '" + field.name() + "' binary value to iceberg record", e);
           throw new InterruptedException("Failed Processing Event!" + e.getMessage());
         }
         break;
       case LIST:
-        mappedResult.put(field.name(), jsonObjectMapper.convertValue(node, List.class));
+        val = jsonObjectMapper.convertValue(node, List.class);
         break;
       case MAP:
-        mappedResult.put(field.name(), jsonObjectMapper.convertValue(node, Map.class));
+        val = jsonObjectMapper.convertValue(node, Map.class);
         break;
       case STRUCT:
         throw new RuntimeException("Cannot process recursive records!");
@@ -166,15 +165,16 @@ public class IcebergUtil {
 //        // recursive call to get nested data/record
 //        Types.StructType nestedField = Types.StructType.of(field);
 //        GenericRecord r = getIcebergRecord(schema, nestedField, node.get(field.name()));
-//        mappedResult.put(field.name(), r);
+//        return  r);
 //        // throw new RuntimeException("Cannot process recursive record!");
 //        break;
       default:
         // default to String type
-        mappedResult.put(field.name(), node.asText(null));
+        val = node.asText(null);
         break;
     }
 
+    return val;
   }
 
   public static Map<String, String> getConfigSubset(Config config, String prefix) {
