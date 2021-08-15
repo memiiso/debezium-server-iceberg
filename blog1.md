@@ -15,7 +15,7 @@ Debezium extracts realtime database changes as json, avro, protobuf events and d
 #### Apache Iceberg
 Apache Iceberg is an open table format for huge analytic datasets, with Concurrent ACID writes, it supports Insert and Update queries, plus many other features listed here
 Link 
-Apache iceberg has API fundation which supported by Spark and Presto and Trino, 
+Apache iceberg has great flexible foundation/API which integrated by Spark, Presto, Trino, Flink and Hive
 
 ## debezium-server-iceberg
 
@@ -26,18 +26,18 @@ with this project its becomes possible to use best features from both projects e
 
 ### Extending Debezium Server with custom sink
 debezium-server-iceberg  adds custom sink to Debezium server quarkus application [link here], 
-with custom sink received realtime json events converted to iceberg rows and processed using iceberg api 
-received rows are either appended or updated target table using iceberg api, since iceberg supports many cloud storage its eaily porrible to configure destination which could be 
-any of hadoop storage cloud storage location, consumed events are added to destination table as parquet files
+with custom sink received realtime json events converted to iceberg rows and processed using iceberg API 
+received rows are either appended or updated to destination iceberg table as Parquet files, since iceberg supports many cloud storage its easily possible to configure destination which could be 
+any of hadoop storage cloud storage location. with debezium-server-iceberg its easily possible to replicate your RDBMS to cloud storage  
 
 # update, append
-
-# destination, iceberg catalog
-
+V 0.12 iceberg
+retain deletes as soft delete!
 # wait delay batch size
 
-
-@Contribution 
+wait by reading debezium metrics! another great feature of debezium
+# destination, iceberg catalog
+@Contribution
 
 
 thanks to two projects
