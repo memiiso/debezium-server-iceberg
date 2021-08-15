@@ -39,9 +39,6 @@ public class BaseSparkTest {
     Testing.Files.createTestingFile(ConfigSource.OFFSET_STORE_PATH);
   }
 
-  // @ConfigProperty(name = "debezium.sink.iceberg.bucket-name", defaultValue = "")
-  String bucket = S3_BUCKET;
-
   @BeforeAll
   static void setup() {
     Map<String, String> appSparkConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), SPARK_PROP_PREFIX);
@@ -142,7 +139,7 @@ public class BaseSparkTest {
   }
 
   public Dataset<Row> getTableData(String table) {
-    return spark.newSession().sql("SELECT input_file_name() as input_file, * FROM default.debeziumcdc_" + table.replace(".", "_"));
+    return spark.newSession().sql("SELECT input_file_name() as input_file, * FROM debeziumevents.debeziumcdc_" + table.replace(".", "_"));
   }
 
 }

@@ -37,9 +37,11 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.source.poll.interval.ms", "10000"); // 5 seconds!
     // iceberg
     config.put("debezium.sink.iceberg.table-prefix", "debeziumcdc_");
+    config.put("debezium.sink.iceberg.table-namespace", "debeziumevents");
     config.put("debezium.sink.iceberg.fs.defaultFS", "s3a://" + S3_BUCKET);
     config.put("debezium.sink.iceberg.warehouse", "s3a://" + S3_BUCKET + "/iceberg_warehouse");
     config.put("debezium.sink.iceberg.type", "hadoop");
+    config.put("debezium.sink.iceberg.catalog-name", "mycatalog");
     config.put("debezium.sink.iceberg.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog");
 
     // enable disable schema
