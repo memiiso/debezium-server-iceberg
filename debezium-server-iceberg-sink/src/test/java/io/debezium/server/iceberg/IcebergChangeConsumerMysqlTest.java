@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(S3Minio.class)
 @QuarkusTestResource(SourceMysqlDB.class)
-@TestProfile(BatchSparkChangeConsumerMysqlTestProfile.class)
-public class BatchSparkChangeConsumerMysqlTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerMysqlTestProfile.class)
+public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
 
   @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "1000")
@@ -51,6 +51,8 @@ public class BatchSparkChangeConsumerMysqlTest extends BaseSparkTest {
         return false;
       }
     });
+
+    S3Minio.listFiles();
   }
 
 }
