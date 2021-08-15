@@ -1,6 +1,6 @@
 
 @TODO cleanup documentation 
-@TODO add help page contributing page 
+@TODO add contributing page 
 
 # Using Debezium to Create ACID Data Lake House
 
@@ -37,7 +37,7 @@ retain deletes as soft delete!
 
 wait by reading debezium metrics! another great feature of debezium
 # destination, iceberg catalog
-@Contribution
 
+@Contribution ..etc
 
-thanks to two projects
+thanks to two projects making it possible Apache iceberg[link], Debezium[link]
