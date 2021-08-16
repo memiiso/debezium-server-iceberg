@@ -52,6 +52,7 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.transforms.unwrap.type", "io.debezium.transforms.ExtractNewRecordState");
     config.put("debezium.transforms.unwrap.add.fields", "op,table,source.ts_ms,db");
     config.put("debezium.transforms.unwrap.delete.handling.mode", "rewrite");
+    config.put("debezium.transforms.unwrap.drop.tombstones", "true");
 
     // DEBEZIUM SOURCE conf
     config.put("debezium.source." + StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, OFFSET_STORE_PATH.toAbsolutePath().toString());
@@ -63,7 +64,7 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
         "inventory.table_datatypes,inventory.test_date_table");
     config.put("%postgresql.debezium.source.database.whitelist", "inventory");
-    config.put("%mysql.debezium.source.table.whitelist", "inventory.customers");
+    config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
     config.put("debezium.source.include.schema.changes", "false");
 
     config.put("quarkus.log.level", "INFO");
