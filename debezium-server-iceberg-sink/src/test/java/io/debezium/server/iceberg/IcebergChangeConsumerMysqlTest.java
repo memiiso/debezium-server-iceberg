@@ -40,6 +40,36 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
   Integer maxBatchSize;
 
   @Test
+  public void testTombstoneEvents() throws Exception {
+    // create test table
+    String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
+        " c_id INTEGER ," +
+        " c_id2 INTEGER ," +
+        " c_data TEXT," +
+        "  PRIMARY KEY (c_id, c_id2)" +
+        " );";
+    String sqlInsert =
+        "INSERT INTO inventory.test_delete_table (c_id, c_id2, c_data ) " +
+            "VALUES  (1,1,'data'),(1,2,'data'),(1,3,'data'),(1,4,'data') ;";
+    String sqlDelete = "DELETE FROM inventory.test_delete_table where c_id = 1 ;";
+
+    SourceMysqlDB.runSQL(sqlCreate);
+    SourceMysqlDB.runSQL(sqlInsert);
+    SourceMysqlDB.runSQL(sqlDelete);
+    SourceMysqlDB.runSQL(sqlInsert);
+
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.test_delete_table");
+        df.show();
+        return df.count() >= 12; // 4 insert 4 delete 4 insert!
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+
+  @Test
   public void testSimpleUpload() {
     Testing.Print.enable();
 
