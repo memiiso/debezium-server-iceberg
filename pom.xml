@@ -17,13 +17,6 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
 
-    <repositories>
-        <repository>
-            <id>nexus-orgapacheiceberg</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1018/</url>
-        </repository>
-    </repositories>
-
     <properties>
         <revision>0.1.0-SNAPSHOT</revision>
 

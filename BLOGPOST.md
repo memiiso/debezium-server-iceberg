@@ -17,27 +17,30 @@ Apache iceberg has great foundation and flexible API which currently supported b
 
 [@TODO visual architecture diagram]
 
-Debezium Server Iceberg project puts both projects together and enables realtime data pipeline to any cloud storage, hdfs destination supported by iceberg
-Debezium Server Iceberg it is possible to use best features from both projects like realtime structured data pipeline and ACID table format with update support
+Iceberg sink uses both projects and enables realtime data pipeline to any cloud storage, hdfs destination supported by iceberg
+With Iceberg sink it is possible to use great features provided by both projects like realtime structured data flow and ACID table format with update support on data lake
 
-Debezium Iceberg sink extends [Debezium server quarkus application](https://debezium.io/documentation/reference/operations/debezium-server.html#_installation), 
+Debezium Iceberg extends [Debezium server quarkus application](https://debezium.io/documentation/reference/operations/debezium-server.html#_installation) and implements new sink, 
 
-Iceberg consumer converts debezium json events to iceberg rows and commits them to destination iceberg table using iceberg API 
-It's possible to append database events to iceberg tables or do upsert using source table primary key
-since iceberg supports many cloud storage its easily possible to configure destination which could be any of hadoop storage cloud storage location. 
-with debezium-server-iceberg its easily possible to replicate your RDBMS to cloud storage  
+Iceberg sink converts debezium json events to iceberg parquet data file, delete file and commits them to destination iceberg table using iceberg Java API
 
-# update, append
-Iceberg consumer by default works with upsert mode. When a row updated on source table destination row replaced with up-to-date record. 
-with upsert mode data at destination is always deduplicate and kept up to date
+since iceberg supports many cloud storages its easily possible to configure different destinations like s3, hdfs, ...
+with debezium-server-iceberg its easily possible to replicate your RDBMS to cloud storage
+
+### update, append
+Iceberg sink by default works with upsert mode. When a row updated on source table destination row replaced with the new updated version. 
+with upsert mode data at destination kept identical to source data
+
+retain deletes as soft delete! 
 
 
 V 0.12 iceberg
 retain deletes as soft delete!
-# wait delay batch size
+### wait delay batch size
 
 wait by reading debezium metrics! another great feature of debezium
-# destination, iceberg catalog
+### destination, iceberg catalog
+
 
 @Contribution ..etc
 
