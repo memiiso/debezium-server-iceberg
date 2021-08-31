@@ -27,13 +27,13 @@ values received then the record with higher `__op` priority is added to destinat
 
 ### Append
 Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to append, with append mode data deduplication is not done, all received records are appended to destination table
-Note: For the tables without primary key operation mode is append even configuration is set to upsert mode
+Note: For the tables without primary key operation mode falls back to append even configuration is set to upsert mode
 
 #### Keeping Deleted Records
 
 By default `debezium.sink.iceberg.upsert-keep-deletes=true` will keep deletes in the iceberg table, setting it to false
 will remove deleted records from the destination iceberg table. With this config its possible to keep last version of the deleted
-record in the table(to do soft deletes).
+record in the table(possible to do soft deletes).
 
 ### Optimizing batch size (or commit interval)
 

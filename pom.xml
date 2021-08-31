@@ -36,7 +36,7 @@
         <version.awssdk>2.16.88</version.awssdk>
         <version.parquet>1.11.1</version.parquet>
         <!-- Debezium -->
-        <version.debezium>1.7.0.Alpha1</version.debezium>
+        <version.debezium>1.7.0.Beta1</version.debezium>
         <!-- Quarkus -->
         <version.quarkus>2.0.3.Final</version.quarkus>
     </properties>
