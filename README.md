@@ -52,7 +52,7 @@ this should be configured with `debezium.source.max.queue.size` and `debezium.so
 This is default configuration by default consumer will not use any batch size wait
 
 #### DynamicBatchSizeWait
-
+**Deprecated** 
 This wait strategy dynamically adds wait to increase batch size. Wait duration is calculated based on number of processed events in
 last 3 batches. if last batch sizes are lower than `max.batch.size` Wait duration will increase and if last batch sizes
 are bigger than 90% of `max.batch.size` Wait duration will decrease
@@ -68,9 +68,9 @@ debezium.sink.batch.batch-size-wait.max-wait-ms=5000
 ```
 #### MaxBatchSizeWait
 
-MaxBatchSizeWait uses debezium metrics to optimize batch size, this strategy is more precise compared to DynamicBatchSizeWait
-DynamicBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size` 
-maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties
+MaxBatchSizeWait uses debezium metrics to optimize batch size, this strategy is more precise compared to DynamicBatchSizeWait.
+MaxBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size`. 
+Maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties.
 
 example setup to receive ~2048 events per commit. maximum wait is set to 30 seconds, streaming queue current size checked every 5 seconds
 ```properties
@@ -100,7 +100,7 @@ database table = `inventory.customers` will be replicated to `default.testc_cdc_
 
 ## Debezium Event Flattening
 
-Iceberg consumer requires event flattening, Currently nested events and complex data types(like Struct) are not supported
+Iceberg consumer requires event flattening, Currently nested events and complex data types(like Struct) are not supported.
 
 ```properties
 debezium.transforms=unwrap
