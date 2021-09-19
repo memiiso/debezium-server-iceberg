@@ -117,36 +117,40 @@ Iceberg consumer uses iceberg catalog to read and commit data to destination tab
 
 Now we got perfect raw layer with near realtime data feed which we can build Curated Layer,Analytic Layer or Datawarehouse on top of.
 
-for example i could easily use Spark SQL(or Prestodb, Trino, Flink) and process this data to next layer:)
+for example i could easily use https://iceberg.apache.org/spark-writes/[Spark SQL](or Prestodb, Trino, Flink) and process this data to next layer:)
 
 [source,sql]
 ----
 MERGE INTO dwh.consumers t
-                USING (
-                -- new data goes to insert
-                    SELECT customer_id, name, effective_date, to_date('9999-12-31', 'yyyy-MM-dd') as end_date FROM debezium.consumers
-                    UNION ALL
-                -- update exiting records and close them
-                    SELECT t.customer_id, t.name, t.effective_date, s.effective_date as end_date FROM debezium.consumers s
-                    INNER JOIN dwh.consumers t on s.customer_id = t.customer_id AND t.current = true
+     USING (
+     -- new data goes to insert
+         SELECT customer_id, name, effective_date, to_date('9999-12-31', 'yyyy-MM-dd') as end_date FROM debezium.consumers
+         UNION ALL
+     -- update exiting records and close them
+         SELECT t.customer_id, t.name, t.effective_date, s.effective_date as end_date FROM debezium.consumers s
+         INNER JOIN dwh.consumers t on s.customer_id = t.customer_id AND t.current = true
 
-                ) s
-                ON s.customer_id = t.customer_id AND s.effective_date = t.effective_date
-                -- close last record.
-                WHEN MATCHED
-                  THEN UPDATE SET t.current = false, t.end_date = s.end_date
-                WHEN NOT MATCHED THEN
-                   INSERT(customer_id, name, current, effective_date, end_date)
-                   VALUES(s.customer_id, s.name, true, s.effective_date, s.end_date);
+     ) s
+     ON s.customer_id = t.customer_id AND s.effective_date = t.effective_date
+     -- close last record.
+     WHEN MATCHED
+       THEN UPDATE SET t.current = false, t.end_date = s.end_date
+    -- deleting deleted record is also possible!
+    -- WHEN MATCHED and s.__op = 'd'
+    --    THEN DELETE
+     WHEN NOT MATCHED THEN
+        INSERT(customer_id, name, current, effective_date, end_date)
+        VALUES(s.customer_id, s.name, true, s.effective_date, s.end_date);
 ----
 
-its also possible to use delete insert
+its also possible to use https://iceberg.apache.org/spark-writes/[delete, insert statements]
 [source,sql]
 ----
-
+INSERT INTO prod.db.table SELECT ...;
+DELETE FROM prod.db.table WHERE ts >= '2020-05-01 00:00:00' and ts < '2020-06-01 00:00:00';
 ----
 
-in https://github.com/ismailsimsek/iceberg-examples[iceberg examples] project you could see more examples and experiment with iceberg spark
+in https://github.com/ismailsimsek/iceberg-examples[iceberg examples] project you could see more examples and experiment with iceberg and spark
 
 === Contribution
 
