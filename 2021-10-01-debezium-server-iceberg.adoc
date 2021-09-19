@@ -2,8 +2,8 @@
 layout: post
 title:  Using Debezium to Create ACID Data Lake
 date:   2021-10-01
-tags: [ debezium, iceberg, datalake ]
-author: isimsek
+tags: [ debezium, iceberg, datalake, lakehouse ]
+author: Ismail Simsek
 ---
 
 Do you need to build Lakehouse with near realtime data pipeline, do you want it to support ACID transactions and updates on data lake?
@@ -36,6 +36,8 @@ on high level data processing works like below ::
 * as last step these files are committed to destination table(uploaded to destination storage)) as data and delete file using iceberg java API.
 
 If destination table not found in the destination catalog consumer will automatically try to create it using event schema and key schema(record key)
+
+image::docs/images/Debezium-Iceberg.png[Debezium-Iceberg]
 
 Currently, Iceberg Consumer supports only json events. With json events event schema must be enabled to do correct type conversion to iceberg record.
 and complex nested data types are not supported, so event flattening must be enabled.
@@ -135,7 +137,7 @@ MERGE INTO dwh.consumers t
      -- close last record.
      WHEN MATCHED
        THEN UPDATE SET t.current = false, t.end_date = s.end_date
-    -- deleting deleted record is also possible!
+    -- also possible to delete deleted records!
     -- WHEN MATCHED and s.__op = 'd'
     --    THEN DELETE
      WHEN NOT MATCHED THEN

@@ -5,6 +5,8 @@
 This project adds iceberg consumer to [debezium server application](https://debezium.io/documentation/reference/operations/debezium-server.html). it could be used to
 replicate database changes to iceberg table(Cloud storage, hdfs) without requiring Spark, Kafka or Streaming platform.
 
+![Debezium Iceberg](docs/images/Debezium-Iceberg.png)
+
 ## `iceberg` Consumer
 
 Iceberg consumer appends or upserts debezium events to destination iceberg tables. When event and key schemas
