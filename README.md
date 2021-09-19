@@ -5,6 +5,8 @@
 This project adds iceberg consumer to [debezium server application](https://debezium.io/documentation/reference/operations/debezium-server.html). it could be used to
 replicate database changes to iceberg table(Cloud storage, hdfs) without requiring Spark, Kafka or Streaming platform.
 
+![Debezium Iceberg](docs/images/Debezium-Iceberg.png)
+
 ## `iceberg` Consumer
 
 Iceberg consumer appends or upserts debezium events to destination iceberg tables. When event and key schemas
@@ -27,13 +29,13 @@ values received then the record with higher `__op` priority is added to destinat
 
 ### Append
 Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to append, with append mode data deduplication is not done, all received records are appended to destination table
-Note: For the tables without primary key operation mode is append even configuration is set to upsert mode
+Note: For the tables without primary key operation mode falls back to append even configuration is set to upsert mode
 
 #### Keeping Deleted Records
 
 By default `debezium.sink.iceberg.upsert-keep-deletes=true` will keep deletes in the iceberg table, setting it to false
 will remove deleted records from the destination iceberg table. With this config its possible to keep last version of the deleted
-record in the table(to do soft deletes).
+record in the table(possible to do soft deletes).
 
 ### Optimizing batch size (or commit interval)
 
@@ -50,7 +52,7 @@ this should be configured with `debezium.source.max.queue.size` and `debezium.so
 This is default configuration by default consumer will not use any batch size wait
 
 #### DynamicBatchSizeWait
-
+**Deprecated** 
 This wait strategy dynamically adds wait to increase batch size. Wait duration is calculated based on number of processed events in
 last 3 batches. if last batch sizes are lower than `max.batch.size` Wait duration will increase and if last batch sizes
 are bigger than 90% of `max.batch.size` Wait duration will decrease
@@ -66,9 +68,9 @@ debezium.sink.batch.batch-size-wait.max-wait-ms=5000
 ```
 #### MaxBatchSizeWait
 
-MaxBatchSizeWait uses debezium metrics to optimize batch size, this strategy is more precise compared to DynamicBatchSizeWait
-DynamicBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size` 
-maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties
+MaxBatchSizeWait uses debezium metrics to optimize batch size, this strategy is more precise compared to DynamicBatchSizeWait.
+MaxBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size`. 
+Maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties.
 
 example setup to receive ~2048 events per commit. maximum wait is set to 30 seconds, streaming queue current size checked every 5 seconds
 ```properties
@@ -98,7 +100,7 @@ database table = `inventory.customers` will be replicated to `default.testc_cdc_
 
 ## Debezium Event Flattening
 
-Iceberg consumer requires event flattening, Currently nested events and complex data types(like Struct) are not supported
+Iceberg consumer requires event flattening, Currently nested events and complex data types(like Struct) are not supported.
 
 ```properties
 debezium.transforms=unwrap

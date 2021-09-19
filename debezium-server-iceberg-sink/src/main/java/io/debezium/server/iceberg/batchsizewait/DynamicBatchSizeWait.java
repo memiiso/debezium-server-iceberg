@@ -25,6 +25,7 @@ import static io.debezium.config.CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE;
  */
 @Dependent
 @Named("DynamicBatchSizeWait")
+@Deprecated
 public class DynamicBatchSizeWait implements InterfaceBatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(DynamicBatchSizeWait.class);
 

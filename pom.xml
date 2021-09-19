@@ -17,13 +17,6 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
 
-    <repositories>
-        <repository>
-            <id>nexus-orgapacheiceberg</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1018/</url>
-        </repository>
-    </repositories>
-
     <properties>
         <revision>0.1.0-SNAPSHOT</revision>
 
@@ -43,7 +36,8 @@
         <version.awssdk>2.16.88</version.awssdk>
         <version.parquet>1.11.1</version.parquet>
         <!-- Debezium -->
-        <version.debezium>1.7.0.Alpha1</version.debezium>
+        <version.debezium>1.7.0.CR1</version.debezium>
+        <version.mysql.driver>8.0.26</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>2.0.3.Final</version.quarkus>
     </properties>
@@ -77,6 +71,12 @@
                 <scope>import</scope>
             </dependency>
 
+            <!-- MySQL JDBC Driver, Binlog reader, Geometry support -->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${version.mysql.driver}</version>
+            </dependency>
             <!-- debezium server -->
             <dependency>
                 <groupId>io.debezium</groupId>
