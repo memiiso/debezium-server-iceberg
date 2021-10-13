@@ -2,7 +2,7 @@
 
 Replicate database changes to Iceberg table(Cloud storage, hdfs) without requiring Spark, Kafka or Streaming platform.
 
-![Debezium Iceberg](images/Debezium-Iceberg.png)
+![Debezium Iceberg](images/debezium-iceberg.png)
 
 ## `iceberg` Consumer
 
