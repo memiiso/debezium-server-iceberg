@@ -48,15 +48,10 @@
             <!-- aws -->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
-                <artifactId>bundle</artifactId>
+                <artifactId>bom</artifactId>
                 <version>${version.awssdk}</version>
+                <type>pom</type>
             </dependency>
-            <dependency>
-                <groupId>software.amazon.awssdk</groupId>
-                <artifactId>url-connection-client</artifactId>
-                <version>${version.awssdk}</version>
-            </dependency>
-
             <!-- parquet -->
             <dependency>
                 <groupId>org.apache.parquet</groupId>

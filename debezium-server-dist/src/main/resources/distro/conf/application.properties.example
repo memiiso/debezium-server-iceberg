@@ -1,5 +1,23 @@
-debezium.sink.type=kinesis
-debezium.sink.kinesis.region=eu-central-1
+debezium.sink.type=iceberg
+debezium.sink.iceberg.table-prefix=debeziumcdc_
+debezium.sink.iceberg.catalog-name=mycatalog
+debezium.sink.iceberg.table-namespace=debeziumevents
+debezium.sink.iceberg.fs.defaultFS=s3a://my-bucket
+debezium.sink.iceberg.warehouse=s3a://my-bucket/iceberg_warehouse
+debezium.sink.iceberg.type=hadoop
+debezium.sink.iceberg.com.amazonaws.services.s3.enableV4=true
+debezium.sink.iceberg.com.amazonaws.services.s3a.enableV4=true
+debezium.sink.iceberg.fs.s3a.aws.credentials.provider=com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+debezium.sink.iceberg.fs.s3a.access.key=my-aws-access-key
+debezium.sink.iceberg.fs.s3a.secret.key=my-secret-access-key
+debezium.sink.iceberg.fs.s3a.path.style.access=true
+debezium.sink.iceberg.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+debezium.sink.iceberg.upsert=true
+debezium.sink.iceberg.upsert-keep-deletes=true
+debezium.format.value.schemas.enable=true
+debezium.format.key.schemas.enable=true
+
+# source db
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
 debezium.source.offset.storage.file.filename=data/offsets.dat
 debezium.source.offset.flush.interval.ms=0
@@ -11,11 +29,8 @@ debezium.source.database.dbname=postgres
 debezium.source.database.server.name=tutorial
 debezium.source.schema.include.list=inventory
 
-
 # ############ SET LOG LEVELS ############
 quarkus.log.level=INFO
-# Change this to set Spark log level
-quarkus.log.category."org.apache.spark".level=WARN
 # hadoop, parquet
 quarkus.log.category."org.apache.hadoop".level=WARN
 quarkus.log.category."org.apache.parquet".level=WARN
