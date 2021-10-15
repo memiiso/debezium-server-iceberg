@@ -38,9 +38,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release latest
+          name: Release master/latest
           tag_name: latest
-          body: Release latest
+          body: master branch release
           draft: false
-          prerelease: false
+          prerelease: true
           files: debezium-server-dist/target/debezium-server-dist-latest.zip
