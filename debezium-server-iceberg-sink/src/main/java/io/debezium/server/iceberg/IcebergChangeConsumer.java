@@ -78,9 +78,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
 
-  Configuration hadoopConf = new Configuration();
+  final Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
-  Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
 
   @Inject
   @Any
@@ -99,7 +99,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     // pass iceberg properties to iceberg and hadoop
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
-    conf.forEach(this.icebergProperties::put);
+    this.icebergProperties.putAll(conf);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 

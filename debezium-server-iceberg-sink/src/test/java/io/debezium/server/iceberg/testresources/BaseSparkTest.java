@@ -85,7 +85,7 @@ public class BaseSparkTest {
     return PGLoadTestDataTable(numRows, false);
   }
 
-  public static int PGLoadTestDataTable(int numRows, boolean addRandomDelay) throws Exception {
+  public static int PGLoadTestDataTable(int numRows, boolean addRandomDelay) {
     int numInsert = 0;
     do {
 
