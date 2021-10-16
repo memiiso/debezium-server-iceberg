@@ -34,25 +34,27 @@ public class DebeziumToIcebergTable {
   private final List<Types.NestedField> tableColumns;
   private final List<Types.NestedField> tableRowIdentifierColumns;
 
-  public DebeziumToIcebergTable(byte[] eventVal, byte[] eventKey) throws IOException {
+  public DebeziumToIcebergTable(byte[] eventVal, byte[] eventKey) {
     tableColumns = extractSchema(eventVal);
     tableRowIdentifierColumns = (eventKey == null) ? null : extractSchema(eventKey);
   }
 
-  public DebeziumToIcebergTable(byte[] eventVal) throws IOException {
+  public DebeziumToIcebergTable(byte[] eventVal) {
     this(eventVal, null);
   }
 
-  private List<Types.NestedField> extractSchema(byte[] eventVal) throws IOException {
+  private List<Types.NestedField> extractSchema(byte[] eventVal) {
+    try {
+      JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
+      if (IcebergUtil.hasSchema(jsonEvent)) {
+        return IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
+      }
 
-    JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
-
-    if (IcebergUtil.hasSchema(jsonEvent)) {
-      return IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
+      LOGGER.trace("Event schema not found in the given data:!");
+      return null;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-
-    LOGGER.trace("Event schema not found in the given data:!");
-    return null;
   }
 
   public boolean hasSchema() {
@@ -73,7 +75,7 @@ public class DebeziumToIcebergTable {
     return so;
   }
 
-  private Set<Integer> getRowIdentifierFieldIds() throws Exception {
+  private Set<Integer> getRowIdentifierFieldIds() {
 
     if (this.tableRowIdentifierColumns == null) {
       return ImmutableSet.of();
@@ -107,7 +109,7 @@ public class DebeziumToIcebergTable {
     return identifierFieldIds;
   }
 
-  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) throws Exception {
+  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
 
     Schema schema = new Schema(this.tableColumns, getRowIdentifierFieldIds());
 
@@ -122,7 +124,7 @@ public class DebeziumToIcebergTable {
       return tb.create();
     }
 
-    throw new Exception("Failed to create table "+ tableIdentifier);
+    throw new RuntimeException("Failed to create table "+ tableIdentifier);
   }
 
 }

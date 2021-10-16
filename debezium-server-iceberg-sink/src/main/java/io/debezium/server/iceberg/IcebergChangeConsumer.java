@@ -101,6 +101,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   Deserializer<JsonNode> valDeserializer;
+  private IcebergTableOperations icebergTableOperations;
 
   @PostConstruct
   void connect() throws InterruptedException {
@@ -117,6 +118,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     conf.forEach(this.icebergProperties::put);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
+    icebergTableOperations = new IcebergTableOperations(icebergCatalog);
 
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
@@ -136,15 +138,15 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     return destination.replace(".", "_");
   }
 
-  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) throws Exception {
+  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
 
     if (!eventSchemaEnabled) {
-      throw new Exception("Table '" + tableIdentifier + "' not found! " +
+      throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
           "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
 
     if (event.value() == null) {
-      throw new Exception("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
+      throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
     }
 
     DebeziumToIcebergTable eventSchema = event.key() == null
@@ -166,20 +168,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
                 Collectors.toCollection(ArrayList::new))));
 
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
-      Table icebergTable;
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      try {
-        // load iceberg table
-        icebergTable = icebergCatalog.loadTable(tableIdentifier);
-      } catch (org.apache.iceberg.exceptions.NoSuchTableException e) {
-        // get schema from an event and create iceberg table
-        try {
-          icebergTable = createIcebergTable(tableIdentifier, event.getValue().get(0));
-        } catch (Exception e2) {
-          e.printStackTrace();
-          throw new InterruptedException("Failed to create iceberg table, " + e2.getMessage());
-        }
-      }
+      Table icebergTable = icebergTableOperations.loadTable(tableIdentifier)
+          .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
       addToTable(icebergTable, event.getValue());
     }
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
