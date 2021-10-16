@@ -14,8 +14,11 @@ debezium.sink.iceberg.fs.s3a.path.style.access=true
 debezium.sink.iceberg.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 debezium.sink.iceberg.upsert=true
 debezium.sink.iceberg.upsert-keep-deletes=true
+# enable event schemas
 debezium.format.value.schemas.enable=true
 debezium.format.key.schemas.enable=true
+debezium.format.value=json
+debezium.format.key=json
 
 # source db
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
@@ -28,6 +31,13 @@ debezium.source.database.password=postgres
 debezium.source.database.dbname=postgres
 debezium.source.database.server.name=tutorial
 debezium.source.schema.include.list=inventory
+
+# complex nested data types are not supported, do event flattening. unwrap message!
+debezium.transforms=unwrap
+debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
+debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
+debezium.transforms.unwrap.delete.handling.mode=rewrite
+debezium.transforms.unwrap.drop.tombstones=true
 
 # ############ SET LOG LEVELS ############
 quarkus.log.level=INFO
