@@ -15,6 +15,7 @@ import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
+import io.debezium.server.iceberg.tableoperators.InterfaceIcebergTableOperator;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -103,6 +104,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Deserializer<JsonNode> valDeserializer;
   private IcebergTableOperations icebergTableOperations;
 
+
+  @Inject
+  @Any
+  Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
+  InterfaceIcebergTableOperator icebergTableOperator;
+
   @PostConstruct
   void connect() throws InterruptedException {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
@@ -132,6 +139,21 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     batchSizeWait = instance.get();
     batchSizeWait.initizalize();
     LOGGER.info("Using {}", batchSizeWait.getClass().getName());
+
+    // init table operator
+    ;
+    String icebergTableOperatorName = upsert ? "IcebergTableOperatorUpsert" : "IcebergTableOperatorAppend";
+    Instance<InterfaceIcebergTableOperator> toInstance = icebergTableOperatorInstances.select(NamedLiteral.of(icebergTableOperatorName));
+    if (instance.isAmbiguous()) {
+      throw new DebeziumException("Multiple icebergTableOperation size wait class  were found");
+    }
+    if (instance.isUnsatisfied()) {
+      throw new DebeziumException("No batch size wait class is available");
+    }
+    icebergTableOperator = toInstance.get();
+    icebergTableOperator.initialize();
+    LOGGER.info("Using {}", icebergTableOperator.getClass().getName());
+
   }
 
   public String map(String destination) {
@@ -172,6 +194,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       Table icebergTable = icebergTableOperations.loadTable(tableIdentifier)
           .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
       addToTable(icebergTable, event.getValue());
+      //icebergTableOperator.addToTable(icebergTable,event.getValue());
     }
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
     // even its should be saved to file periodically
