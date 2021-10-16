@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.tableoperator;
 import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
+import io.debezium.server.iceberg.DebeziumToIcebergTable;
 import io.debezium.server.iceberg.IcebergUtil;
 
 import java.io.Closeable;
@@ -32,6 +33,7 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,9 @@ import org.slf4j.LoggerFactory;
  */
 abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIcebergTableOperator.class);
+
+  @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
+  boolean eventSchemaEnabled;
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   Deserializer<JsonNode> valDeserializer;
 
@@ -117,7 +122,27 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
         .build();
   }
 
-  public Optional<Table> loadTable(Catalog catalog, TableIdentifier tableId) {
+  public Table createIcebergTable(Catalog catalog,
+                                  TableIdentifier tableIdentifier,
+                                  ChangeEvent<Object, Object> event) {
+
+    if (!eventSchemaEnabled) {
+      throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
+          "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+    }
+
+    if (event.value() == null) {
+      throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
+    }
+
+    DebeziumToIcebergTable eventSchema = event.key() == null
+        ? new DebeziumToIcebergTable(getBytes(event.value()))
+        : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
+
+    return eventSchema.create(catalog, tableIdentifier);
+  }
+
+  public Optional<Table> loadIcebergTable(Catalog catalog, TableIdentifier tableId) {
     try {
       Table table = catalog.loadTable(tableId);
       return Optional.of(table);

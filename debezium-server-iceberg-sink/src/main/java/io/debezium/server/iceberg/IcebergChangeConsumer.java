@@ -31,7 +31,6 @@ import javax.enterprise.inject.literal.NamedLiteral;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
@@ -55,13 +54,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
-  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
-  boolean eventSchemaEnabled;
   @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
@@ -74,12 +70,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String catalogName;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
-  boolean upsertKeepDeletes;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
-  String opColumn;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
-  String sourceTsMsColumn;
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
 
@@ -91,7 +81,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
   Map<String, String> icebergProperties = new ConcurrentHashMap<>();
-  private IcebergTableOperations icebergTableOperations;
 
   @Inject
   @Any
@@ -113,7 +102,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     conf.forEach(this.icebergProperties::put);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
-    icebergTableOperations = new IcebergTableOperations(icebergCatalog);
 
     Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
     if (instance.isAmbiguous()) {
@@ -128,10 +116,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     String icebergTableOperatorName = upsert ? "IcebergTableOperatorUpsert" : "IcebergTableOperatorAppend";
     Instance<InterfaceIcebergTableOperator> toInstance = icebergTableOperatorInstances.select(NamedLiteral.of(icebergTableOperatorName));
     if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple class named `"+icebergTableOperatorName+"` were found");
+      throw new DebeziumException("Multiple class named `" + icebergTableOperatorName + "` were found");
     }
     if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No class named `"+icebergTableOperatorName+"` found");
+      throw new DebeziumException("No class named `" + icebergTableOperatorName + "` found");
     }
     icebergTableOperator = toInstance.get();
     icebergTableOperator.initialize();
@@ -141,24 +129,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   public String map(String destination) {
     return destination.replace(".", "_");
-  }
-
-  private Table createIcebergTable(TableIdentifier tableIdentifier, ChangeEvent<Object, Object> event) {
-
-    if (!eventSchemaEnabled) {
-      throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
-          "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
-    }
-
-    if (event.value() == null) {
-      throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
-    }
-
-    DebeziumToIcebergTable eventSchema = event.key() == null
-        ? new DebeziumToIcebergTable(getBytes(event.value()))
-        : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
-
-    return eventSchema.create(icebergCatalog, tableIdentifier);
   }
 
   @Override
@@ -174,10 +144,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      Table icebergTable = icebergTableOperations.loadTable(tableIdentifier)
-          .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
+      Table icebergTable = icebergTableOperator
+          .loadIcebergTable(icebergCatalog, tableIdentifier)
+          .orElseGet(() ->
+              icebergTableOperator.createIcebergTable(icebergCatalog, tableIdentifier, event.getValue().get(0)));
       //addToTable(icebergTable, event.getValue());
-      icebergTableOperator.addToTable(icebergTable,event.getValue());
+      icebergTableOperator.addToTable(icebergTable, event.getValue());
     }
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
     // even its should be saved to file periodically
