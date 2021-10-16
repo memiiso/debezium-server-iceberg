@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
-  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
 

@@ -33,22 +33,18 @@ public class TestUtil {
 
   public static DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> getCommitter() {
     return new DebeziumEngine.RecordCommitter() {
-      public synchronized void markProcessed(SourceRecord record) throws InterruptedException {
-        return;
+      public synchronized void markProcessed(SourceRecord record) {
       }
 
       @Override
-      public void markProcessed(Object record) throws InterruptedException {
-        return;
+      public void markProcessed(Object record) {
       }
 
-      public synchronized void markBatchFinished() throws InterruptedException {
-        return;
+      public synchronized void markBatchFinished() {
       }
 
       @Override
-      public void markProcessed(Object record, DebeziumEngine.Offsets sourceOffsets) throws InterruptedException {
-        return;
+      public void markProcessed(Object record, DebeziumEngine.Offsets sourceOffsets) {
       }
 
       @Override

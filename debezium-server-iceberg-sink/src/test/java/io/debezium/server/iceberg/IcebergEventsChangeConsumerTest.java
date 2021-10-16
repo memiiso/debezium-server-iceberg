@@ -38,7 +38,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   String sinkType;
 
   @Test
-  public void testIcebergEvents() throws Exception {
+  public void testIcebergEvents() {
     Assertions.assertEquals(sinkType, "icebergevents");
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {

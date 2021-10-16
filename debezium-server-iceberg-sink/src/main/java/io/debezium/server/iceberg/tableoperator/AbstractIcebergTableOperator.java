@@ -47,7 +47,7 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
 
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
   boolean eventSchemaEnabled;
-  Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   Deserializer<JsonNode> valDeserializer;
 
   @Override

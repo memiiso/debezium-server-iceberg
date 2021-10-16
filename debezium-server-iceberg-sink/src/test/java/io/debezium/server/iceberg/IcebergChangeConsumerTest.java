@@ -209,7 +209,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   }
 
   @Test
-  public void testSimpleUpload() throws Exception {
+  public void testSimpleUpload() {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");

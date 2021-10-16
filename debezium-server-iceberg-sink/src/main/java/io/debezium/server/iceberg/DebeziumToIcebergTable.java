@@ -83,9 +83,7 @@ public class DebeziumToIcebergTable {
 
     Set<Integer> identifierFieldIds = new HashSet<>();
 
-    ListIterator<Types.NestedField> idIterator = this.tableRowIdentifierColumns.listIterator();
-    while (idIterator.hasNext()) {
-      Types.NestedField ic = idIterator.next();
+    for (Types.NestedField ic : this.tableRowIdentifierColumns) {
       boolean found = false;
 
       ListIterator<Types.NestedField> colsIterator = this.tableColumns.listIterator();

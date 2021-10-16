@@ -88,7 +88,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  Configuration hadoopConf = new Configuration();
+  final Configuration hadoopConf = new Configuration();
   @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
@@ -103,7 +103,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
 
-  Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
 
@@ -123,7 +123,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
-    conf.forEach(this.icebergProperties::put);
+    this.icebergProperties.putAll(conf);
 
     if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
       warehouseLocation = defaultFs + "/iceberg_warehouse";
