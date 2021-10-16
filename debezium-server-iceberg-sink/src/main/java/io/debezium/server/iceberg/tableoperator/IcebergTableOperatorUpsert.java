@@ -6,7 +6,7 @@
  *
  */
 
-package io.debezium.server.iceberg.tableoperators;
+package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.engine.ChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
@@ -14,11 +14,9 @@ import io.debezium.server.iceberg.IcebergUtil;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
@@ -34,6 +32,7 @@ import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.deletes.EqualityDeleteWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,12 +40,25 @@ import org.slf4j.LoggerFactory;
 @Named("IcebergTableOperatorUpsert")
 public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
 
-  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
+  static ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
+  String sourceTsMsColumn;
 
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
+  boolean upsertKeepDeletes;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
+  String opColumn;
 
   @Inject
   IcebergTableOperatorAppend icebergTableAppend;
+
+
+  @Override
+  public void initialize() {
+    super.initialize();
+    icebergTableAppend.initialize();
+  }
 
   private DeleteFile getDeleteFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
 
@@ -129,7 +141,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     return new ArrayList<>(icebergRecordsmap.values());
   }
 
-  public int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
+  private int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
     if (lhs.getField(sourceTsMsColumn).equals(rhs.getField(sourceTsMsColumn))) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
       return
@@ -146,32 +158,38 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   @Override
   public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
 
-      if (icebergTable.sortOrder().isUnsorted()) {
-        LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
-        // call append here!
-        icebergTableAppend.addToTable(icebergTable,events);
-        return;
-      }
+    if (icebergTable.sortOrder().isUnsorted()) {
+      LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
+      // call append here!
+      icebergTableAppend.addToTable(icebergTable, events);
+      return;
+    }
 
-      // DO UPSERT >>> DELETE + INSERT
-      ArrayList<Record> icebergRecords = toDeduppedIcebergRecords(icebergTable.schema(), events);
-      DataFile dataFile = getDataFile(icebergTable, icebergRecords);
-      DeleteFile deleteDataFile = getDeleteFile(icebergTable, icebergRecords);
-      LOGGER.debug("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
-      RowDelta c = icebergTable
-          .newRowDelta()
-          .addRows(dataFile);
+    // DO UPSERT >>> DELETE + INSERT
+    ArrayList<Record> icebergRecords = toDeduppedIcebergRecords(icebergTable.schema(), events);
+    DataFile dataFile = getDataFile(icebergTable, icebergRecords);
+    DeleteFile deleteDataFile = getDeleteFile(icebergTable, icebergRecords);
+    LOGGER.debug("Committing new file as Upsert (has deletes:{}) '{}' !", deleteDataFile != null, dataFile.path());
+    RowDelta c = icebergTable
+        .newRowDelta()
+        .addRows(dataFile);
 
-      if (deleteDataFile != null) {
-        c.addDeletes(deleteDataFile)
-            .validateDeletedFiles();
-      }
+    if (deleteDataFile != null) {
+      c.addDeletes(deleteDataFile)
+          .validateDeletedFiles();
+    }
 
-      c.commit();
-
+    c.commit();
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
-
   }
 
+  @Override
+  public Predicate<Record> filterEvents() {
+    return p ->
+        // if its upsert and upsertKeepDeletes = true
+        upsertKeepDeletes
+            // if not then exclude deletes
+            || !(p.getField(opColumn).equals("d"));
+  }
 
 }

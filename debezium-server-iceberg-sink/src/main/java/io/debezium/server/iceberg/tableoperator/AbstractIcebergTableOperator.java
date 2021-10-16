@@ -6,7 +6,7 @@
  *
  */
 
-package io.debezium.server.iceberg.tableoperators;
+package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
@@ -16,10 +16,7 @@ import io.debezium.server.iceberg.IcebergUtil;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,42 +32,29 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Wrapper to perform operations in iceberg tables
+ *
  * @author Rafael Acevedo
  */
 abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIcebergTableOperator.class);
-
-  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
-  String tablePrefix;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
-  @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
-  String catalogName;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
-  boolean upsert;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
-  boolean upsertKeepDeletes;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
-  String opColumn;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
-  String sourceTsMsColumn;
-  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
-  String batchSizeWaitName;
-
   Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
-  protected Deserializer<JsonNode> valDeserializer;
+  Deserializer<JsonNode> valDeserializer;
+
+  @Override
+  public void initialize() {
+    valSerde.configure(Collections.emptyMap(), false);
+    valDeserializer = valSerde.deserializer();
+  }
 
   protected byte[] getBytes(Object object) {
     if (object instanceof byte[]) {
       return (byte[]) object;
-    }
-    else if (object instanceof String) {
+    } else if (object instanceof String) {
       return ((String) object).getBytes();
     }
     throw new DebeziumException(unsupportedTypeMessage(object));
@@ -105,21 +89,8 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
 
     FileAppender<Record> writer;
-    // if its append OR upsert with keep deletes then add all the records to data file
-    // if table has no PK - which means fall back to append
-    // if its upsert and upsertKeepDeletes = true
-    // if nothing above then exclude deletes
     List<Record> newRecords = icebergRecords.stream()
-        .filter(r ->
-            // if its append OR upsert with keep deletes then add all the records to data file
-            !upsert
-                // if table has no PK - which means fall back to append
-                || icebergTable.sortOrder().isUnsorted()
-                // if its upsert and upsertKeepDeletes = true
-                || upsertKeepDeletes
-                // if nothing above then exclude deletes
-                || !(r.getField(opColumn).equals("d")))
-        .collect(Collectors.toList());
+        .filter(this.filterEvents()).collect(Collectors.toList());
     try {
       LOGGER.debug("Writing data to file: {}!", out);
       writer = Parquet.write(out)

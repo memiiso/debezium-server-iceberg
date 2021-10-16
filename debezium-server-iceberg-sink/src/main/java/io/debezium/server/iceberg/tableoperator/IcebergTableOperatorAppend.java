@@ -6,14 +6,16 @@
  *
  */
 
-package io.debezium.server.iceberg.tableoperators;
+package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.engine.ChangeEvent;
 
 import java.util.ArrayList;
+import java.util.function.Predicate;
 import javax.enterprise.context.Dependent;
 import javax.inject.Named;
 
+import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.data.Record;
@@ -31,9 +33,15 @@ public class IcebergTableOperatorAppend extends AbstractIcebergTableOperator {
     ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
     DataFile dataFile = getDataFile(icebergTable, icebergRecords);
     LOGGER.debug("Committing new file as Append '{}' !", dataFile.path());
-    icebergTable.newAppend()
-        .appendFile(dataFile)
-        .commit();
+    AppendFiles c = icebergTable.newAppend()
+        .appendFile(dataFile);
+
+    c.commit();
+    LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
   }
 
+  @Override
+  public Predicate<Record> filterEvents() {
+    return p -> true;
+  }
 }

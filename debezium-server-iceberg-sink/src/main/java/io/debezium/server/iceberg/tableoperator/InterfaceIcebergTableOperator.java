@@ -6,19 +6,21 @@
  *
  */
 
-package io.debezium.server.iceberg.tableoperators;
+package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.engine.ChangeEvent;
 
 import java.util.ArrayList;
+import java.util.function.Predicate;
 
 import org.apache.iceberg.Table;
+import org.apache.iceberg.data.Record;
 
 public interface InterfaceIcebergTableOperator {
 
-  default void initialize(){
-  }
-  
+  void initialize();
+
   void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException;
+  Predicate<Record> filterEvents();
 
 }
