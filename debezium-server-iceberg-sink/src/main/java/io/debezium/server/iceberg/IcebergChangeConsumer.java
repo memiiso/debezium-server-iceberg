@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -38,6 +39,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -54,6 +56,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  final Configuration hadoopConf = new Configuration();
+  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
@@ -72,16 +76,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   boolean upsert;
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
-
+  @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
+  boolean eventSchemaEnabled;
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
-
-  final Configuration hadoopConf = new Configuration();
   Catalog icebergCatalog;
-  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
-
   @Inject
   @Any
   Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
@@ -144,10 +145,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      Table icebergTable = icebergTableOperator
-          .loadIcebergTable(icebergCatalog, tableIdentifier)
-          .orElseGet(() ->
-              icebergTableOperator.createIcebergTable(icebergCatalog, tableIdentifier, event.getValue().get(0)));
+      Table icebergTable = loadIcebergTable(tableIdentifier)
+          .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
       //addToTable(icebergTable, event.getValue());
       icebergTableOperator.addToTable(icebergTable, event.getValue());
     }
@@ -162,5 +161,36 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
 
   }
+
+
+  private Table createIcebergTable(TableIdentifier tableIdentifier,
+                                   ChangeEvent<Object, Object> event) {
+
+    if (!eventSchemaEnabled) {
+      throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
+          "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+    }
+
+    if (event.value() == null) {
+      throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
+    }
+
+    DebeziumToIcebergTable eventSchema = event.key() == null
+        ? new DebeziumToIcebergTable(getBytes(event.value()))
+        : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
+
+    return eventSchema.create(icebergCatalog, tableIdentifier);
+  }
+
+  private Optional<Table> loadIcebergTable(TableIdentifier tableId) {
+    try {
+      Table table = icebergCatalog.loadTable(tableId);
+      return Optional.of(table);
+    } catch (NoSuchTableException e) {
+      LOGGER.warn("table not found: {}", tableId.toString());
+      return Optional.empty();
+    }
+  }
+
 
 }
