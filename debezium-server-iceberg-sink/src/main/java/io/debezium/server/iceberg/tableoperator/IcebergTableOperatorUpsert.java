@@ -63,7 +63,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     icebergTableAppend.initialize();
   }
 
-  private DeleteFile getDeleteFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
+  private DeleteFile getDeleteFile(Table icebergTable, ArrayList<Record> icebergRecords) {
 
     final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
@@ -105,7 +105,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
       }
 
     } catch (IOException e) {
-      throw new InterruptedException(e.getMessage());
+      throw new RuntimeException(e);
     }
 
     LOGGER.debug("Creating iceberg equality delete file!");
@@ -122,7 +122,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
         .build();
   }
 
-  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) {
     ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
 
     for (ChangeEvent<Object, Object> e : events) {
@@ -159,7 +159,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   }
 
   @Override
-  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) {
 
     if (icebergTable.sortOrder().isUnsorted()) {
       LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");

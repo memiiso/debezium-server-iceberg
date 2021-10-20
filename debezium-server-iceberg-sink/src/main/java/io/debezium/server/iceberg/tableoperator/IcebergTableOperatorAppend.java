@@ -28,7 +28,7 @@ public class IcebergTableOperatorAppend extends AbstractIcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIcebergTableOperator.class);
 
   @Override
-  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) {
 
     ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
     DataFile dataFile = getDataFile(icebergTable, icebergRecords);

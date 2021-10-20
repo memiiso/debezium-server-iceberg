@@ -30,13 +30,13 @@ class TestIcebergUtil {
   final String unwrapWithSchema = Testing.Files.readResourceAsString("json/unwrap-with-schema.json");
 
   @Test
-  public void testNestedJsonRecord() throws JsonProcessingException {
+  public void testNestedJsonRecord() {
     Exception exception = assertThrows(Exception.class, () -> IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema")));
     assertTrue(exception.getMessage().contains("nested data type"));
   }
 
   @Test
-  public void testUnwrapJsonRecord() throws IOException, InterruptedException {
+  public void testUnwrapJsonRecord() throws IOException {
     JsonNode event = new ObjectMapper().readTree(unwrapWithSchema).get("payload");
     List<Types.NestedField> fileds = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(unwrapWithSchema)
         .get("schema"));
