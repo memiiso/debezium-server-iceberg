@@ -73,7 +73,7 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     return "Unexpected data type '" + type + "'";
   }
 
-  protected ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException {
+  protected ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) {
 
     ArrayList<Record> icebergRecords = new ArrayList<>();
     for (ChangeEvent<Object, Object> e : events) {
@@ -85,7 +85,7 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     return icebergRecords;
   }
 
-  protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) throws InterruptedException {
+  protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
 
@@ -105,7 +105,7 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
       }
 
     } catch (IOException e) {
-      throw new InterruptedException(e.getMessage());
+      throw new RuntimeException(e);
     }
 
     LOGGER.debug("Creating iceberg DataFile!");

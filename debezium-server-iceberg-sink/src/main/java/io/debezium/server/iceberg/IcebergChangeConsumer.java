@@ -89,12 +89,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   InterfaceIcebergTableOperator icebergTableOperator;
 
   @PostConstruct
-  void connect() throws InterruptedException {
+  void connect() {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.value={" + valueFormat + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
+      throw new DebeziumException("debezium.format.value={" + valueFormat + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
     }
     if (!keyFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
+      throw new DebeziumException("debezium.format.key={" + valueFormat + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
     // pass iceberg properties to iceberg and hadoop

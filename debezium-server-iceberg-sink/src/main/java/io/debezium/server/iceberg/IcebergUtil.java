@@ -103,11 +103,11 @@ public class IcebergUtil {
         && jsonNode.get("schema").get("fields").isArray();
   }
 
-  public static GenericRecord getIcebergRecord(Schema schema, JsonNode data) throws InterruptedException {
+  public static GenericRecord getIcebergRecord(Schema schema, JsonNode data) {
     return IcebergUtil.getIcebergRecord(schema.asStruct(), data);
   }
 
-  public static GenericRecord getIcebergRecord(Types.StructType tableFields, JsonNode data) throws InterruptedException {
+  public static GenericRecord getIcebergRecord(Types.StructType tableFields, JsonNode data) {
     Map<String, Object> mappedResult = new HashMap<>();
     LOGGER.debug("Processing nested field:{}", tableFields);
 
@@ -123,7 +123,7 @@ public class IcebergUtil {
   }
 
   private static Object jsonToGenericRecordVal(Types.NestedField field,
-                                               JsonNode node) throws InterruptedException {
+                                               JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
     final Object val;
     switch (field.type().typeId()) {
@@ -150,7 +150,7 @@ public class IcebergUtil {
           val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
           LOGGER.error("Failed converting '" + field.name() + "' binary value to iceberg record", e);
-          throw new InterruptedException("Failed Processing Event!" + e.getMessage());
+          throw new RuntimeException("Failed Processing Event!", e);
         }
         break;
       case LIST:

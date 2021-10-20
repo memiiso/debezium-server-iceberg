@@ -109,13 +109,13 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
 
   @PostConstruct
-  void connect() throws InterruptedException {
+  void connect() {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.value={" + valueFormat + "} not supported, " +
+      throw new DebeziumException("debezium.format.value={" + valueFormat + "} not supported, " +
           "Supported (debezium.format.value=*) formats are {json,}!");
     }
     if (!keyFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new InterruptedException("debezium.format.key={" + valueFormat + "} not supported, " +
+      throw new DebeziumException("debezium.format.key={" + valueFormat + "} not supported, " +
           "Supported (debezium.format.key=*) formats are {json,}!");
     }
 
@@ -222,7 +222,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     } catch (IOException e) {
       LOGGER.error("Failed committing events to iceberg table!", e);
-      throw new InterruptedException(e.getMessage());
+      throw new RuntimeException("Failed commiting events to iceberg table!", e);
     }
 
     DataFile dataFile = DataFiles.builder(eventTable.spec())

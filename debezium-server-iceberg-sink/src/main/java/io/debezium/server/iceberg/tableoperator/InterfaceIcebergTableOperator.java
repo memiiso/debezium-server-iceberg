@@ -20,7 +20,7 @@ public interface InterfaceIcebergTableOperator {
 
   void initialize();
 
-  void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) throws InterruptedException;
+  void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events);
 
   Predicate<Record> filterEvents();
 }
