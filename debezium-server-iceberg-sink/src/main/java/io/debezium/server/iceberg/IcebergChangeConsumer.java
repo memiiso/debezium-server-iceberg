@@ -91,11 +91,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
   InterfaceIcebergTableOperator icebergTableOperator;
 
-  private static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
-  Clock clock = Clock.system();
-  long consumerStart = clock.currentTimeInMillis();
-  long numConsumedEvents = 0;
-  Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
+  protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
+  protected final Clock clock = Clock.system();
+  protected long consumerStart = clock.currentTimeInMillis();
+  protected long numConsumedEvents = 0;
+  protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
 
   @PostConstruct
   void connect() {
@@ -172,7 +172,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   }
 
-  private void logConsumerProgress(long numUploadedEvents) {
+  protected void logConsumerProgress(long numUploadedEvents) {
     numConsumedEvents += numUploadedEvents;
     if (logTimer.expired()) {
       LOGGER.info("Consumed {} records after {}", numConsumedEvents, Strings.duration(clock.currentTimeInMillis() - consumerStart));
