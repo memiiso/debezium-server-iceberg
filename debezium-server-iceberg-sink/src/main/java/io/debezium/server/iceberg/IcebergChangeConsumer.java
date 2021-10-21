@@ -15,6 +15,9 @@ import io.debezium.engine.format.Json;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.InterfaceIcebergTableOperator;
+import io.debezium.util.Clock;
+import io.debezium.util.Strings;
+import io.debezium.util.Threads;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -88,6 +91,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
   InterfaceIcebergTableOperator icebergTableOperator;
 
+  private static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
+  Clock clock = Clock.system();
+  long consumerStart = clock.currentTimeInMillis();
+  long numConsumedEvents = 0;
+  Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
+
   @PostConstruct
   void connect() {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
@@ -157,9 +166,20 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       committer.markProcessed(record);
     }
     committer.markBatchFinished();
+    this.logConsumerProgress(records.size());
 
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
 
+  }
+
+  private void logConsumerProgress(long numUploadedEvents) {
+    numConsumedEvents += numUploadedEvents;
+    if (logTimer.expired()) {
+      LOGGER.info("Consumed {} records after {}", numConsumedEvents, Strings.duration(clock.currentTimeInMillis() - consumerStart));
+      numConsumedEvents = 0;
+      consumerStart = clock.currentTimeInMillis();
+      logTimer = Threads.timer(clock, LOG_INTERVAL);
+    }
   }
 
 
