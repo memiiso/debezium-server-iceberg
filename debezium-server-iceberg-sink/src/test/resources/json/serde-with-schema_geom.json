@@ -12,7 +12,7 @@
         "type": "struct",
         "fields": [
           {
-            "type": "bytes",
+            "type": "string",
             "optional": false,
             "field": "wkb"
           },
@@ -32,7 +32,7 @@
         "type": "struct",
         "fields": [
           {
-            "type": "bytes",
+            "type": "string",
             "optional": false,
             "field": "wkb"
           },

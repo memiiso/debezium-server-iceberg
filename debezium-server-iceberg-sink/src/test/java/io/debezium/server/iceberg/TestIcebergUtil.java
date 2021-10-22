@@ -12,7 +12,6 @@ import io.debezium.serde.DebeziumSerdes;
 import io.debezium.util.Testing;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -56,14 +55,13 @@ class TestIcebergUtil {
     List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
     Schema schema = new Schema(schemaFields);
     System.out.println(schema);
-    assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional binary, 4: srid: optional int>"));
+    assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional string, 4: srid: optional int>"));
 
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
     GenericRecord g = (GenericRecord) record.getField("g");
     GenericRecord h = (GenericRecord) record.getField("h");
+    assertEquals("AQEAAAAAAAAAAADwPwAAAAAAAPA/", g.get(0, Types.StringType.get().typeId().javaClass()));
     assertEquals(123, g.get(1, Types.IntegerType.get().typeId().javaClass()));
-    ByteBuffer gwkbBb = (ByteBuffer) g.get(0, Types.BinaryType.get().typeId().javaClass());
-    assertEquals("java.nio.HeapByteBuffer", gwkbBb.getClass().getName());
     assertEquals("Record(null, null)", h.toString());
     assertNull(h.get(0, Types.BinaryType.get().typeId().javaClass()));
   }
