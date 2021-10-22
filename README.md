@@ -7,6 +7,8 @@
 This project adds iceberg consumer to [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html). It could be used to
 replicate database CDC changes to Iceberg table (Cloud Storage, HDFS) in realtime, without requiring Spark, Kafka or Streaming platform.
 
+More detail available in [Debezium Iceberg Consumer Documentation](docs/DOCS.md)
+
 ![Debezium Iceberg](docs/images/debezium-iceberg.png)
 
 # Contributing

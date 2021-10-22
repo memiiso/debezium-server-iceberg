@@ -97,8 +97,7 @@ database table = `inventory.customers` will be replicated to `default.testc_cdc_
 
 ## Debezium Event Flattening
 
-Iceberg consumer requires event flattening, Currently nested events and complex data types(like Struct) are not supported.
-
+Iceberg consumer requires event flattening.
 ```properties
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
