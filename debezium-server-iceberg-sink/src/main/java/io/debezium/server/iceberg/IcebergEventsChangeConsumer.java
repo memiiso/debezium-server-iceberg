@@ -195,7 +195,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
   }
 
-  private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) throws InterruptedException {
+  private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
 
     PartitionKey pk = new PartitionKey(TABLE_PARTITION, TABLE_SCHEMA);
