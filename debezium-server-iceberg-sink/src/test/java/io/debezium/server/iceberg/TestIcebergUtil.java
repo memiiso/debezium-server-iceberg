@@ -12,6 +12,7 @@ import io.debezium.serde.DebeziumSerdes;
 import io.debezium.util.Testing;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestIcebergUtil {
   final String serdeWithSchema = Testing.Files.readResourceAsString("json/serde-with-schema.json");
   final String unwrapWithSchema = Testing.Files.readResourceAsString("json/unwrap-with-schema.json");
+  final String unwrapWithGeomSchema = Testing.Files.readResourceAsString("json/serde-with-schema_geom.json");
 
   @Test
   public void testNestedJsonRecord() {
@@ -44,6 +46,26 @@ class TestIcebergUtil {
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), event);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
+  }
+
+  @Test
+  public void testNestedGeomJsonRecord() throws JsonProcessingException {
+    JsonNode jsonData = new ObjectMapper().readTree(unwrapWithGeomSchema);
+    JsonNode jsonPayload = jsonData.get("payload");
+    JsonNode jsonSchema = jsonData.get("schema");
+    List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
+    Schema schema = new Schema(schemaFields);
+    System.out.println(schema);
+    assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional binary, 4: srid: optional int>"));
+
+    GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
+    GenericRecord g = (GenericRecord) record.getField("g");
+    GenericRecord h = (GenericRecord) record.getField("h");
+    assertEquals(123, g.get(1, Types.IntegerType.get().typeId().javaClass()));
+    ByteBuffer gwkbBb = (ByteBuffer) g.get(0, Types.BinaryType.get().typeId().javaClass());
+    assertEquals("java.nio.HeapByteBuffer[pos=0 lim=21 cap=21]", gwkbBb.toString());
+    assertEquals("Record(null, null)", h.toString());
+    assertNull(h.get(0, Types.BinaryType.get().typeId().javaClass()));
   }
 
   @Test

@@ -220,4 +220,17 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       }
     });
   }
+
+  @Test
+  public void testGeomData() {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        Dataset<Row> ds = getTableData("testc.inventory.geom");
+        ds.show(false);
+        return ds.count() >= 3;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
 }

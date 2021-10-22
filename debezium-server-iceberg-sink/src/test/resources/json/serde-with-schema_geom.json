@@ -1,0 +1,93 @@
+{
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "type": "int32",
+        "optional": false,
+        "default": 0,
+        "field": "id"
+      },
+      {
+        "type": "struct",
+        "fields": [
+          {
+            "type": "bytes",
+            "optional": false,
+            "field": "wkb"
+          },
+          {
+            "type": "int32",
+            "optional": true,
+            "field": "srid"
+          }
+        ],
+        "optional": true,
+        "name": "io.debezium.data.geometry.Geometry",
+        "version": 1,
+        "doc": "Geometry",
+        "field": "g"
+      },
+      {
+        "type": "struct",
+        "fields": [
+          {
+            "type": "bytes",
+            "optional": false,
+            "field": "wkb"
+          },
+          {
+            "type": "int32",
+            "optional": true,
+            "field": "srid"
+          }
+        ],
+        "optional": true,
+        "name": "io.debezium.data.geometry.Geometry",
+        "version": 1,
+        "doc": "Geometry",
+        "field": "h"
+      },
+      {
+        "type": "string",
+        "optional": true,
+        "field": "__op"
+      },
+      {
+        "type": "string",
+        "optional": true,
+        "field": "__table"
+      },
+      {
+        "type": "int64",
+        "optional": true,
+        "field": "__source_ts_ms"
+      },
+      {
+        "type": "string",
+        "optional": true,
+        "field": "__db"
+      },
+      {
+        "type": "string",
+        "optional": true,
+        "field": "__deleted"
+      }
+    ],
+    "optional": false,
+    "name": "testc.inventory.geom.Value"
+  },
+  "payload": {
+    "id": 1,
+    "g": {
+      "wkb": "AQEAAAAAAAAAAADwPwAAAAAAAPA/",
+      "srid": 123
+    },
+    "h": null,
+    "__op": "r",
+    "__table": "geom",
+    "__source_ts_ms": 1634844424986,
+    "__db": "postgres",
+    "__deleted": "false"
+  }
+}
