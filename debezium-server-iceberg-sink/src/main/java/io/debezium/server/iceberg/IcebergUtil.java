@@ -33,7 +33,7 @@ public class IcebergUtil {
 
   public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema) {
     LOGGER.debug(eventSchema.toString());
-    return getIcebergSchema(eventSchema, "", -1);
+    return getIcebergSchema(eventSchema, "", 0);
   }
 
   public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
@@ -80,13 +80,11 @@ public class IcebergUtil {
           //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
           //break;
         case "struct":
-          throw new RuntimeException("Field:'" + fieldName + "' has nested data type, " +
-              "nested data types are not supported by consumer");
-//          //recursive call
-//          Schema subSchema = SchemaUtil.getIcebergSchema(jsonSchemaFieldNode, fieldName, ++columnId);
-//          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema.columns())));
-//          columnId += subSchema.columns().size();
-//          break;
+          // create it as struct, nested type
+          List<Types.NestedField> subSchema = IcebergUtil.getIcebergSchema(jsonSchemaFieldNode, fieldName, columnId);
+          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema)));
+          columnId += subSchema.size();
+          break;
         default:
           // default to String type
           schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
@@ -122,8 +120,8 @@ public class IcebergUtil {
     return GenericRecord.create(tableFields).copy(mappedResult);
   }
 
-  private static Object jsonToGenericRecordVal(Types.NestedField field,
-                                               JsonNode node) {
+  static Object jsonToGenericRecordVal(Types.NestedField field,
+                                       JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
     final Object val;
     switch (field.type().typeId()) {
@@ -160,14 +158,10 @@ public class IcebergUtil {
         val = jsonObjectMapper.convertValue(node, Map.class);
         break;
       case STRUCT:
-        throw new RuntimeException("Cannot process recursive records!");
-        // Disabled because cannot recursively process StructType/NestedField
-//        // recursive call to get nested data/record
-//        Types.StructType nestedField = Types.StructType.of(field);
-//        GenericRecord r = getIcebergRecord(schema, nestedField, node.get(field.name()));
-//        return  r);
-//        // throw new RuntimeException("Cannot process recursive record!");
-//        break;
+        // create it as struct, nested type
+        // recursive call to get nested data/record
+        val = getIcebergRecord(field.type().asStructType(), node);
+        break;
       default:
         // default to String type
         val = node.asText(null);
