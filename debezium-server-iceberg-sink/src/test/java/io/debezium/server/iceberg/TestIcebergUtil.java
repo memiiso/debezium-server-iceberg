@@ -63,7 +63,7 @@ class TestIcebergUtil {
     GenericRecord h = (GenericRecord) record.getField("h");
     assertEquals(123, g.get(1, Types.IntegerType.get().typeId().javaClass()));
     ByteBuffer gwkbBb = (ByteBuffer) g.get(0, Types.BinaryType.get().typeId().javaClass());
-    assertEquals("java.nio.HeapByteBuffer[pos=0 lim=21 cap=21]", gwkbBb.toString());
+    assertEquals("java.nio.HeapByteBuffer", gwkbBb.getClass().getName());
     assertEquals("Record(null, null)", h.toString());
     assertNull(h.get(0, Types.BinaryType.get().typeId().javaClass()));
   }
