@@ -68,8 +68,8 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.source.offset.flush.interval.ms", "60000");
     config.put("debezium.source.database.server.name", "testc");
     config.put("%postgresql.debezium.source.schema.whitelist", "inventory");
-    config.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
-        "inventory.table_datatypes,inventory.test_date_table,inventory.geom");
+//    config.put("debezium.source.table.whitelist", "inventory.customers,inventory.orders,inventory.products," +
+//        "inventory.table_datatypes,inventory.test_date_table,inventory.geom");
     config.put("%postgresql.debezium.source.database.whitelist", "inventory");
     config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
     config.put("debezium.source.include.schema.changes", "false");
