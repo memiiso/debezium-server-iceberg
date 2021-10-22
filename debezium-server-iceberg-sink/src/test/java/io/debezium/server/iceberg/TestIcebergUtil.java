@@ -31,9 +31,9 @@ class TestIcebergUtil {
   final String unwrapWithGeomSchema = Testing.Files.readResourceAsString("json/serde-with-schema_geom.json");
 
   @Test
-  public void testNestedJsonRecord() {
-    Exception exception = assertThrows(Exception.class, () -> IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema")));
-    assertTrue(exception.getMessage().contains("nested data type"));
+  public void testNestedJsonRecord() throws JsonProcessingException {
+    List<Types.NestedField> d = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema"));
+    assertTrue(d.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, 4:"));
   }
 
   @Test
