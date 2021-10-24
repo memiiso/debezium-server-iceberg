@@ -178,12 +178,12 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     });
     getTableData("testc.inventory.customers").show();
 
-    // CASE 1:(Adding new column to source) 
+    // CASE 1:(Adding new column to source) (A column missing in iceberg table)
     // data of the new column is ignored till same column defined in iceberg table
     // for example: if a column not found in iceberg table its data is dropped ignored and not copied to target!
     // once iceberg table adds same column then data for this column recognized and populated
 
-    // CASE 2:(Removing column from source)
+    // CASE 2:(Removing column from source) (An extra column in iceberg table)
     // these columns are populated with null value
     
     // CASE 3:(Renaming column from source) 

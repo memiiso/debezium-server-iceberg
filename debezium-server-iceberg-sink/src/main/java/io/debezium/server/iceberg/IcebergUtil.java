@@ -110,10 +110,12 @@ public class IcebergUtil {
     LOGGER.debug("Processing nested field:{}", tableFields);
 
     for (Types.NestedField field : tableFields.fields()) {
+      // Set value to null if json event don't have the field
       if (data == null || !data.has(field.name()) || data.get(field.name()) == null) {
         mappedResult.put(field.name(), null);
         continue;
       }
+      // get the value of the field from json event, map it to iceberg value
       mappedResult.put(field.name(), jsonToGenericRecordVal(field, data.get(field.name())));
     }
 
