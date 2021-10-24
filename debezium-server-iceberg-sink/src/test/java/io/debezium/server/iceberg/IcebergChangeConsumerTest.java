@@ -8,21 +8,15 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.DebeziumServer;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
-import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import javax.inject.Inject;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -31,9 +25,10 @@ import org.apache.iceberg.types.Types;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -46,53 +41,29 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTestResource(SourcePostgresqlDB.class)
 @TestProfile(IcebergChangeConsumerTestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
-
-  @Inject
-  DebeziumServer server;
+  
+  protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
+  
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   String tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
-
-  {
-    // Testing.Debug.enable();
-    Testing.Files.delete(ConfigSource.OFFSET_STORE_PATH);
-    Testing.Files.createTestingFile(ConfigSource.OFFSET_STORE_PATH);
-  }
-
-  private HadoopCatalog getIcebergCatalog() {
-    // loop and set hadoopConf
-    Configuration hadoopConf = new Configuration();
-    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
-      if (name.startsWith("debezium.sink.iceberg.")) {
-        hadoopConf.set(name.substring("debezium.sink.iceberg.".length()),
-            ConfigProvider.getConfig().getValue(name, String.class));
-      }
-    }
-    HadoopCatalog icebergCatalog = new HadoopCatalog();
-    icebergCatalog.setConf(hadoopConf);
-
-    Map<String, String> configMap = new HashMap<>();
-    hadoopConf.forEach(e-> configMap.put(e.getKey(), e.getValue()));
-    icebergCatalog.initialize("iceberg", configMap);
-    return icebergCatalog;
-  }
-
-  private org.apache.iceberg.Table getTable(String table) {
+  
+  protected org.apache.iceberg.Table getTable(String table) {
     HadoopCatalog catalog = getIcebergCatalog();
     return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
   }
-
+  
   @Test
-  public void testDatatypes() throws Exception {
+  public void testDataTypes() throws Exception {
     assertEquals(sinkType, "iceberg");
     String sql = "\n" +
-        "        DROP TABLE IF EXISTS inventory.table_datatypes;\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.table_datatypes (\n" +
+        "        DROP TABLE IF EXISTS inventory.data_types;\n" +
+        "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
         "            c_id INTEGER ,\n" +
         "            c_text TEXT,\n" +
         "            c_varchar VARCHAR,\n" +
@@ -104,14 +75,14 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "            c_decimal DECIMAL(18,4),\n" +
         "            c_numeric NUMERIC(18,4),\n" +
         "            c_interval INTERVAL,\n" +
-        "            c_boolean BOOLean,\n" +
+        "            c_boolean BOOLEAN,\n" +
         "            c_uuid UUID,\n" +
         "            c_bytea BYTEA,\n" +
-        "            c_json json,\n" +
-        "            c_jsonb jsonb\n" +
+        "            c_json JSON,\n" +
+        "            c_jsonb JSONB\n" +
         "          );";
     SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.table_datatypes (" +
+    sql = "INSERT INTO inventory.data_types (" +
         "c_id, " +
         "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamptz, " +
         "c_float, c_decimal,c_numeric,c_interval,c_boolean,c_uuid,c_bytea,  " +
@@ -127,7 +98,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.table_datatypes");
+        Dataset<Row> df = getTableData("testc.inventory.data_types");
         df.show(true);
         return df.where("c_text is null AND c_varchar is null AND c_int is null " +
             "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
@@ -140,17 +111,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   }
 
   @Test
-  public void testIcebergConsumer() throws Exception {
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        Dataset<Row> ds = getTableData("testc.inventory.customers");
-        //ds.show();
-        return ds.count() >= 4;
-      } catch (Exception e) {
-        return false;
-      }
-    });
-
+  public void testSchemaChanges() throws Exception {
+    // TEST add new columns, drop not null constraint
     SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1' WHERE ID = 1002 ;");
     SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_varchar_column varchar(255);");
     SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_boolean_column boolean;");
@@ -167,8 +129,13 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
-        ds.show();
-        return ds.where("first_name == 'George__UPDATE1'").count() == 3
+        //ds.show();
+        return
+            ds.where("__op == 'r'").count() == 4 // snapshot rows. initial table data
+            && ds.where("__op == 'u'").count() == 3 // 3 update
+            && ds.where("__op == 'c'").count() == 1 // 1 insert
+            && ds.where("__op == 'd'").count() == 1 // 1 insert
+            && ds.where("first_name == 'George__UPDATE1'").count() == 3
             && ds.where("first_name == 'SallyUSer2'").count() == 1
             && ds.where("last_name is null").count() == 1
             && ds.where("id == '1004'").where("__op == 'd'").count() == 1;
@@ -176,34 +143,53 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
-
+    
+    // added columns are not recognized by iceberg
     getTableData("testc.inventory.customers").show();
-    // add new columns to iceberg table!  and check if new column values are populated!
+    
+    // TEST add new columns to iceberg table then check if its data populated!
     Table table = getTable("testc.inventory.customers");
-
-    // !!!!! IMPORTANT !!! column list here is in reverse order!! for testing purpose!
+    // NOTE column list below are in reverse order!! testing the behaviour purpose!
     table.updateSchema()
-        // test_date_column is Long type because debezium serializes date type as number
+        // NOTE test_date_column is Long type because debezium serializes date type as number
         .addColumn("test_date_column", Types.LongType.get())
         .addColumn("test_boolean_column", Types.BooleanType.get())
         .addColumn("test_varchar_column", Types.StringType.get())
         .commit();
-
+    // insert row after defining new column in target iceberg table
+    SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
+        "(default,'After-Defining-Iceberg-fields','Thomas',null,'value1',false, '2020-01-01');");
+    
+    // remove column from source
     SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers DROP COLUMN email;");
     SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
-        "(default,'User3','lastname_value3','test_varchar_value3',true, '2020-01-01'::DATE);");
+        "(default,'User3','lastname_value3','after-dropping-email-column-from-source',true, '2020-01-01'::DATE);");
 
     Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
         ds.show();
         return ds.where("first_name == 'User3'").count() == 1
-            && ds.where("test_varchar_column == 'test_varchar_value3'").count() == 1;
+            && ds.where("first_name == 'After-Defining-Iceberg-fields'").count() == 1
+            && ds.where("test_varchar_column == 'after-dropping-email-column-from-source' AND email is null").count() == 1;
       } catch (Exception e) {
         return false;
       }
     });
+    getTableData("testc.inventory.customers").show();
 
+    // CASE 1:(Adding new column to source) 
+    // data of the new column is ignored till same column defined in iceberg table
+    // for example: if a column not found in iceberg table its data is dropped ignored and not copied to target!
+    // once iceberg table adds same column then data for this column recognized and populated
+
+    // CASE 2:(Removing column from source)
+    // these columns are populated with null value
+    
+    // CASE 3:(Renaming column from source) 
+    // this is CASE 2 + CASE 1 : old column will be populated with null values and new column will not be recognized 
+    // and populated till it's added to iceberg table
+    
     S3Minio.listFiles();
 
   }
@@ -219,10 +205,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
-  }
-
-  @Test
-  public void testGeomData() {
+    
+    // test nested data(struct) consumed
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.geom");

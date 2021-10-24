@@ -21,7 +21,6 @@ import java.time.Duration;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,10 +33,6 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(SourceMysqlDB.class)
 @TestProfile(IcebergChangeConsumerMysqlTestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
-
-
-  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "1000")
-  Integer maxBatchSize;
 
   @Test
   public void testTombstoneEvents() throws Exception {
@@ -57,12 +52,14 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
     SourceMysqlDB.runSQL(sqlInsert);
     SourceMysqlDB.runSQL(sqlDelete);
     SourceMysqlDB.runSQL(sqlInsert);
+    SourceMysqlDB.runSQL(sqlDelete);
+    SourceMysqlDB.runSQL(sqlInsert);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.test_delete_table");
         df.show();
-        return df.count() >= 12; // 4 insert 4 delete 4 insert!
+        return df.count() == 20; // 4X3 insert 4X2 delete!
       } catch (Exception e) {
         return false;
       }

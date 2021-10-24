@@ -9,17 +9,11 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.TestConfigSource;
-import io.debezium.util.Testing;
-
-import java.nio.file.Path;
-
-import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 
 public class ConfigSource extends TestConfigSource {
 
   public static final String S3_REGION = "us-east-1";
   public static final String S3_BUCKET = "test-bucket";
-  public static final Path HISTORY_FILE = Testing.Files.createTestingPath("dbhistory.txt").toAbsolutePath();
 
   @Override
   public int getOrdinal() {
@@ -62,9 +56,8 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.transforms.unwrap.drop.tombstones", "true");
 
     // DEBEZIUM SOURCE conf
-    config.put("debezium.source." + StandaloneConfig.OFFSET_STORAGE_FILE_FILENAME_CONFIG, OFFSET_STORE_PATH.toAbsolutePath().toString());
-    config.put("debezium.source.database.history", "io.debezium.relational.history.FileDatabaseHistory");
-    config.put("debezium.source.database.history.file.filename", HISTORY_FILE.toAbsolutePath().toString());
+    config.put("debezium.source.offset.storage", "org.apache.kafka.connect.storage.MemoryOffsetBackingStore");
+    config.put("debezium.source.database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
     config.put("debezium.source.offset.flush.interval.ms", "60000");
     config.put("debezium.source.database.server.name", "testc");
     config.put("%postgresql.debezium.source.schema.whitelist", "inventory");
