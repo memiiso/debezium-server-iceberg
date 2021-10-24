@@ -11,7 +11,6 @@ package io.debezium.server.iceberg;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.debezium.util.Testing;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
@@ -35,7 +34,18 @@ import org.junit.jupiter.api.Test;
 public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
   @Test
-  public void testTombstoneEvents() throws Exception {
+  public void testSimpleUpload() throws Exception {
+
+    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.customers");
+        return df.filter("id is not null").count() >= 4;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+    // S3Minio.listFiles();
+
     // create test table
     String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
         " c_id INTEGER ," +
@@ -64,22 +74,7 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
         return false;
       }
     });
-  }
 
-  @Test
-  public void testSimpleUpload() {
-    Testing.Print.enable();
-
-    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.customers");
-        return df.filter("id is not null").count() >= 4;
-      } catch (Exception e) {
-        return false;
-      }
-    });
-
-    S3Minio.listFiles();
   }
 
 }

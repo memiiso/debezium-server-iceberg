@@ -194,6 +194,43 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   }
 
+
+  @Test
+  public void testDataTypeChanges() throws Exception {
+    // @TODO 
+    // TEST add new columns, drop not null constraint
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1' WHERE ID = 1002 ;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_varchar_column varchar(255);");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_boolean_column boolean;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ADD test_date_column date;");
+
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1'  WHERE id = 1002 ;");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ALTER COLUMN email DROP NOT NULL;");
+    SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
+        "(default,'SallyUSer2','Thomas',null,'value1',false, '2020-01-01');");
+    SourcePostgresqlDB.runSQL("ALTER TABLE inventory.customers ALTER COLUMN last_name DROP NOT NULL;");
+    SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET last_name = NULL  WHERE id = 1002 ;");
+    SourcePostgresqlDB.runSQL("DELETE FROM inventory.customers WHERE id = 1004 ;");
+
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
+      try {
+        Dataset<Row> ds = getTableData("testc.inventory.customers");
+        //ds.show();
+        return
+            ds.where("__op == 'r'").count() == 4 // snapshot rows. initial table data
+                && ds.where("__op == 'u'").count() == 3 // 3 update
+                && ds.where("__op == 'c'").count() == 1 // 1 insert
+                && ds.where("__op == 'd'").count() == 1 // 1 insert
+                && ds.where("first_name == 'George__UPDATE1'").count() == 3
+                && ds.where("first_name == 'SallyUSer2'").count() == 1
+                && ds.where("last_name is null").count() == 1
+                && ds.where("id == '1004'").where("__op == 'd'").count() == 1;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+
   @Test
   public void testSimpleUpload() {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
