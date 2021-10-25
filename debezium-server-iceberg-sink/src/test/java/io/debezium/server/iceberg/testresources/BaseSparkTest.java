@@ -8,12 +8,13 @@
 
 package io.debezium.server.iceberg.testresources;
 
-import io.debezium.server.iceberg.ConfigSource;
 import io.debezium.server.iceberg.IcebergUtil;
-import io.debezium.util.Testing;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.BeforeAll;
 import static io.debezium.server.iceberg.ConfigSource.S3_BUCKET;
 
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to s3 destination.
+ * Integration test that uses spark to consumer data is consumed.
  *
  * @author Ismail Simsek
  */
@@ -34,9 +35,22 @@ public class BaseSparkTest {
   private static final String SPARK_PROP_PREFIX = "debezium.sink.sparkbatch.";
   protected static SparkSession spark;
 
-  static {
-    Testing.Files.delete(ConfigSource.OFFSET_STORE_PATH);
-    Testing.Files.createTestingFile(ConfigSource.OFFSET_STORE_PATH);
+  protected HadoopCatalog getIcebergCatalog() {
+    // loop and set hadoopConf
+    Configuration hadoopConf = new Configuration();
+    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
+      if (name.startsWith("debezium.sink.iceberg.")) {
+        hadoopConf.set(name.substring("debezium.sink.iceberg.".length()),
+            ConfigProvider.getConfig().getValue(name, String.class));
+      }
+    }
+    HadoopCatalog icebergCatalog = new HadoopCatalog();
+    icebergCatalog.setConf(hadoopConf);
+
+    Map<String, String> configMap = new HashMap<>();
+    hadoopConf.forEach(e-> configMap.put(e.getKey(), e.getValue()));
+    icebergCatalog.initialize("iceberg", configMap);
+    return icebergCatalog;
   }
 
   @BeforeAll
@@ -73,7 +87,7 @@ public class BaseSparkTest {
   public static void PGCreateTestDataTable() throws Exception {
     // create test table
     String sql = "" +
-        "        CREATE TABLE IF NOT EXISTS inventory.test_date_table (\n" +
+        "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
         "            c_id INTEGER ,\n" +
         "            c_text TEXT,\n" +
         "            c_varchar VARCHAR" +
@@ -94,7 +108,7 @@ public class BaseSparkTest {
           if (addRandomDelay) {
             Thread.sleep(TestUtil.randomInt(20000, 100000));
           }
-          String sql = "INSERT INTO inventory.test_date_table (c_id, c_text, c_varchar ) " +
+          String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
               "VALUES ";
           StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '" + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
           for (int i = 0; i < 100; i++) {
@@ -115,7 +129,7 @@ public class BaseSparkTest {
   public static void mysqlCreateTestDataTable() throws Exception {
     // create test table
     String sql = "\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.test_date_table (\n" +
+        "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
         "            c_id INTEGER ,\n" +
         "            c_text TEXT,\n" +
         "            c_varchar TEXT\n" +
@@ -126,7 +140,7 @@ public class BaseSparkTest {
   public static int mysqlLoadTestDataTable(int numRows) throws Exception {
     int numInsert = 0;
     do {
-      String sql = "INSERT INTO inventory.test_date_table (c_id, c_text, c_varchar ) " +
+      String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
           "VALUES ";
       StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '" + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
       for (int i = 0; i < 10; i++) {
