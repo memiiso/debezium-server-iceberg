@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.tableoperator;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +85,12 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     }
     
     edw.deleteAll(deleteRows);
+    
+    try {
+      edw.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
 
     LOGGER.debug("Creating iceberg equality delete file!");
     return Optional.of(edw.toDeleteFile());

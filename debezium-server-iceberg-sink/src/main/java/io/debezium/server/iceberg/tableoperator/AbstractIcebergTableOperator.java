@@ -13,6 +13,7 @@ import io.debezium.engine.ChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.IcebergUtil;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -91,7 +92,13 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     DataWriter<Record> dw = apender.newDataWriter(icebergTable.encryption().encrypt(out), FileFormat.PARQUET, null);
     
     icebergRecords.stream().filter(this.filterEvents()).forEach(dw::add);
-    
+
+    try {
+      dw.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     LOGGER.debug("Creating iceberg DataFile!");
     return dw.toDataFile();
   }
