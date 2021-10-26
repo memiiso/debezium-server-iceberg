@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
 @Named("IcebergTableOperatorUpsert")
 public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
   static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
 
@@ -65,10 +65,17 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
     EncryptedOutputFile eout = icebergTable.encryption().encrypt(out);
-    
-    GenericAppenderFactory apender = new GenericAppenderFactory(icebergTable.schema(), icebergTable.spec());
+
+    //public GenericAppenderFactory(Schema schema, PartitionSpec spec, int[] equalityFieldIds, Schema eqDeleteRowSchema, Schema posDeleteRowSchema) {
+    int[] idFields = icebergTable.schema().identifierFieldIds().stream().mapToInt(Integer::intValue).toArray();
+    GenericAppenderFactory apender = new GenericAppenderFactory(
+        icebergTable.schema(),
+        icebergTable.spec(),
+        idFields,
+        icebergTable.sortOrder().schema(),
+        (Schema) null);
     EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, FileFormat.PARQUET, null);
-    
+
     //EqualityDeleteWriter<Record> deleteWriter;
     // anything is not an insert.
     // upsertKeepDeletes = false, which means delete deletes
@@ -83,9 +90,9 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     if (deleteRows.size() == 0) {
       return Optional.empty();
     }
-    
+
     edw.deleteAll(deleteRows);
-    
+
     try {
       edw.close();
     } catch (IOException e) {
