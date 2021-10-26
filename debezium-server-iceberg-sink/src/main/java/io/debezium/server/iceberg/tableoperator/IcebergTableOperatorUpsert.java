@@ -32,6 +32,7 @@ import org.apache.iceberg.data.Record;
 import org.apache.iceberg.deletes.EqualityDeleteWriter;
 import org.apache.iceberg.encryption.EncryptedOutputFile;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,11 +68,10 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     EncryptedOutputFile eout = icebergTable.encryption().encrypt(out);
 
     //public GenericAppenderFactory(Schema schema, PartitionSpec spec, int[] equalityFieldIds, Schema eqDeleteRowSchema, Schema posDeleteRowSchema) {
-    int[] idFields = icebergTable.schema().identifierFieldIds().stream().mapToInt(Integer::intValue).toArray();
     GenericAppenderFactory apender = new GenericAppenderFactory(
         icebergTable.schema(),
         icebergTable.spec(),
-        idFields,
+        Ints.toArray(icebergTable.schema().identifierFieldIds()),
         icebergTable.schema(),
         (Schema) null);
     EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, FileFormat.PARQUET, null);
