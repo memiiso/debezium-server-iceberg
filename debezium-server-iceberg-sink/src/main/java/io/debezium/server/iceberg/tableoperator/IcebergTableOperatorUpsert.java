@@ -72,7 +72,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
         icebergTable.schema(),
         icebergTable.spec(),
         idFields,
-        icebergTable.sortOrder().schema(),
+        icebergTable.schema(),
         (Schema) null);
     EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, FileFormat.PARQUET, null);
 
