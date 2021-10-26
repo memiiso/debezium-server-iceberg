@@ -13,10 +13,7 @@ import io.debezium.server.iceberg.IcebergUtil;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -36,6 +33,7 @@ import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.iceberg.TableProperties.*;
 
 @Dependent
 @Named("IcebergTableOperatorUpsert")
@@ -62,21 +60,22 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   }
 
   private Optional<DeleteFile> getDeleteFile(Table icebergTable, ArrayList<Record> icebergRecords) {
-
-    final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
+    
+    String formatAsString = icebergTable.properties().getOrDefault(DELETE_DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
+    FileFormat fileFormat = FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+    
+    final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + fileFormat.name();
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
     EncryptedOutputFile eout = icebergTable.encryption().encrypt(out);
 
-    //public GenericAppenderFactory(Schema schema, PartitionSpec spec, int[] equalityFieldIds, Schema eqDeleteRowSchema, Schema posDeleteRowSchema) {
     GenericAppenderFactory apender = new GenericAppenderFactory(
         icebergTable.schema(),
         icebergTable.spec(),
         Ints.toArray(icebergTable.schema().identifierFieldIds()),
         icebergTable.schema(),
-        (Schema) null);
-    EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, FileFormat.PARQUET, null);
+        null);
+    EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, fileFormat, null);
 
-    //EqualityDeleteWriter<Record> deleteWriter;
     // anything is not an insert.
     // upsertKeepDeletes = false, which means delete deletes
     List<Record> deleteRows = icebergRecords.stream()

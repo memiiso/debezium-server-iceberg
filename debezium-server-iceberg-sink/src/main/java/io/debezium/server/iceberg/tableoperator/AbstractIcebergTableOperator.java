@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,6 +34,8 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
 /**
  * Wrapper to perform operations in iceberg tables
@@ -85,11 +88,15 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
   }
 
   protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) {
-    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
+
+    String formatAsString = icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
+    FileFormat fileFormat = FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+    
+    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + fileFormat.name();
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
     
     GenericAppenderFactory apender = new GenericAppenderFactory(icebergTable.schema(), icebergTable.spec());
-    DataWriter<Record> dw = apender.newDataWriter(icebergTable.encryption().encrypt(out), FileFormat.PARQUET, null);
+    DataWriter<Record> dw = apender.newDataWriter(icebergTable.encryption().encrypt(out), fileFormat, null);
     
     icebergRecords.stream().filter(this.filterEvents()).forEach(dw::add);
 

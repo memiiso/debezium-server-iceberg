@@ -23,6 +23,7 @@ import org.apache.iceberg.relocated.com.google.common.collect.ImmutableSet;
 import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.iceberg.TableProperties.*;
 
 /**
  *
@@ -107,13 +108,16 @@ public class DebeziumToIcebergTable {
     return identifierFieldIds;
   }
 
-  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier) {
+  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier, String writeFormat,
+                      String writeDeleteFormat) {
 
     Schema schema = new Schema(this.tableColumns, getRowIdentifierFieldIds());
 
     if (this.hasSchema()) {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, schema)
-          .withProperty("format-version", "2")
+          .withProperty(FORMAT_VERSION, "2")
+          .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
+          .withProperty(DELETE_DEFAULT_FILE_FORMAT, writeDeleteFormat.toLowerCase(Locale.ENGLISH))
           .withSortOrder(getSortOrder(schema));
 
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
