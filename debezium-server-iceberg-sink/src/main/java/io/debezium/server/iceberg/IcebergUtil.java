@@ -143,7 +143,8 @@ public class IcebergUtil {
         val = node.isNull() ? null : node.asBoolean();
         break;
       case STRING:
-        val = node.asText(null);
+        // if the node is not a value node (method isValueNode returns false), convert it to string.
+        val = node.isValueNode() ? node.asText(null) : node.toString();
         break;
       case BINARY:
         try {
@@ -166,7 +167,8 @@ public class IcebergUtil {
         break;
       default:
         // default to String type
-        val = node.asText(null);
+        // if the node is not a value node (method isValueNode returns false), convert it to string.
+        val = node.isValueNode() ? node.asText(null) : node.toString();
         break;
     }
 
