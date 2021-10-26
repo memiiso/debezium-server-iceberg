@@ -13,23 +13,21 @@ import io.debezium.engine.ChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.IcebergUtil;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.iceberg.*;
+import org.apache.iceberg.DataFile;
+import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
-import org.apache.iceberg.io.FileAppender;
+import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
-import org.apache.iceberg.parquet.Parquet;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
@@ -88,34 +86,14 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
   protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) {
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
-
-    FileAppender<Record> writer;
-    List<Record> newRecords = icebergRecords.stream()
-        .filter(this.filterEvents()).collect(Collectors.toList());
-    try {
-      LOGGER.debug("Writing data to file: {}!", out);
-      writer = Parquet.write(out)
-          .createWriterFunc(GenericParquetWriter::buildWriter)
-          .forTable(icebergTable)
-          .overwrite()
-          .build();
-
-      try (Closeable toClose = writer) {
-        writer.addAll(newRecords);
-      }
-
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
+    
+    GenericAppenderFactory apender = new GenericAppenderFactory(icebergTable.schema(), icebergTable.spec());
+    DataWriter<Record> dw = apender.newDataWriter(icebergTable.encryption().encrypt(out), FileFormat.PARQUET, null);
+    
+    icebergRecords.stream().filter(this.filterEvents()).forEach(dw::add);
+    
     LOGGER.debug("Creating iceberg DataFile!");
-    return DataFiles.builder(icebergTable.spec())
-        .withFormat(FileFormat.PARQUET)
-        .withPath(out.location())
-        .withFileSizeInBytes(writer.length())
-        .withSplitOffsets(writer.splitOffsets())
-        .withMetrics(writer.metrics())
-        .build();
+    return dw.toDataFile();
   }
 
 }
