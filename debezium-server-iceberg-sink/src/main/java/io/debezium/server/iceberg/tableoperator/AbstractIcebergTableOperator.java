@@ -30,6 +30,7 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
@@ -87,16 +88,28 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     return icebergRecords;
   }
 
-  protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) {
-
+  FileFormat getFileFormat(Table icebergTable){
     String formatAsString = icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
-    FileFormat fileFormat = FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+    return FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+  }
+
+  GenericAppenderFactory getAppender(Table icebergTable) {
+    return new GenericAppenderFactory(
+        icebergTable.schema(),
+        icebergTable.spec(),
+        Ints.toArray(icebergTable.schema().identifierFieldIds()),
+        icebergTable.schema(),
+        null);
+  }
+  
+  protected DataFile getDataFile(Table icebergTable, ArrayList<Record> icebergRecords) {
     
+    FileFormat fileFormat = getFileFormat(icebergTable);
+    GenericAppenderFactory appender = getAppender(icebergTable);
     final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + fileFormat.name();
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
     
-    GenericAppenderFactory apender = new GenericAppenderFactory(icebergTable.schema(), icebergTable.spec());
-    DataWriter<Record> dw = apender.newDataWriter(icebergTable.encryption().encrypt(out), fileFormat, null);
+    DataWriter<Record> dw = appender.newDataWriter(icebergTable.encryption().encrypt(out), fileFormat, null);
     
     icebergRecords.stream().filter(this.filterEvents()).forEach(dw::add);
 
