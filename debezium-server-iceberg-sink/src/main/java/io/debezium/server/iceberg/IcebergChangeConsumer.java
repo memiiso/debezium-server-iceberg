@@ -47,6 +47,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.iceberg.TableProperties.*;
 
 /**
  * Implementation of the consumer that delivers the messages to iceberg tables.
@@ -81,6 +82,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String batchSizeWaitName;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
   boolean eventSchemaEnabled;
+  @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
+  String writeFormat;
+
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
@@ -199,7 +203,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         ? new DebeziumToIcebergTable(getBytes(event.value()))
         : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
 
-    return eventSchema.create(icebergCatalog, tableIdentifier);
+    return eventSchema.create(icebergCatalog, tableIdentifier, writeFormat);
   }
 
   private Optional<Table> loadIcebergTable(TableIdentifier tableId) {
@@ -207,7 +211,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       Table table = icebergCatalog.loadTable(tableId);
       return Optional.of(table);
     } catch (NoSuchTableException e) {
-      LOGGER.warn("table not found: {}", tableId.toString());
+      LOGGER.warn("Table not found: {}", tableId.toString());
       return Optional.empty();
     }
   }

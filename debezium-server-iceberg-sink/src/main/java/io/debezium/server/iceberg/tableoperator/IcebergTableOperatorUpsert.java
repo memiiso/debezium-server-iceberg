@@ -11,14 +11,9 @@ package io.debezium.server.iceberg.tableoperator;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -27,24 +22,25 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Ints;
 import org.apache.iceberg.*;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.deletes.EqualityDeleteWriter;
+import org.apache.iceberg.encryption.EncryptedOutputFile;
 import org.apache.iceberg.io.OutputFile;
-import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.iceberg.TableProperties.*;
 
 @Dependent
 @Named("IcebergTableOperatorUpsert")
 public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
   static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperatorUpsert.class);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
 
@@ -64,11 +60,21 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   }
 
   private Optional<DeleteFile> getDeleteFile(Table icebergTable, ArrayList<Record> icebergRecords) {
-
-    final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
+    
+    String formatAsString = icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
+    FileFormat fileFormat = FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+    
+    final String fileName = "del-" + UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + fileFormat.name();
     OutputFile out = icebergTable.io().newOutputFile(icebergTable.locationProvider().newDataLocation(fileName));
+    EncryptedOutputFile eout = icebergTable.encryption().encrypt(out);
 
-    EqualityDeleteWriter<Record> deleteWriter;
+    GenericAppenderFactory apender = new GenericAppenderFactory(
+        icebergTable.schema(),
+        icebergTable.spec(),
+        Ints.toArray(icebergTable.schema().identifierFieldIds()),
+        icebergTable.schema(),
+        null);
+    EqualityDeleteWriter<Record> edw = apender.newEqDeleteWriter(eout, fileFormat, null);
 
     // anything is not an insert.
     // upsertKeepDeletes = false, which means delete deletes
@@ -84,36 +90,16 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
       return Optional.empty();
     }
 
+    edw.deleteAll(deleteRows);
+
     try {
-      LOGGER.debug("Writing data to equality delete file: {}!", out);
-      deleteWriter = Parquet.writeDeletes(out)
-          .createWriterFunc(GenericParquetWriter::buildWriter)
-          .overwrite()
-          .forTable(icebergTable)
-          .equalityFieldIds(List.copyOf(icebergTable.schema().identifierFieldIds()))
-          .withSortOrder(icebergTable.sortOrder())
-          .buildEqualityWriter();
-
-      try (Closeable toClose = deleteWriter) {
-        deleteWriter.deleteAll(deleteRows);
-      }
-
+      edw.close();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
 
     LOGGER.debug("Creating iceberg equality delete file!");
-    // Equality delete files identify deleted rows in a collection of data files by one or more column values,
-    // and may optionally contain additional columns of the deleted row.
-    return Optional.of(FileMetadata.deleteFileBuilder(icebergTable.spec())
-        .ofEqualityDeletes(Ints.toArray(icebergTable.schema().identifierFieldIds()))
-        .withFormat(FileFormat.PARQUET)
-        .withPath(out.location())
-        .withFileSizeInBytes(deleteWriter.length())
-        .withFileSizeInBytes(deleteWriter.length())
-        .withRecordCount(deleteRows.size())
-        .withSortOrder(icebergTable.sortOrder())
-        .build());
+    return Optional.of(edw.toDeleteFile());
   }
 
   private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) {
