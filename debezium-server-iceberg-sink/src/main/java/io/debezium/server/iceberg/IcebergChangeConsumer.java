@@ -21,10 +21,7 @@ import io.debezium.util.Threads;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -38,11 +35,13 @@ import javax.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -58,10 +57,15 @@ import static org.apache.iceberg.TableProperties.*;
 @Dependent
 public class IcebergChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
+  protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  protected final Clock clock = Clock.system();
   final Configuration hadoopConf = new Configuration();
   final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+  protected long consumerStart = clock.currentTimeInMillis();
+  protected long numConsumedEvents = 0;
+  protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
@@ -84,7 +88,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   boolean eventSchemaEnabled;
   @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
   String writeFormat;
-
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
@@ -94,12 +97,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @Any
   Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
   InterfaceIcebergTableOperator icebergTableOperator;
-
-  protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
-  protected final Clock clock = Clock.system();
-  protected long consumerStart = clock.currentTimeInMillis();
-  protected long numConsumedEvents = 0;
-  protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
 
   @PostConstruct
   void connect() {
@@ -199,12 +196,26 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
     }
 
-    DebeziumToIcebergTable eventSchema = event.key() == null
-        ? new DebeziumToIcebergTable(getBytes(event.value()))
-        : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
+    List<Types.NestedField> tableColumns = IcebergUtil.getIcebergFieldsFromEventSchema(getBytes(event.value()));
+    List<Types.NestedField> keyColumns =
+        IcebergUtil.getIcebergFieldsFromEventSchema(event.key() == null ? null : getBytes(event.key()));
 
-    return eventSchema.create(icebergCatalog, tableIdentifier, writeFormat);
+    if (tableColumns.isEmpty()) {
+      throw new RuntimeException("Failed to create table " + tableIdentifier);
+    }
+
+    Schema schema = IcebergUtil.getSchema(tableColumns, keyColumns);
+
+    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
+        schema.identifierFieldNames());
+
+    return icebergCatalog.buildTable(tableIdentifier, schema)
+        .withProperty(FORMAT_VERSION, "2")
+        .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
+        .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
+        .create();
   }
+
 
   private Optional<Table> loadIcebergTable(TableIdentifier tableId) {
     try {
@@ -215,6 +226,5 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       return Optional.empty();
     }
   }
-
 
 }

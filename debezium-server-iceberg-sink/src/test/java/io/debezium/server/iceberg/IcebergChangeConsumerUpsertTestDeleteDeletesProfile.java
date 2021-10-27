@@ -20,7 +20,6 @@ public class IcebergChangeConsumerUpsertTestDeleteDeletesProfile implements Quar
   public Map<String, String> getConfigOverrides() {
     Map<String, String> config = new HashMap<>();
 
-    config.put("debezium.sink.type", "iceberg");
     config.put("debezium.sink.iceberg.upsert", "true");
     config.put("debezium.sink.iceberg.upsert-keep-deletes", "false");
     return config;
