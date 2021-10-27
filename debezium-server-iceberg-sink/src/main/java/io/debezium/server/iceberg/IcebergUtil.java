@@ -10,15 +10,14 @@ package io.debezium.server.iceberg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
+import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
@@ -188,5 +187,46 @@ public class IcebergUtil {
     return ret;
   }
 
+  public static List<Types.NestedField> getIcebergFieldsFromEventSchema(byte[] eventVal) {
+    
+    try {
+      JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
+      if (IcebergUtil.hasSchema(jsonEvent)) {
+        return IcebergUtil.getIcebergSchema(jsonEvent.get("schema"));
+      }
+
+      LOGGER.trace("Event schema not found in the given data:!");
+      return new ArrayList<>();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static Schema getSchema(List<Types.NestedField> tableColumns,
+                                 List<Types.NestedField> keyColumns) {
+
+    Set<Integer> identifierFieldIds = new HashSet<>();
+
+    Schema tmpSchema = new Schema(tableColumns);
+    for (Types.NestedField ic : keyColumns) {
+      Types.NestedField idField = tmpSchema.findField(ic.name());
+
+      if (idField == null) {
+        throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
+      }
+      identifierFieldIds.add(idField.fieldId());
+    }
+
+    return new Schema(tableColumns, identifierFieldIds);
+  }
+
+  public static SortOrder getIdentifierFieldAsSortOrder(Schema schema) {
+    SortOrder.Builder sob = SortOrder.builderFor(schema);
+    for (String fieldName : schema.identifierFieldNames()) {
+      sob = sob.asc(fieldName);
+    }
+
+    return sob.build();
+  }
 
 }
