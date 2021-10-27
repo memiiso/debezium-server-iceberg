@@ -197,7 +197,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
 
     List<Types.NestedField> tableColumns = IcebergUtil.getIcebergFieldsFromEventSchema(getBytes(event.value()));
-    List<Types.NestedField> keyColumns = IcebergUtil.getIcebergFieldsFromEventSchema(getBytes(event.key()));
+    List<Types.NestedField> keyColumns =
+        IcebergUtil.getIcebergFieldsFromEventSchema(event.key() == null ? null : getBytes(event.key()));
 
     if (tableColumns.isEmpty()) {
       throw new RuntimeException("Failed to create table " + tableIdentifier);

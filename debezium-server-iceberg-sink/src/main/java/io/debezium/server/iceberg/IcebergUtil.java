@@ -189,6 +189,10 @@ public class IcebergUtil {
 
   public static List<Types.NestedField> getIcebergFieldsFromEventSchema(byte[] eventVal) {
     
+    if(eventVal == null){
+      return new ArrayList<>();
+    }
+    
     try {
       JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
       if (IcebergUtil.hasSchema(jsonEvent)) {
