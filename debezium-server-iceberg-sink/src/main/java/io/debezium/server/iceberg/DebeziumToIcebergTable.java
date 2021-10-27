@@ -108,8 +108,7 @@ public class DebeziumToIcebergTable {
     return identifierFieldIds;
   }
 
-  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier, String writeFormat,
-                      String writeDeleteFormat) {
+  public Table create(Catalog icebergCatalog, TableIdentifier tableIdentifier, String writeFormat) {
 
     Schema schema = new Schema(this.tableColumns, getRowIdentifierFieldIds());
 
@@ -117,7 +116,6 @@ public class DebeziumToIcebergTable {
       Catalog.TableBuilder tb = icebergCatalog.buildTable(tableIdentifier, schema)
           .withProperty(FORMAT_VERSION, "2")
           .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
-          .withProperty(DELETE_DEFAULT_FILE_FORMAT, writeDeleteFormat.toLowerCase(Locale.ENGLISH))
           .withSortOrder(getSortOrder(schema));
 
       LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,

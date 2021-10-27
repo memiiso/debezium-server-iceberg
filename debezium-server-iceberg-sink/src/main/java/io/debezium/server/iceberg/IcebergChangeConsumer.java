@@ -84,8 +84,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   boolean eventSchemaEnabled;
   @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
   String writeFormat;
-  @ConfigProperty(name = "debezium.sink.iceberg." + DELETE_DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
-  String writeDeleteFormat;
 
   @Inject
   @Any
@@ -205,7 +203,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         ? new DebeziumToIcebergTable(getBytes(event.value()))
         : new DebeziumToIcebergTable(getBytes(event.value()), getBytes(event.key()));
 
-    return eventSchema.create(icebergCatalog, tableIdentifier, writeFormat, writeDeleteFormat);
+    return eventSchema.create(icebergCatalog, tableIdentifier, writeFormat);
   }
 
   private Optional<Table> loadIcebergTable(TableIdentifier tableId) {

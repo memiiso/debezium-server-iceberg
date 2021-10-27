@@ -21,6 +21,7 @@ public class IcebergChangeConsumerTestProfile implements QuarkusTestProfile {
     Map<String, String> config = new HashMap<>();
 
     config.put("debezium.sink.type", "iceberg");
+    config.put("debezium.sink.iceberg.write.format.default", "orc");
 
     return config;
   }
