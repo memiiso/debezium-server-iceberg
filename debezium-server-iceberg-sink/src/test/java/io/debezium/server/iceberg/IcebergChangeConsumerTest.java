@@ -219,7 +219,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         " (c_id, c_varchar, c_int2string, c_date2string, c_timestamp2string, string2int, string2timestamp, string2boolean) " +
         " VALUES (2, 'STRING-DATA-2', 222, current_date , current_timestamp, 222, current_timestamp, true)";
     SourcePostgresqlDB.runSQL(sql);
-    
+
     SourcePostgresqlDB.runSQL("ALTER TABLE inventory.data_type_changes " +
         "ALTER COLUMN c_int2string TYPE VARCHAR(555), " +
         "ALTER COLUMN c_date2string TYPE VARCHAR(555), " +
@@ -227,7 +227,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "ALTER COLUMN string2int TYPE INTEGER USING string2int::integer, " +
         "ALTER COLUMN string2timestamp TYPE TIMESTAMP USING string2timestamp::TIMESTAMP, " +
         "ALTER COLUMN string2boolean TYPE boolean USING string2boolean::boolean"
-        );
+    );
     sql = "INSERT INTO inventory.data_type_changes " +
         " (c_id, c_varchar, c_int2string, c_date2string, c_timestamp2string, string2int, string2timestamp, string2boolean) " +
         " VALUES (3, 'STRING-DATA-3', '333', 'current_date-3' , 'current_timestamp-3', 333, current_timestamp, false)";
