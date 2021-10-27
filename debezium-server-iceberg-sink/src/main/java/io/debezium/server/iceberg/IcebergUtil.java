@@ -210,21 +210,32 @@ public class IcebergUtil {
                                  List<Types.NestedField> keyColumns) {
 
     Set<Integer> identifierFieldIds = new HashSet<>();
-
-    Schema tmpSchema = new Schema(tableColumns);
+    
     for (Types.NestedField ic : keyColumns) {
-      Types.NestedField idField = tmpSchema.findField(ic.name());
+      boolean found = false;
 
-      if (idField == null) {
+      ListIterator<Types.NestedField> colsIterator = tableColumns.listIterator();
+      while (colsIterator.hasNext()) {
+        Types.NestedField tc = colsIterator.next();
+        if (Objects.equals(tc.name(), ic.name())) {
+          identifierFieldIds.add(tc.fieldId());
+          // set column as required its part of identifier filed
+          colsIterator.set(tc.asRequired());
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
         throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
       }
-      identifierFieldIds.add(idField.fieldId());
-    }
 
+    }
+    
     return new Schema(tableColumns, identifierFieldIds);
   }
 
-  public static SortOrder getIdentifierFieldAsSortOrder(Schema schema) {
+  public static SortOrder getIdentifierFieldsAsSortOrder(Schema schema) {
     SortOrder.Builder sob = SortOrder.builderFor(schema);
     for (String fieldName : schema.identifierFieldNames()) {
       sob = sob.asc(fieldName);

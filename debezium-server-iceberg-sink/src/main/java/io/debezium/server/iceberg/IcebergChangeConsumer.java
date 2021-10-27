@@ -212,7 +212,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     return icebergCatalog.buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, "2")
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
-        .withSortOrder(IcebergUtil.getIdentifierFieldAsSortOrder(schema))
+        .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
         .create();
   }
 
