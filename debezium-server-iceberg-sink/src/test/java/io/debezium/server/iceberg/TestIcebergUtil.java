@@ -54,10 +54,10 @@ class TestIcebergUtil {
     JsonNode jsonSchema = jsonData.get("schema");
     List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
     Schema schema = new Schema(schemaFields);
-    System.out.println(schema);
-    assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional string, 4: srid: optional int>"));
-
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
+    //System.out.println(schema);
+    //System.out.println(record);
+    assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional string, 4: srid: optional int>"));
     GenericRecord g = (GenericRecord) record.getField("g");
     GenericRecord h = (GenericRecord) record.getField("h");
     assertEquals("AQEAAAAAAAAAAADwPwAAAAAAAPA/", g.get(0, Types.StringType.get().typeId().javaClass()));

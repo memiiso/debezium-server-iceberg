@@ -150,7 +150,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
     // TEST add new columns to iceberg table then check if its data populated!
     Table table = getTable("testc.inventory.customers");
-    // NOTE column list below are in reverse order!! testing the behaviour purpose!
+    // NOTE column list below are in reverse order!! testing the behaviour!
     table.updateSchema()
         // NOTE test_date_column is Long type because debezium serializes date type as number
         .addColumn("test_date_column", Types.LongType.get())
@@ -236,6 +236,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.data_type_changes");
+        ds.printSchema();
         ds.show();
         return ds.where("__op == 'r'").count() == 19;
       } catch (Exception e) {
