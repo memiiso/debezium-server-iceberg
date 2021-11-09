@@ -2,7 +2,7 @@ name: CI to Github Container Registry
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
 
