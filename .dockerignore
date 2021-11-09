@@ -2,3 +2,5 @@ Dockerfile
 **/target/
 
 .idea/
+.github/
+.run/

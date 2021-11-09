@@ -10,25 +10,26 @@ env:
 jobs:
   build:
     name: Main
+    if: github.repository_owner == 'memiiso'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Check Out Repo
         uses: actions/checkout@v2
 
       - name: Set env
         run: |
-          echo "RELEASE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=latest" >> $GITHUB_ENV
           echo "RELEASE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
           echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Build project
-        run: mvn -B package -Passembly --file pom.xml -Drevision=latest
+        run: mvn -B package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
 
-      - name: Delete latest release
+      - name: Delete ${{ env.RELEASE_NAME }} release
         uses: dev-drprasad/delete-tag-and-release@v0.1.3
         with:
           delete_release: true # default: false
-          tag_name: latest
+          tag_name: ${{ env.RELEASE_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,9 +39,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release master/latest
-          tag_name: latest
-          body: master branch release
+          name: Release ${{ env.RELEASE_NAME }}
+          tag_name: ${{ env.RELEASE_NAME }}
+          body: Release master branch
           draft: false
           prerelease: true
-          files: debezium-server-dist/target/debezium-server-dist-latest.zip
+          files: debezium-server-dist/target/debezium-server-dist-${{ env.RELEASE_NAME }}.zip
