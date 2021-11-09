@@ -39,8 +39,8 @@ jobs:
           file: ./Dockerfile
           builder: ${{ steps.buildx.outputs.name }}
           push: true
-          # tags:  memiiso/debezium-server-iceberg:latest
-          tags: ghcr.io/memiiso/debezium-server-iceberg:latest
+          # tags:  ${{ github.repository_owner }}/debezium-server-iceberg:latest
+          tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Image digest
