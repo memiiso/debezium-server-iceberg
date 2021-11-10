@@ -22,7 +22,7 @@ jobs:
           echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Build project
-        run: mvn -B package -Passembly --file pom.xml -Drevision=latest
+        run: mvn -B --quiet package -Passembly --file pom.xml -Drevision=latest
 
       - name: Delete latest release
         uses: dev-drprasad/delete-tag-and-release@v0.1.3
