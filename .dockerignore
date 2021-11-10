@@ -2,4 +2,4 @@
 **
 
 # Allow files and directories
-!debezium-server-dist/target/debezium-server-dist**.zip
+!**debezium-server-dist/target/debezium-server-dist**.zip
