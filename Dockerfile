@@ -1,5 +1,6 @@
 FROM eclipse-temurin:11-jre
 RUN apt-get update && apt-get install zip unzip
+# NOTe make sure to run `mvn clean package -Passembly -Dmaven.test.skip=true`
 COPY ./debezium-server-dist/target/debezium-server-dist*.zip /tmp/
 RUN unzip /tmp/debezium-server-dist*.zip -d /tmp
 RUN mv /tmp/debezium-server-iceberg /app
