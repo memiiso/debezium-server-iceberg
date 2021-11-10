@@ -32,6 +32,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log location
+        run: |
+          pwd
+          ls -l
+          
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
