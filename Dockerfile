@@ -3,7 +3,7 @@ RUN apt-get -qq update && apt-get -qq install maven unzip
 COPY . /app
 WORKDIR /app
 RUN mvn clean package -Passembly -Dmaven.test.skip --quiet
-RUN unzip /app/debezium-server-dist/target/debezium-server-dist*.zip -d appdist
+RUN unzip /app/debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 
 FROM eclipse-temurin:11-jre
 COPY --from=builder /app/appdist/ /app/

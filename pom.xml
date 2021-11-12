@@ -138,7 +138,7 @@
 
     <modules>
         <module>debezium-server-iceberg-sink</module>
-        <module>debezium-server-dist</module>
+        <module>debezium-server-iceberg-dist</module>
     </modules>
 
 </project>
