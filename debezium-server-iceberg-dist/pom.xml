@@ -87,23 +87,47 @@
                 </dependency>
                 <dependency>
                     <groupId>io.debezium</groupId>
+                    <artifactId>debezium-connector-oracle</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>io.debezium</groupId>
                     <artifactId>debezium-server-core</artifactId>
                 </dependency>
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-kinesis</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-pubsub</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-pulsar</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-eventhubs</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-redis</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-kafka</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-pravega</artifactId>-->
+<!--                </dependency>-->
+<!--                <dependency>-->
+<!--                    <groupId>io.debezium</groupId>-->
+<!--                    <artifactId>debezium-server-nats-streaming</artifactId>-->
+<!--                </dependency>-->
                 <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-kinesis</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-pubsub</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-pulsar</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-eventhubs</artifactId>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-logging-json</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>io.debezium</groupId>
