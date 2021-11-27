@@ -8,11 +8,23 @@ This project adds iceberg consumer to [Debezium Server](https://debezium.io/docu
 replicate database CDC changes to Iceberg table (Cloud Storage, HDFS) in realtime, without requiring Spark, Kafka or Streaming platform.
 
 More detail available in [documentation page](docs/DOCS.md)
+Also, check [caveats](docs/CAVEATS.md) for better understanding the current limitation and proper workaround
 
 ![Debezium Iceberg](docs/images/debezium-iceberg.png)
 
+# Install from source
+- Requirements:
+  - JDK 11
+  - Maven
+- Clone from repo: `git clone https://github.com/memiiso/debezium-server-iceberg.git`
+- From the root of the project:
+  - Build and package debezium server: `mvn -Passembly -Dmaven.test.skip package`
+  - After building, unzip your server distribution: `debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist`
+  - cd into unzipped folder: `cd appdist`
+  - Run the server using provided script: `bash run.sh`
+
 # Contributing
-The Memiiso community welcomes anyone that wants to help out in any way, whether that includes reporting problems, helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features. See [contributing document](CONTRIBUTE.md) for details.
+The Memiiso community welcomes anyone that wants to help out in any way, whether that includes reporting problems, helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features. See [contributing document](CONTRIBUTING.md) for details.
 
 ### Contributors
 <a href="https://github.com/memiiso/debezium-server-iceberg/graphs/contributors">
