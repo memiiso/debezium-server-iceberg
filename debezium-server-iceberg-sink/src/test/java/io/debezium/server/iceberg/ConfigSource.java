@@ -57,14 +57,14 @@ public class ConfigSource extends TestConfigSource {
 
     // DEBEZIUM SOURCE conf
     config.put("debezium.source.offset.storage", "org.apache.kafka.connect.storage.MemoryOffsetBackingStore");
-    config.put("debezium.source.database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
+    //config.put("debezium.source.database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
     config.put("debezium.source.offset.flush.interval.ms", "60000");
     config.put("debezium.source.database.server.name", "testc");
     config.put("%postgresql.debezium.source.schema.whitelist", "inventory");
     config.put("debezium.source.table.whitelist", "inventory.*");
     config.put("%postgresql.debezium.source.database.whitelist", "inventory");
     config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
-    config.put("debezium.source.include.schema.changes", "false");
+    config.put("debezium.source.include.schema.changes", "true");
 
     config.put("quarkus.log.level", "INFO");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");

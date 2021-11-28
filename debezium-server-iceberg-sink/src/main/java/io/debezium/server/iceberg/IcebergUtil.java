@@ -18,6 +18,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.exceptions.ValidationException;
+import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
@@ -35,6 +36,33 @@ public class IcebergUtil {
     return getIcebergSchema(eventSchema, "", 0);
   }
 
+  public static org.apache.iceberg.types.Type.PrimitiveType getIcebergField(String fieldType) {
+    switch (fieldType) {
+      case "int8":
+      case "int16":
+      case "int32": // int 4 bytes
+        return Types.IntegerType.get();
+      case "int64": // long 8 bytes
+        return Types.LongType.get();
+      case "float8":
+      case "float16":
+      case "float32": // float is represented in 32 bits,
+        return Types.FloatType.get();
+      case "float64": // double is represented in 64 bits
+        return Types.DoubleType.get();
+      case "boolean":
+        return Types.BooleanType.get();
+      case "string":
+        return Types.StringType.get();
+      case "bytes":
+        return Types.BinaryType.get();
+      default:
+        // default to String type
+        return Types.StringType.get();
+      //throw new RuntimeException("'" + fieldName + "' has "+fieldType+" type, "+fieldType+" not supported!");
+    }
+  }
+
   public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
     List<Types.NestedField> schemaColumns = new ArrayList<>();
     String schemaType = eventSchema.get("type").textValue();
@@ -45,35 +73,17 @@ public class IcebergUtil {
       String fieldType = jsonSchemaFieldNode.get("type").textValue();
       LOGGER.debug("Processing Field: [{}] {}.{}::{}", columnId, schemaName, fieldName, fieldType);
       switch (fieldType) {
-        case "int8":
-        case "int16":
-        case "int32": // int 4 bytes
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.IntegerType.get()));
-          break;
-        case "int64": // long 8 bytes
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.LongType.get()));
-          break;
-        case "float8":
-        case "float16":
-        case "float32": // float is represented in 32 bits,
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.FloatType.get()));
-          break;
-        case "float64": // double is represented in 64 bits
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.DoubleType.get()));
-          break;
-        case "boolean":
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.BooleanType.get()));
-          break;
-        case "string":
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
-          break;
-        case "bytes":
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.BinaryType.get()));
-          break;
         case "array":
-          throw new RuntimeException("'" + fieldName + "' has Array type, Array type not supported!");
-          //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.ListType.ofOptional()));
-          //break;
+          JsonNode items = jsonSchemaFieldNode.get("items");
+          if (items != null && items.has("type")) {
+            Type.PrimitiveType item = IcebergUtil.getIcebergField(items.get("type").textValue());
+            schemaColumns.add(Types.NestedField.optional(
+                columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
+            //throw new RuntimeException("'" + fieldName + "' has Array type, Array type not supported!");
+          } else {
+            throw new RuntimeException("Unexpected Array type for field " + fieldName);
+          }
+          break;
         case "map":
           throw new RuntimeException("'" + fieldName + "' has Map type, Map type not supported!");
           //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
@@ -84,9 +94,8 @@ public class IcebergUtil {
           schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema)));
           columnId += subSchema.size();
           break;
-        default:
-          // default to String type
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
+        default: //primitive types
+          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, IcebergUtil.getIcebergField(fieldType)));
           break;
       }
     }

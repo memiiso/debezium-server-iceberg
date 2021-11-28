@@ -29,6 +29,7 @@ class TestIcebergUtil {
   final String serdeWithSchema = Testing.Files.readResourceAsString("json/serde-with-schema.json");
   final String unwrapWithSchema = Testing.Files.readResourceAsString("json/unwrap-with-schema.json");
   final String unwrapWithGeomSchema = Testing.Files.readResourceAsString("json/serde-with-schema_geom.json");
+  final String unwrapWithArraySchema = Testing.Files.readResourceAsString("json/serde-with-array.json");
 
   @Test
   public void testNestedJsonRecord() throws JsonProcessingException {
@@ -47,6 +48,20 @@ class TestIcebergUtil {
     assertEquals(16850, record.getField("order_date"));
   }
 
+  @Test
+  public void testNestedArrayJsonRecord() throws JsonProcessingException {
+    JsonNode jsonData = new ObjectMapper().readTree(unwrapWithArraySchema);
+    JsonNode jsonPayload = jsonData.get("payload");
+    JsonNode jsonSchema = jsonData.get("schema");
+    List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
+    Schema schema = new Schema(schemaFields);
+    assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 4: schedule: optional list<string>, 6:"));
+    //System.out.println(schema.asStruct());
+    GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
+    //System.out.println(record);
+    assertTrue( record.toString().contains("[10000, 10001, 10002, 10003]"));
+  }
+  
   @Test
   public void testNestedGeomJsonRecord() throws JsonProcessingException {
     JsonNode jsonData = new ObjectMapper().readTree(unwrapWithGeomSchema);
