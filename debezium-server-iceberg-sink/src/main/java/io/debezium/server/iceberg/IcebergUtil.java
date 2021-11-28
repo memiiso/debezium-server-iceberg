@@ -163,7 +163,7 @@ public class IcebergUtil {
         }
         break;
       case LIST:
-        val = jsonObjectMapper.convertValue(node, List.class);
+        val = jsonObjectMapper.convertValue(node, ArrayList.class);
         break;
       case MAP:
         val = jsonObjectMapper.convertValue(node, Map.class);
