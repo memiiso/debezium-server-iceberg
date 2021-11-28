@@ -19,8 +19,9 @@ Also, check [caveats](docs/CAVEATS.md) for better understanding the current limi
 - Clone from repo: `git clone https://github.com/memiiso/debezium-server-iceberg.git`
 - From the root of the project:
   - Build and package debezium server: `mvn -Passembly -Dmaven.test.skip package`
-  - After building, unzip your server distribution: `debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist`
+  - After building, unzip your server distribution: `unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist`
   - cd into unzipped folder: `cd appdist`
+  - Create `application.properties` file and config it: `nano conf/application.properties`, you can check the example configuration in [application.properties.example](debezium-server-iceberg-sink/src/main/resources/conf/application.properties.example)
   - Run the server using provided script: `bash run.sh`
 
 # Contributing
