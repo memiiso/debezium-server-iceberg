@@ -63,7 +63,7 @@ public class ConfigSource extends TestConfigSource {
     config.put("%postgresql.debezium.source.schema.whitelist", "inventory");
     config.put("%postgresql.debezium.source.database.whitelist", "inventory");
     config.put("%postgresql.debezium.source.table.whitelist", "inventory.*");
-    config.put("debezium.source.include.schema.changes", "true");
+    config.put("debezium.source.include.schema.changes", "false");
 
     config.put("quarkus.log.level", "INFO");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
