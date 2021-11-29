@@ -76,7 +76,11 @@ public class IcebergUtil {
         case "array":
           JsonNode items = jsonSchemaFieldNode.get("items");
           if (items != null && items.has("type")) {
-            PrimitiveType item = IcebergUtil.getIcebergFieldType(items.get("type").textValue());
+            String listItemType = items.get("type").textValue();
+            if (listItemType.equals("struct") || listItemType.equals("array") || listItemType.equals("map")) {
+              throw new RuntimeException("Complex Array types are not supported array[" + listItemType + "], field " + fieldName);
+            }
+            PrimitiveType item = IcebergUtil.getIcebergFieldType(listItemType);
             schemaColumns.add(Types.NestedField.optional(
                 columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
             //throw new RuntimeException("'" + fieldName + "' has Array type, Array type not supported!");
@@ -104,9 +108,9 @@ public class IcebergUtil {
 
   public static boolean hasSchema(JsonNode jsonNode) {
     return jsonNode != null
-        && jsonNode.has("schema")
-        && jsonNode.get("schema").has("fields")
-        && jsonNode.get("schema").get("fields").isArray();
+           && jsonNode.has("schema")
+           && jsonNode.get("schema").has("fields")
+           && jsonNode.get("schema").get("fields").isArray();
   }
 
   public static GenericRecord getIcebergRecord(Schema schema, JsonNode data) {
@@ -158,7 +162,7 @@ public class IcebergUtil {
         try {
           val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
-          LOGGER.error("Failed converting '" + field.name() + "' binary value to iceberg record", e);
+          LOGGER.error("Failed to convert binary value to iceberg value, field:" + field.name(), e);
           throw new RuntimeException("Failed Processing Event!", e);
         }
         break;
@@ -197,11 +201,11 @@ public class IcebergUtil {
   }
 
   public static List<Types.NestedField> getIcebergFieldsFromEventSchema(byte[] eventVal) {
-    
-    if(eventVal == null){
+
+    if (eventVal == null) {
       return new ArrayList<>();
     }
-    
+
     try {
       JsonNode jsonEvent = IcebergUtil.jsonObjectMapper.readTree(eventVal);
       if (IcebergUtil.hasSchema(jsonEvent)) {
@@ -219,7 +223,7 @@ public class IcebergUtil {
                                  List<Types.NestedField> keyColumns) {
 
     Set<Integer> identifierFieldIds = new HashSet<>();
-    
+
     for (Types.NestedField ic : keyColumns) {
       boolean found = false;
 
@@ -240,7 +244,7 @@ public class IcebergUtil {
       }
 
     }
-    
+
     return new Schema(tableColumns, identifierFieldIds);
   }
 
