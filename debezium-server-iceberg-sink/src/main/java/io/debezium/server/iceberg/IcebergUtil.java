@@ -18,7 +18,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.exceptions.ValidationException;
-import org.apache.iceberg.types.Type;
+import org.apache.iceberg.types.Type.PrimitiveType;
 import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class IcebergUtil {
     return getIcebergSchema(eventSchema, "", 0);
   }
 
-  public static org.apache.iceberg.types.Type.PrimitiveType getIcebergField(String fieldType) {
+  public static PrimitiveType getIcebergFieldType(String fieldType) {
     switch (fieldType) {
       case "int8":
       case "int16":
@@ -76,7 +76,7 @@ public class IcebergUtil {
         case "array":
           JsonNode items = jsonSchemaFieldNode.get("items");
           if (items != null && items.has("type")) {
-            Type.PrimitiveType item = IcebergUtil.getIcebergField(items.get("type").textValue());
+            PrimitiveType item = IcebergUtil.getIcebergFieldType(items.get("type").textValue());
             schemaColumns.add(Types.NestedField.optional(
                 columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
             //throw new RuntimeException("'" + fieldName + "' has Array type, Array type not supported!");
@@ -95,7 +95,7 @@ public class IcebergUtil {
           columnId += subSchema.size();
           break;
         default: //primitive types
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, IcebergUtil.getIcebergField(fieldType)));
+          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, IcebergUtil.getIcebergFieldType(fieldType)));
           break;
       }
     }
