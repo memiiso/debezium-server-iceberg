@@ -112,6 +112,39 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   }
 
   @Test
+  public void testConsumingArrayDataType() throws Exception {
+    String sql = "    DROP TABLE IF EXISTS inventory.array_data;\n" +
+                 "    CREATE TABLE IF NOT EXISTS inventory.array_data (\n" +
+                 "      name text,\n" +
+                 "      pay_by_quarter integer[],\n" +
+                 "      schedule text[][]\n" +
+                 "    );\n" +
+                 "  INSERT INTO inventory.array_data\n" +
+                 "  VALUES " +
+                 "('Carol2',\n" +
+                 "      ARRAY[20000, 25000, 25000, 25000],\n" +
+                 "      ARRAY[['breakfast', 'consulting'], ['meeting', 'lunch']]),\n"+
+                 "('Bill',\n" +
+                 "      '{10000, 10000, 10000, 10000}',\n" +
+                 "      '{{\"meeting\", \"lunch\"}, {\"training\", \"presentation\"}}'),\n" +
+                 "  ('Carol1',\n" +
+                 "          '{20000, 25000, 25000, 25000}',\n" +
+                 "          '{{\"breakfast\", \"consulting\"}, {\"meeting\", \"lunch\"}}')" +
+                 ";";
+    SourcePostgresqlDB.runSQL(sql);
+    
+    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.array_data");
+        df.show(false);
+        return df.count() >= 3;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+
+  @Test
   public void testSchemaChanges() throws Exception {
     // TEST add new columns, drop not null constraint
     SourcePostgresqlDB.runSQL("UPDATE inventory.customers SET first_name='George__UPDATE1' WHERE ID = 1002 ;");
