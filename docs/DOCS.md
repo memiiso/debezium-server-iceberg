@@ -75,8 +75,8 @@ debezium.sink.batch.batch-size-wait=MaxBatchSizeWait
 debezium.sink.batch.metrics.snapshot-mbean=debezium.postgres:type=connector-metrics,context=snapshot,server=testc
 debezium.sink.batch.metrics.streaming-mbean=debezium.postgres:type=connector-metrics,context=streaming,server=testc
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
-debezium.source.max.batch.size=2048");
-debezium.source.max.queue.size=16000");
+debezium.source.max.batch.size=2048;
+debezium.source.max.queue.size=16000";
 debezium.sink.batch.batch-size-wait.max-wait-ms=30000
 debezium.sink.batch.batch-size-wait.wait-interval-ms=5000
 ```
@@ -115,30 +115,7 @@ debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
 ```
 
 ### Example Configuration
-
-```properties
-debezium.sink.type=iceberg
-# run with append mode
-debezium.sink.iceberg.upsert=false
-debezium.sink.iceberg.upsert-keep-deletes=true
-# iceberg
-debezium.sink.iceberg.table-prefix=debeziumcdc_
-debezium.sink.iceberg.table-namespace=debeziumevents
-debezium.sink.iceberg.fs.defaultFS=s3a://S3_BUCKET);
-debezium.sink.iceberg.warehouse=s3a://S3_BUCKET/iceberg_warehouse
-debezium.sink.iceberg.type=hadoop
-debezium.sink.iceberg.catalog-name=mycatalog
-debezium.sink.iceberg.catalog-impl=org.apache.iceberg.hadoop.HadoopCatalog
-# enable event schemas
-debezium.format.value.schemas.enable=true
-debezium.format.value=json
-# complex nested data types are not supported, do event flattening. unwrap message!
-debezium.transforms=unwrap
-debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
-debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
-debezium.transforms.unwrap.delete.handling.mode=rewrite
-debezium.transforms.unwrap.drop.tombstones=true
-```
+Read [application.properties.example](../debezium-server-iceberg-sink/src/main/resources/conf/application.properties.example)
 
 ## Schema Change Behaviour
 
