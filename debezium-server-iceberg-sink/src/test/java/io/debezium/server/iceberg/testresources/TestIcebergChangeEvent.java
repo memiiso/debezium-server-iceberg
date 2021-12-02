@@ -8,23 +8,23 @@
 
 package io.debezium.server.iceberg.testresources;
 
-import io.debezium.engine.ChangeEvent;
-import io.debezium.engine.RecordChangeEvent;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 
-public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEvent<V> {
+public class TestIcebergChangeEvent<K, V> extends IcebergChangeEvent<K, V> {
 
   private final K key;
   private final V value;
   private final String destination;
 
-  public TestChangeEvent(K key, V value, String destination) {
+  public TestIcebergChangeEvent(K key, V value, String destination) {
+    super(null);
     this.key = key;
     this.value = value;
     this.destination = destination;
   }
   
-  public TestChangeEvent(V value) {
-    this(null,value,null);
+  public TestIcebergChangeEvent(K key) {
+    this(key,null,null);
   }
 
   @Override
@@ -34,11 +34,6 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   @Override
   public V value() {
-    return value;
-  }
-
-  @Override
-  public V record() {
     return value;
   }
 

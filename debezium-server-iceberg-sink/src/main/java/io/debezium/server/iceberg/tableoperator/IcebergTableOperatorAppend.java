@@ -8,9 +8,10 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.engine.ChangeEvent;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 import javax.enterprise.context.Dependent;
 import javax.inject.Named;
@@ -28,7 +29,7 @@ public class IcebergTableOperatorAppend extends AbstractIcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIcebergTableOperator.class);
 
   @Override
-  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) {
+  public void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events) {
 
     ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
     DataFile dataFile = getDataFile(icebergTable, icebergRecords);

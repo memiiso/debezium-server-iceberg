@@ -8,8 +8,7 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.engine.ChangeEvent;
-import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -96,11 +95,11 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     return Optional.of(edw.toDeleteFile());
   }
 
-  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) {
+  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, List<IcebergChangeEvent<Object, Object>> events) {
     ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
 
-    for (ChangeEvent<Object, Object> e : events) {
-      GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
+    for (IcebergChangeEvent<Object, Object> e : events) {
+      GenericRecord icebergRecord = e.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
           getBytes(e.value())));
 
       // only replace it if its newer
@@ -133,7 +132,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   }
 
   @Override
-  public void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events) {
+  public void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events) {
 
     if (icebergTable.sortOrder().isUnsorted()) {
       LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
