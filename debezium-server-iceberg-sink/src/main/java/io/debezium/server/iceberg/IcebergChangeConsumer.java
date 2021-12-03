@@ -12,6 +12,7 @@ import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
+import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.InterfaceIcebergTableOperator;
@@ -19,36 +20,38 @@ import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.literal.NamedLiteral;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
-import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.iceberg.TableProperties.*;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
 /**
  * Implementation of the consumer that delivers the messages to iceberg tables.
@@ -60,8 +63,13 @@ import static org.apache.iceberg.TableProperties.*;
 public class IcebergChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
+  protected static final ObjectMapper mapper = new ObjectMapper();
+  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  static Deserializer<JsonNode> valDeserializer;
+  static Deserializer<JsonNode> keyDeserializer;
   protected final Clock clock = Clock.system();
   final Configuration hadoopConf = new Configuration();
   final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
@@ -116,44 +124,53 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 
-    Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
-    if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple batch size wait class named '" + batchSizeWaitName + "' were found");
-    } else if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No batch size wait class named '" + batchSizeWaitName + "' is available");
-    }
-    batchSizeWait = instance.get();
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, batchSizeWaitName);
     batchSizeWait.initizalize();
-    LOGGER.info("Using {}", batchSizeWait.getClass().getName());
 
-    String icebergTableOperatorName = upsert ? "IcebergTableOperatorUpsert" : "IcebergTableOperatorAppend";
-    Instance<InterfaceIcebergTableOperator> toInstance = icebergTableOperatorInstances.select(NamedLiteral.of(icebergTableOperatorName));
-    if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple class named `" + icebergTableOperatorName + "` were found");
-    }
-    if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No class named `" + icebergTableOperatorName + "` found");
-    }
-    icebergTableOperator = toInstance.get();
+    final String icebergTableOperatorName = upsert ? "IcebergTableOperatorUpsert" : "IcebergTableOperatorAppend";
+    icebergTableOperator = IcebergUtil.selectInstance(icebergTableOperatorInstances, icebergTableOperatorName);
     icebergTableOperator.initialize();
-    LOGGER.info("Using {}", icebergTableOperator.getClass().getName());
-
+    // configure and set 
+    valSerde.configure(Collections.emptyMap(), false);
+    valDeserializer = valSerde.deserializer();
+    // configure and set 
+    keySerde.configure(Collections.emptyMap(), true);
+    keyDeserializer = keySerde.deserializer();
   }
-  
+
   @Override
   public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
       throws InterruptedException {
     Instant start = Instant.now();
 
-    Map<String, List<IcebergChangeEvent<Object, Object>>> result =
+    Map<String, List<IcebergChangeEvent>> result =
         records.stream()
-            .map(IcebergChangeEvent::new)
+            .map((ChangeEvent<Object, Object> e)
+                -> {
+              try {
+                return new IcebergChangeEvent(e.destination(),
+                    valDeserializer.deserialize(e.destination(), getBytes(e.value())),
+                    e.key() == null ? null : keyDeserializer.deserialize(e.destination(), getBytes(e.key())),
+                    mapper.readTree(getBytes(e.value())).get("schema"),
+                    e.key() == null ? null : mapper.readTree(getBytes(e.key())).get("schema")
+                );
+              } catch (IOException ex) {
+                throw new DebeziumException(ex);
+              }
+            })
             .collect(Collectors.groupingBy(IcebergChangeEvent::destinationTable));
 
-    for (Map.Entry<String, List<IcebergChangeEvent<Object, Object>>> event : result.entrySet()) {
+    for (Map.Entry<String, List<IcebergChangeEvent>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      Table icebergTable = loadIcebergTable(tableIdentifier)
-          .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
+      Table icebergTable = IcebergUtil.loadIcebergTable(icebergCatalog, tableIdentifier)
+          .orElseGet(() -> {
+            if (!eventSchemaEnabled) {
+              throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
+                                         "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+            }
+            return IcebergUtil.createIcebergTable(icebergCatalog, tableIdentifier,
+                event.getValue().get(0).getSchema(), writeFormat);
+          });
       //addToTable(icebergTable, event.getValue());
       icebergTableOperator.addToTable(icebergTable, event.getValue());
     }
@@ -177,38 +194,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       numConsumedEvents = 0;
       consumerStart = clock.currentTimeInMillis();
       logTimer = Threads.timer(clock, LOG_INTERVAL);
-    }
-  }
-
-
-  private Table createIcebergTable(TableIdentifier tableIdentifier,
-                                   IcebergChangeEvent<Object, Object> event) {
-
-    if (!eventSchemaEnabled) {
-      throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
-                                 "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
-    }
-
-    Schema schema = event.getSchema();
-
-    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
-        schema.identifierFieldNames());
-
-    return icebergCatalog.buildTable(tableIdentifier, schema)
-        .withProperty(FORMAT_VERSION, "2")
-        .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
-        .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
-        .create();
-  }
-
-
-  private Optional<Table> loadIcebergTable(TableIdentifier tableId) {
-    try {
-      Table table = icebergCatalog.loadTable(tableId);
-      return Optional.of(table);
-    } catch (NoSuchTableException e) {
-      LOGGER.warn("Table not found: {}", tableId.toString());
-      return Optional.empty();
     }
   }
 

@@ -29,7 +29,7 @@ public class IcebergTableOperatorAppend extends AbstractIcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIcebergTableOperator.class);
 
   @Override
-  public void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events) {
+  public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
 
     ArrayList<Record> icebergRecords = toIcebergRecords(icebergTable.schema(), events);
     DataFile dataFile = getDataFile(icebergTable, icebergRecords);

@@ -20,7 +20,7 @@ public interface InterfaceIcebergTableOperator {
 
   void initialize();
 
-  void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events);
+  void addToTable(Table icebergTable, List<IcebergChangeEvent> events);
 
   Predicate<Record> filterEvents();
 }

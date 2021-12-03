@@ -143,12 +143,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     eventTable = icebergCatalog.loadTable(tableIdentifier);
 
     Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
-    if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple batch size wait class named '" + batchSizeWaitName + "' were found");
-    } else if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No batch size wait class named '" + batchSizeWaitName + "' is available");
-    }
-    batchSizeWait = instance.get();
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, batchSizeWaitName);
     batchSizeWait.initizalize();
     LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
