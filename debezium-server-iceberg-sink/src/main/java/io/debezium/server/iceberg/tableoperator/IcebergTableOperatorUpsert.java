@@ -95,12 +95,11 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
     return Optional.of(edw.toDeleteFile());
   }
 
-  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, List<IcebergChangeEvent<Object, Object>> events) {
+  private ArrayList<Record> toDeduppedIcebergRecords(Schema schema, List<IcebergChangeEvent> events) {
     ConcurrentHashMap<Object, GenericRecord> icebergRecordsmap = new ConcurrentHashMap<>();
 
-    for (IcebergChangeEvent<Object, Object> e : events) {
-      GenericRecord icebergRecord = e.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
-          getBytes(e.value())));
+    for (IcebergChangeEvent e : events) {
+      GenericRecord icebergRecord = e.getIcebergRecord(schema);
 
       // only replace it if its newer
       if (icebergRecordsmap.containsKey(e.key())) {
@@ -132,7 +131,7 @@ public class IcebergTableOperatorUpsert extends AbstractIcebergTableOperator {
   }
 
   @Override
-  public void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events) {
+  public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
 
     if (icebergTable.sortOrder().isUnsorted()) {
       LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
