@@ -9,16 +9,12 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.DebeziumException;
-import io.debezium.engine.ChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
-import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.iceberg.DataFile;
@@ -76,11 +72,11 @@ abstract class AbstractIcebergTableOperator implements InterfaceIcebergTableOper
     return "Unexpected data type '" + type + "'";
   }
 
-  protected ArrayList<Record> toIcebergRecords(Schema schema, ArrayList<ChangeEvent<Object, Object>> events) {
+  protected ArrayList<Record> toIcebergRecords(Schema schema, List<IcebergChangeEvent<Object, Object>> events) {
 
     ArrayList<Record> icebergRecords = new ArrayList<>();
-    for (ChangeEvent<Object, Object> e : events) {
-      GenericRecord icebergRecord = IcebergUtil.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
+    for (IcebergChangeEvent<Object, Object> e : events) {
+      GenericRecord icebergRecord = e.getIcebergRecord(schema, valDeserializer.deserialize(e.destination(),
           getBytes(e.value())));
       icebergRecords.add(icebergRecord);
     }

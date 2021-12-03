@@ -21,7 +21,10 @@ import io.debezium.util.Threads;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -41,7 +44,6 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.NoSuchTableException;
-import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -137,23 +139,18 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     LOGGER.info("Using {}", icebergTableOperator.getClass().getName());
 
   }
-
-  public String map(String destination) {
-    return destination.replace(".", "_");
-  }
-
+  
   @Override
   public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
       throws InterruptedException {
     Instant start = Instant.now();
 
-    Map<String, ArrayList<ChangeEvent<Object, Object>>> result = records.stream()
-        .collect(Collectors.groupingBy(
-            objectObjectChangeEvent -> map(objectObjectChangeEvent.destination()),
-            Collectors.mapping(p -> p,
-                Collectors.toCollection(ArrayList::new))));
+    Map<String, List<IcebergChangeEvent<Object, Object>>> result =
+        records.stream()
+            .map(IcebergChangeEvent::new)
+            .collect(Collectors.groupingBy(IcebergChangeEvent::destinationTable));
 
-    for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> event : result.entrySet()) {
+    for (Map.Entry<String, List<IcebergChangeEvent<Object, Object>>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
       Table icebergTable = loadIcebergTable(tableIdentifier)
           .orElseGet(() -> createIcebergTable(tableIdentifier, event.getValue().get(0)));
@@ -185,26 +182,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
 
   private Table createIcebergTable(TableIdentifier tableIdentifier,
-                                   ChangeEvent<Object, Object> event) {
+                                   IcebergChangeEvent<Object, Object> event) {
 
     if (!eventSchemaEnabled) {
       throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
-          "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+                                 "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
 
-    if (event.value() == null) {
-      throw new RuntimeException("Failed to get event schema for table '" + tableIdentifier + "' event value is null");
-    }
-
-    List<Types.NestedField> tableColumns = IcebergUtil.getIcebergFieldsFromEventSchema(getBytes(event.value()));
-    List<Types.NestedField> keyColumns =
-        IcebergUtil.getIcebergFieldsFromEventSchema(event.key() == null ? null : getBytes(event.key()));
-
-    if (tableColumns.isEmpty()) {
-      throw new RuntimeException("Failed to create table " + tableIdentifier);
-    }
-
-    Schema schema = IcebergUtil.getSchema(tableColumns, keyColumns);
+    Schema schema = event.getSchema();
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());

@@ -9,11 +9,11 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.serde.DebeziumSerdes;
+import io.debezium.server.iceberg.testresources.TestChangeEvent;
 import io.debezium.util.Testing;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,16 +34,15 @@ class TestIcebergUtil {
 
   @Test
   public void testNestedJsonRecord() throws JsonProcessingException {
-    List<Types.NestedField> d = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(serdeWithSchema).get("schema"));
-    assertTrue(d.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, 4:"));
+    Schema schema =  new IcebergChangeEvent<>(new TestChangeEvent<>(serdeWithSchema)).getSchema();
+    assertTrue(schema.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, " +
+                                     "4:"));
   }
 
   @Test
   public void testUnwrapJsonRecord() throws IOException {
     JsonNode event = new ObjectMapper().readTree(unwrapWithSchema).get("payload");
-    List<Types.NestedField> fileds = IcebergUtil.getIcebergSchema(new ObjectMapper().readTree(unwrapWithSchema)
-        .get("schema"));
-    Schema schema = new Schema(fileds);
+    Schema schema =  new IcebergChangeEvent<>(new TestChangeEvent<>(unwrapWithSchema)).getSchema();
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), event);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
@@ -54,8 +53,7 @@ class TestIcebergUtil {
     JsonNode jsonData = new ObjectMapper().readTree(unwrapWithArraySchema);
     JsonNode jsonPayload = jsonData.get("payload");
     JsonNode jsonSchema = jsonData.get("schema");
-    List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
-    Schema schema = new Schema(schemaFields);
+    Schema schema =  new IcebergChangeEvent<>(new TestChangeEvent<>(unwrapWithArraySchema)).getSchema();
     assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 4: schedule: optional list<string>, 6:"));
     System.out.println(schema.asStruct());
     System.out.println(schema.findField("pay_by_quarter").type().asListType().elementType());
@@ -74,8 +72,7 @@ class TestIcebergUtil {
     JsonNode jsonSchema = jsonData.get("schema");
     
     assertThrows(RuntimeException.class, () -> {
-          List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
-        Schema schema = new Schema(schemaFields);
+      Schema schema =  new IcebergChangeEvent<>(new TestChangeEvent<>(unwrapWithArraySchema2)).getSchema();
         System.out.println(schema.asStruct());
         System.out.println(schema);
         System.out.println(schema.findField("tableChanges"));
@@ -90,8 +87,7 @@ class TestIcebergUtil {
     JsonNode jsonData = new ObjectMapper().readTree(unwrapWithGeomSchema);
     JsonNode jsonPayload = jsonData.get("payload");
     JsonNode jsonSchema = jsonData.get("schema");
-    List<Types.NestedField> schemaFields = IcebergUtil.getIcebergSchema(jsonSchema);
-    Schema schema = new Schema(schemaFields);
+    Schema schema =  new IcebergChangeEvent<>(new TestChangeEvent<>(unwrapWithGeomSchema)).getSchema();
     GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
     //System.out.println(schema);
     //System.out.println(record);

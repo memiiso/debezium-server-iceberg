@@ -8,9 +8,9 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.engine.ChangeEvent;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Predicate;
 
 import org.apache.iceberg.Table;
@@ -20,7 +20,7 @@ public interface InterfaceIcebergTableOperator {
 
   void initialize();
 
-  void addToTable(Table icebergTable, ArrayList<ChangeEvent<Object, Object>> events);
+  void addToTable(Table icebergTable, List<IcebergChangeEvent<Object, Object>> events);
 
   Predicate<Record> filterEvents();
 }

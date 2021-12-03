@@ -10,14 +10,16 @@ package io.debezium.server.iceberg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
-import org.apache.iceberg.exceptions.ValidationException;
 import org.apache.iceberg.types.Type.PrimitiveType;
 import org.apache.iceberg.types.Types;
 import org.eclipse.microprofile.config.Config;
@@ -31,12 +33,12 @@ public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
   protected static final ObjectMapper jsonObjectMapper = new ObjectMapper();
 
-  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema) {
+  private static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema) {
     LOGGER.debug(eventSchema.toString());
     return getIcebergSchema(eventSchema, "", 0);
   }
 
-  public static PrimitiveType getIcebergFieldType(String fieldType) {
+  private static PrimitiveType getIcebergFieldType(String fieldType) {
     switch (fieldType) {
       case "int8":
       case "int16":
@@ -63,7 +65,7 @@ public class IcebergUtil {
     }
   }
 
-  public static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
+  private static List<Types.NestedField> getIcebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
     List<Types.NestedField> schemaColumns = new ArrayList<>();
     String schemaType = eventSchema.get("type").textValue();
     LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
@@ -106,15 +108,11 @@ public class IcebergUtil {
     return schemaColumns;
   }
 
-  public static boolean hasSchema(JsonNode jsonNode) {
+  private static boolean hasSchema(JsonNode jsonNode) {
     return jsonNode != null
            && jsonNode.has("schema")
            && jsonNode.get("schema").has("fields")
            && jsonNode.get("schema").get("fields").isArray();
-  }
-
-  public static GenericRecord getIcebergRecord(Schema schema, JsonNode data) {
-    return IcebergUtil.getIcebergRecord(schema.asStruct(), data);
   }
 
   public static GenericRecord getIcebergRecord(Types.StructType tableFields, JsonNode data) {
@@ -219,34 +217,6 @@ public class IcebergUtil {
     }
   }
 
-  public static Schema getSchema(List<Types.NestedField> tableColumns,
-                                 List<Types.NestedField> keyColumns) {
-
-    Set<Integer> identifierFieldIds = new HashSet<>();
-
-    for (Types.NestedField ic : keyColumns) {
-      boolean found = false;
-
-      ListIterator<Types.NestedField> colsIterator = tableColumns.listIterator();
-      while (colsIterator.hasNext()) {
-        Types.NestedField tc = colsIterator.next();
-        if (Objects.equals(tc.name(), ic.name())) {
-          identifierFieldIds.add(tc.fieldId());
-          // set column as required its part of identifier filed
-          colsIterator.set(tc.asRequired());
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
-      }
-
-    }
-
-    return new Schema(tableColumns, identifierFieldIds);
-  }
 
   public static SortOrder getIdentifierFieldsAsSortOrder(Schema schema) {
     SortOrder.Builder sob = SortOrder.builderFor(schema);
