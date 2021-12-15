@@ -86,14 +86,6 @@
             <artifactId>hadoop-aws</artifactId>
             <version>${version.hadoop}</version>
         </dependency>
-
-        <!-- needed for quarkus jboss logging -->
-        <dependency>
-            <groupId>org.jboss.logging</groupId>
-            <artifactId>jul-to-slf4j-stub</artifactId>
-            <version>1.0.1.Final</version>
-        </dependency>
-
         <!-- Hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -132,7 +124,6 @@
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
-                <!-- needed for quarkus jboss logging -->
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>jul-to-slf4j</artifactId>
