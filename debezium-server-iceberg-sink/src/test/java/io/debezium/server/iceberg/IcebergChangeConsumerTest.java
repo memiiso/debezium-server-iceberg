@@ -18,9 +18,6 @@ import io.quarkus.test.junit.TestProfile;
 import java.time.Duration;
 
 import org.apache.iceberg.Table;
-import org.apache.iceberg.catalog.Namespace;
-import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.iceberg.types.Types;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -46,18 +43,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
-
-  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
-  String tablePrefix;
-  @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
-  String warehouseLocation;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
-
-  protected org.apache.iceberg.Table getTable(String table) {
-    HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
-  }
 
   @Test
   public void testConsumingVariousDataTypes() throws Exception {

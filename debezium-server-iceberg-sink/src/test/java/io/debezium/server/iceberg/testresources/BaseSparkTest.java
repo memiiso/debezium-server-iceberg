@@ -14,12 +14,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeAll;
 import static io.debezium.server.iceberg.ConfigSource.S3_BUCKET;
 
@@ -29,11 +32,24 @@ import static io.debezium.server.iceberg.ConfigSource.S3_BUCKET;
  * @author Ismail Simsek
  */
 public class BaseSparkTest {
+
+  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
+  String tablePrefix;
+  @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
+  String warehouseLocation;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
+
   protected static final SparkConf sparkconf = new SparkConf()
       .setAppName("CDC-S3-Batch-Spark-Sink")
       .setMaster("local[2]");
   private static final String SPARK_PROP_PREFIX = "debezium.sink.sparkbatch.";
   protected static SparkSession spark;
+
+  protected org.apache.iceberg.Table getTable(String table) {
+    HadoopCatalog catalog = getIcebergCatalog();
+    return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
+  }
 
   protected HadoopCatalog getIcebergCatalog() {
     // loop and set hadoopConf
@@ -153,7 +169,7 @@ public class BaseSparkTest {
   }
 
   public Dataset<Row> getTableData(String table) {
-    return spark.newSession().sql("SELECT input_file_name() as input_file, * FROM debeziumevents.debeziumcdc_" + table.replace(".", "_"));
+    return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM debeziumevents.debeziumcdc_" + table.replace(".", "_"));
   }
 
 }

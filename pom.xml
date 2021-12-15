@@ -27,14 +27,15 @@
         <release>8</release>
         <skipITs>true</skipITs>
 
-        <version.groovy>3.0.7</version.groovy>
+        <version.groovy>3.0.9</version.groovy>
         <version.assembly.plugin>3.3.0</version.assembly.plugin>
         <version.jackson>2.12.6</version.jackson>
-        <version.iceberg>0.12.0</version.iceberg>
+        <version.iceberg>0.12.1</version.iceberg>
         <version.spark>3.1.2</version.spark>
         <version.hadoop>3.3.1</version.hadoop>
-        <version.awssdk>2.16.88</version.awssdk>
-        <version.parquet>1.11.1</version.parquet>
+        <version.awssdk>2.17.75</version.awssdk>
+        <version.parquet>1.12.2</version.parquet>
+        <version.testcontainers>1.15.3</version.testcontainers>
         <!-- Debezium -->
         <version.debezium>1.8.0.Final</version.debezium>
         <version.mysql.driver>8.0.27</version.mysql.driver>
@@ -135,6 +136,13 @@
                 <artifactId>jackson-datatype-jsr310</artifactId>
                 <version>${version.jackson}</version>
                 <optional>true</optional>
+            </dependency>
+            <!-- Test dependencies -->
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>4.9.2</version>
+                <scope>test</scope>
             </dependency>
 
         </dependencies>
