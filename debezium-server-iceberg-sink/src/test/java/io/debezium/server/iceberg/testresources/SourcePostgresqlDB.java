@@ -28,17 +28,24 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String POSTGRES_USER = "postgres";
   public static final String POSTGRES_PASSWORD = "postgres";
   public static final String POSTGRES_DBNAME = "postgres";
-  public static final String POSTGRES_IMAGE = "debezium/example-postgres:1.5";
+  public static final String POSTGRES_IMAGE = "debezium/example-postgres:1.7.0.Final";
   public static final String POSTGRES_HOST = "localhost";
   public static final Integer POSTGRES_PORT_DEFAULT = 5432;
   private static final Logger LOGGER = LoggerFactory.getLogger(SourcePostgresqlDB.class);
 
-  private static GenericContainer<?> container;
+  private static GenericContainer<?> container = new GenericContainer<>(POSTGRES_IMAGE)
+      .waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*", 2))
+      .withEnv("POSTGRES_USER", POSTGRES_USER)
+      .withEnv("POSTGRES_PASSWORD", POSTGRES_PASSWORD)
+      .withEnv("POSTGRES_DB", POSTGRES_DBNAME)
+      .withEnv("POSTGRES_INITDB_ARGS", "-E UTF8")
+      .withEnv("LANG", "en_US.utf8")
+      .withStartupTimeout(Duration.ofSeconds(30));
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
 
-      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + getMappedPort() + "/" + POSTGRES_DBNAME;
+      String url = "jdbc:postgresql://" + POSTGRES_HOST + ":" + container.getMappedPort(POSTGRES_PORT_DEFAULT) + "/" + POSTGRES_DBNAME;
       Class.forName("org.postgresql.Driver");
       Connection con = DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
       Statement st = con.createStatement();
@@ -50,20 +57,8 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
     }
   }
 
-  public static Integer getMappedPort() {
-    return container.getMappedPort(POSTGRES_PORT_DEFAULT);
-  }
-
   @Override
   public Map<String, String> start() {
-    container = new GenericContainer<>(POSTGRES_IMAGE)
-        .waitingFor(Wait.forLogMessage(".*database system is ready to accept connections.*", 2))
-        .withEnv("POSTGRES_USER", POSTGRES_USER)
-        .withEnv("POSTGRES_PASSWORD", POSTGRES_PASSWORD)
-        .withEnv("POSTGRES_DB", POSTGRES_DBNAME)
-        .withEnv("POSTGRES_INITDB_ARGS", "-E UTF8")
-        .withEnv("LANG", "en_US.utf8")
-        .withStartupTimeout(Duration.ofSeconds(30));
     container.start();
 
     Map<String, String> params = new ConcurrentHashMap<>();

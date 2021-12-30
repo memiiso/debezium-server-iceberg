@@ -38,10 +38,8 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   static final String DEFAULT_IMAGE = "minio/minio:latest";
   static final String DEFAULT_STORAGE_DIRECTORY = "/data";
   static final String HEALTH_ENDPOINT = "/minio/health/ready";
-  public static MinioClient client;
-
-
   static private final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(DEFAULT_IMAGE))
+      .withExposedPorts(MINIO_DEFAULT_PORT)
       .waitingFor(new HttpWaitStrategy()
           .forPath(HEALTH_ENDPOINT)
           .forPort(MINIO_DEFAULT_PORT)
@@ -50,6 +48,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
       .withEnv("MINIO_SECRET_KEY", MINIO_SECRET_KEY)
       .withEnv("MINIO_REGION_NAME", ConfigSource.S3_REGION)
       .withCommand("server " + DEFAULT_STORAGE_DIRECTORY);
+  public static MinioClient client;
 
   public static List<Item> getObjectList(String bucketName) {
     List<Item> objects = new ArrayList<>();
@@ -71,7 +70,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     try {
       List<Bucket> bucketList = client.listBuckets();
       for (Bucket bucket : bucketList) {
-        System.out.printf("Bucket:%s ROOT",  bucket.name());
+        System.out.printf("Bucket:%s ROOT", bucket.name());
         Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucket.name()).recursive(true).build());
         for (Result<Item> result : results) {
           Item item = result.get();
