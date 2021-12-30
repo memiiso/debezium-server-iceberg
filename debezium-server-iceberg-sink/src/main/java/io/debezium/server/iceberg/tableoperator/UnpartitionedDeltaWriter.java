@@ -1,5 +1,3 @@
-
-
 package io.debezium.server.iceberg.tableoperator;
 
 import java.io.IOException;

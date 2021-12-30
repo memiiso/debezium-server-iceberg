@@ -45,7 +45,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
         Dataset<Row> ds = spark.newSession().sql("SELECT * FROM debeziumevents.debezium_events");
         ds.show();
         return ds.count() >= 5
-            && ds.select("event_destination").distinct().count() >= 2;
+               && ds.select("event_destination").distinct().count() >= 2;
       } catch (Exception e) {
         return false;
       }

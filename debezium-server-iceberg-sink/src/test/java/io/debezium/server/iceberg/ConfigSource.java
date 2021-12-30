@@ -15,13 +15,6 @@ public class ConfigSource extends TestConfigSource {
   public static final String S3_REGION = "us-east-1";
   public static final String S3_BUCKET = "test-bucket";
 
-  @Override
-  public int getOrdinal() {
-    // Configuration property precedence is based on ordinal values and since we override the
-    // properties in TestConfigSource, we should give this a higher priority.
-    return super.getOrdinal() + 1;
-  }
-
   public ConfigSource() {
     config.put("quarkus.profile", "postgresql");
     // common sink conf
@@ -72,5 +65,12 @@ public class ConfigSource extends TestConfigSource {
     config.put("quarkus.log.category.\"org.eclipse.jetty\".level", "WARN");
     config.put("quarkus.log.category.\"org.apache.iceberg\".level", "ERROR");
 
+  }
+
+  @Override
+  public int getOrdinal() {
+    // Configuration property precedence is based on ordinal values and since we override the
+    // properties in TestConfigSource, we should give this a higher priority.
+    return super.getOrdinal() + 1;
   }
 }

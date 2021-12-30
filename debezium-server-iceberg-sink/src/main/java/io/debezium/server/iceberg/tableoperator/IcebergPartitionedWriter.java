@@ -1,4 +1,3 @@
-
 package io.debezium.server.iceberg.tableoperator;
 
 import org.apache.iceberg.FileFormat;

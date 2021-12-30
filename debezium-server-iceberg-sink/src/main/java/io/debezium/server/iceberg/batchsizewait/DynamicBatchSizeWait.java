@@ -28,15 +28,12 @@ import static io.debezium.config.CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE;
 @Deprecated
 public class DynamicBatchSizeWait implements InterfaceBatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(DynamicBatchSizeWait.class);
-
-  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = DEFAULT_MAX_BATCH_SIZE + "")
-  Integer maxBatchSize;
-
-  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait.max-wait-ms", defaultValue = "300000")
-  Integer maxWaitMs;
-
   final LinkedList<Integer> batchSizeHistory = new LinkedList<>();
   final LinkedList<Integer> sleepMsHistory = new LinkedList<>();
+  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = DEFAULT_MAX_BATCH_SIZE + "")
+  Integer maxBatchSize;
+  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait.max-wait-ms", defaultValue = "300000")
+  Integer maxWaitMs;
 
   public DynamicBatchSizeWait() {
     batchSizeHistory.add(1);
@@ -82,7 +79,7 @@ public class DynamicBatchSizeWait implements InterfaceBatchSizeWait {
     sleepMsHistory.removeFirst();
 
     LOGGER.debug("Calculating Wait delay\n" +
-            "max.batch.size={}\npoll.interval.ms={}\nbatchSizeHistory{}\nsleepMsHistory{}\nval{}",
+                 "max.batch.size={}\npoll.interval.ms={}\nbatchSizeHistory{}\nsleepMsHistory{}\nval{}",
         maxBatchSize, maxWaitMs, batchSizeHistory, sleepMsHistory, sleepMsHistory.getLast());
 
     return sleepMsHistory.getLast();

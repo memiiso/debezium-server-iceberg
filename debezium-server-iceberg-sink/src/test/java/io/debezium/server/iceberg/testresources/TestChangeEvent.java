@@ -22,9 +22,9 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
     this.value = value;
     this.destination = destination;
   }
-  
+
   public TestChangeEvent(V value) {
-    this(null,value,null);
+    this(null, value, null);
   }
 
   @Override

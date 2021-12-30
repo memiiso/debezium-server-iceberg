@@ -78,17 +78,16 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   static final SortOrder TABLE_SORT_ORDER = SortOrder.builderFor(TABLE_SCHEMA)
       .asc("event_sink_epoch_ms", NullOrder.NULLS_LAST)
       .build();
-
-  @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
-  String warehouseLocation;
-
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  final Configuration hadoopConf = new Configuration();
+  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+  @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
+  String warehouseLocation;
   @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  final Configuration hadoopConf = new Configuration();
   @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
@@ -97,13 +96,10 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String catalogName;
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
-
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
   InterfaceBatchSizeWait batchSizeWait;
-
-  final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   Catalog icebergCatalog;
   Table eventTable;
 
@@ -112,11 +108,11 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   void connect() {
     if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
       throw new DebeziumException("debezium.format.value={" + valueFormat + "} not supported, " +
-          "Supported (debezium.format.value=*) formats are {json,}!");
+                                  "Supported (debezium.format.value=*) formats are {json,}!");
     }
     if (!keyFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
       throw new DebeziumException("debezium.format.key={" + valueFormat + "} not supported, " +
-          "Supported (debezium.format.key=*) formats are {json,}!");
+                                  "Supported (debezium.format.key=*) formats are {json,}!");
     }
 
     TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), "debezium_events");
