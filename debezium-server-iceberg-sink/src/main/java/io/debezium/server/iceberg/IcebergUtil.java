@@ -18,17 +18,16 @@ import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.literal.NamedLiteral;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.SortOrder;
-import org.apache.iceberg.Table;
+import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
-import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
+import static org.apache.iceberg.TableProperties.*;
 
 /**
  * @author Ismail Simsek
@@ -64,15 +63,23 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat) {
+                                         Schema schema, String writeFormat, boolean partition) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
+
+    PartitionSpec ps;
+    if (partition) {
+      ps = PartitionSpec.builderFor(schema).day("__source_ts").build();
+    } else {
+      ps = PartitionSpec.builderFor(schema).build();
+    }
 
     return icebergCatalog.buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, "2")
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
         .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
+        .withPartitionSpec(ps)
         .create();
   }
 
@@ -93,6 +100,20 @@ public class IcebergUtil {
       LOGGER.warn("Table not found: {}", tableId.toString());
       return Optional.empty();
     }
+  }
+
+  public static FileFormat getTableFileFormat(Table icebergTable) {
+    String formatAsString = icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
+    return FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
+  }
+
+  public static GenericAppenderFactory getTableAppender(Table icebergTable) {
+    return new GenericAppenderFactory(
+        icebergTable.schema(),
+        icebergTable.spec(),
+        Ints.toArray(icebergTable.schema().identifierFieldIds()),
+        icebergTable.schema(),
+        null);
   }
 
 }

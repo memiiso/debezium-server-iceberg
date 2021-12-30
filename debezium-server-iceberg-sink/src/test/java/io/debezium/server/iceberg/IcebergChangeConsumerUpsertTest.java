@@ -62,7 +62,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.count(), 4);
+    Assertions.assertEquals(4, ds.count());
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'r'").count(), 1);
     Assertions.assertEquals(ds.where("id = 2 AND __op= 'd'").count(), 1);
     Assertions.assertEquals(ds.where("id = 3 AND __op= 'u'").count(), 1);
@@ -84,7 +84,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(getCustomerRecord(6, "u", "Updatedname-6-V1", 11L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
-    ds.show();
+    ds.sort("id").show(false);
     Assertions.assertEquals(ds.count(), 6);
     Assertions.assertEquals(ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
     Assertions.assertEquals(ds.where("id = 4 AND __op= 'r' AND first_name= 'Updatedname-4-V3'").count(), 1);
@@ -114,7 +114,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
     Assertions.assertEquals(ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
-
+    S3Minio.listFiles();
   }
 
   @Test
@@ -167,40 +167,40 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   private TestChangeEvent<Object, Object> getCustomerRecord(Integer id, String operation, String name, Long epoch) {
     String key = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false," + "\"field\":\"id\"}]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Key\"}," +
-        "\"payload\":{\"id\":" + id + "}}";
+                 "\"optional\":false,\"name\":\"testc.inventory.customers.Key\"}," +
+                 "\"payload\":{\"id\":" + id + "}}";
     String val = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
-        "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
-        "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
-        "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
-        ".com\"," +
-        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
-        "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
+                 "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
+                 "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
+                 "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
+                 "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
+                 ".com\"," +
+                 "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
+                 "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
     return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert");
   }
 
   private TestChangeEvent<Object, Object> getCustomerRecordCompositeKey(Integer id, String operation, String name,
                                                                         Long epoch) {
     String key = "{\"schema\":{\"type\":\"struct\",\"fields\":[" +
-        "{\"type\":\"int32\",\"optional\":false," + "\"field\":\"id\"}," +
-        "{\"type\":\"string\",\"optional\":false," + "\"field\":\"first_name\"}" +
-        "]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Key\"}," +
-        "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\"}}";
+                 "{\"type\":\"int32\",\"optional\":false," + "\"field\":\"id\"}," +
+                 "{\"type\":\"string\",\"optional\":false," + "\"field\":\"first_name\"}" +
+                 "]," +
+                 "\"optional\":false,\"name\":\"testc.inventory.customers.Key\"}," +
+                 "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\"}}";
 
     String val = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
-        "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
-        "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
-        "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
-        ".com\"," +
-        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
-        "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
+                 "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
+                 "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
+                 "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
+                 "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
+                 ".com\"," +
+                 "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
+                 "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
     return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert_compositekey");
   }
 
@@ -208,15 +208,15 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
                                                                  Long epoch) {
 
     String val = "{\"schema\":{\"type\":\"struct\",\"fields\":[{\"type\":\"int32\",\"optional\":false,\"field\":\"id\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
-        "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
-        "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
-        "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
-        "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
-        "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
-        ".com\"," +
-        "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
-        "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"first_name\"},{\"type\":\"string\",\"optional\":false,\"field\":\"last_name\"}," +
+                 "{\"type\":\"string\",\"optional\":false,\"field\":\"email\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__op\"}," +
+                 "{\"type\":\"string\",\"optional\":true,\"field\":\"__table\"},{\"type\":\"int64\",\"optional\":true,\"field\":\"__lsn\"}," +
+                 "{\"type\":\"int64\",\"optional\":true,\"field\":\"__source_ts_ms\"},{\"type\":\"string\",\"optional\":true,\"field\":\"__deleted\"}]," +
+                 "\"optional\":false,\"name\":\"testc.inventory.customers.Value\"}," +
+                 "\"payload\":{\"id\":" + id + ",\"first_name\":\"" + name + "\",\"last_name\":\"Walker\",\"email\":\"ed@walker" +
+                 ".com\"," +
+                 "\"__op\":\"" + operation + "\",\"__table\":\"customers\",\"__lsn\":33832960,\"__source_ts_ms\":" + epoch + "," +
+                 "\"__deleted\":\"" + operation.equals("d") + "\"}} ";
     return new TestChangeEvent<>(null, val, "testc.inventory.customers_upsert_nokey");
   }
 

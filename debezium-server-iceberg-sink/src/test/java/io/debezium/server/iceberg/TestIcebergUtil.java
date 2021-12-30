@@ -44,12 +44,14 @@ class TestIcebergUtil {
   @Test
   public void testUnwrapJsonRecord() throws IOException {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithSchema).get("payload"),null, 
-        mapper.readTree(unwrapWithSchema).get("schema"),null);
-    Schema schema =  e.getSchema();
-    GenericRecord record = e.getIcebergRecord(schema);
+        mapper.readTree(unwrapWithSchema).get("payload"), null,
+        mapper.readTree(unwrapWithSchema).get("schema"), null);
+    Schema schema = e.getSchema();
+    GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
+    System.out.println(schema);
+    System.out.println(record);
   }
 
   @Test
@@ -64,7 +66,7 @@ class TestIcebergUtil {
     System.out.println(schema.findField("schedule").type().asListType().elementType());
     assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(),"int");
     assertEquals(schema.findField("schedule").type().asListType().elementType().toString(),"string");
-    GenericRecord record = e.getIcebergRecord(schema);
+    GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(record);
     assertTrue( record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
@@ -90,8 +92,8 @@ class TestIcebergUtil {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         mapper.readTree(unwrapWithGeomSchema).get("payload"),null,
         mapper.readTree(unwrapWithGeomSchema).get("schema"),null);
-    Schema schema =  e.getSchema();
-    GenericRecord record = e.getIcebergRecord(schema);
+    Schema schema = e.getSchema();
+    GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(schema);
     //System.out.println(record);
     assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional string, 4: srid: optional int>"));
