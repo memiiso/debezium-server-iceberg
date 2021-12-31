@@ -68,17 +68,18 @@ public class IcebergTableOperator {
   }
 
   private int compareByTsThenOp(GenericRecord lhs, GenericRecord rhs) {
-    if (lhs.getField(sourceTsMsColumn).equals(rhs.getField(sourceTsMsColumn))) {
+
+    int result = Long.compare((Long) lhs.getField(sourceTsMsColumn), (Long) rhs.getField(sourceTsMsColumn));
+
+    if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      return
-          cdcOperations.getOrDefault(lhs.getField(opColumn), -1)
-              .compareTo(
-                  cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
-              )
-          ;
-    } else {
-      return Long.compare((Long) lhs.getField(sourceTsMsColumn), (Long) rhs.getField(sourceTsMsColumn));
+      result = cdcOperations.getOrDefault(lhs.getField(opColumn), -1)
+          .compareTo(
+              cdcOperations.getOrDefault(rhs.getField(opColumn), -1)
+          );
     }
+
+    return result;
   }
 
   public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
