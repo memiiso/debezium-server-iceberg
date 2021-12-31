@@ -172,7 +172,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     this.logConsumerProgress(records.size());
 
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
-
   }
 
   public Table loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
