@@ -31,6 +31,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Wrapper to perform operations in iceberg tables
+ *
+ * @author Rafael Acevedo
+ */
 @Dependent
 public class IcebergTableOperator {
 
