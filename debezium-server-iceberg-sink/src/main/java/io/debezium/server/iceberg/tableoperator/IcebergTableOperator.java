@@ -94,8 +94,7 @@ public class IcebergTableOperator {
         }
       } else {
         for (IcebergChangeEvent e : events) {
-          GenericRecord icebergRecord = e.asIcebergRecord(icebergTable.schema());
-          writer.write(icebergRecord);
+          writer.write(e.asIcebergRecord(icebergTable.schema()));
         }
       }
 
