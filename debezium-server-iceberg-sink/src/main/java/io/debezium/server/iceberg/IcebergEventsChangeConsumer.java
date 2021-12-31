@@ -14,17 +14,18 @@ import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
+import io.debezium.server.iceberg.tableoperator.PartitionedAppendWriter;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -40,14 +41,13 @@ import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
-import org.apache.iceberg.io.FileAppender;
-import org.apache.iceberg.io.OutputFile;
-import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.io.BaseTaskWriter;
+import org.apache.iceberg.io.OutputFileFactory;
+import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
-import org.apache.iceberg.util.DateTimeUtil;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -79,6 +79,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       .asc("event_sink_epoch_ms", NullOrder.NULLS_LAST)
       .build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
+  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
   final Configuration hadoopConf = new Configuration();
   final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
@@ -164,72 +165,49 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     Instant start = Instant.now();
 
     OffsetDateTime batchTime = OffsetDateTime.now(ZoneOffset.UTC);
+    ArrayList<Record> icebergRecords = records.stream()
+        .map(e -> getIcebergRecord(e.destination(), e, batchTime))
+        .collect(Collectors.toCollection(ArrayList::new));
+    commitBatch(icebergRecords);
 
-    Map<String, ArrayList<ChangeEvent<Object, Object>>> result = records.stream()
-        .collect(Collectors.groupingBy(
-            objectObjectChangeEvent -> map(objectObjectChangeEvent.destination()),
-            Collectors.mapping(p -> p,
-                Collectors.toCollection(ArrayList::new))));
-
-    for (Map.Entry<String, ArrayList<ChangeEvent<Object, Object>>> destEvents : result.entrySet()) {
-      // each destEvents is set of events for a single table
-      ArrayList<Record> destIcebergRecords = destEvents.getValue().stream()
-          .map(e -> getIcebergRecord(destEvents.getKey(), e, batchTime))
-          .collect(Collectors.toCollection(ArrayList::new));
-
-      commitBatch(destEvents.getKey(), batchTime, destIcebergRecords);
+    // workaround! somehow offset is not saved to file unless we call committer.markProcessed
+    // even it's should be saved to file periodically
+    for (ChangeEvent<Object, Object> record : records) {
+      LOGGER.trace("Processed event '{}'", record);
+      committer.markProcessed(record);
     }
-    // committer.markProcessed(record);
     committer.markBatchFinished();
-
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
-
   }
 
-  private void commitBatch(String destination, OffsetDateTime batchTime, ArrayList<Record> icebergRecords) {
-    final String fileName = UUID.randomUUID() + "-" + Instant.now().toEpochMilli() + "." + FileFormat.PARQUET;
+  private void commitBatch(ArrayList<Record> icebergRecords) {
 
-    PartitionKey pk = new PartitionKey(TABLE_PARTITION, TABLE_SCHEMA);
-    Record pr = GenericRecord.create(TABLE_SCHEMA)
-        .copy("event_destination",
-            destination, "event_sink_timestamptz",
-            DateTimeUtil.microsFromTimestamptz(batchTime));
-    pk.partition(pr);
+    FileFormat format = IcebergUtil.getTableFileFormat(eventTable);
+    GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(eventTable);
+    int partitionId = Integer.parseInt(dtFormater.format(Instant.now()));
+    OutputFileFactory fileFactory = OutputFileFactory.builderFor(eventTable, partitionId, 1L)
+        .defaultSpec(eventTable.spec()).format(format).build();
 
-    OutputFile out =
-        eventTable.io().newOutputFile(eventTable.locationProvider().newDataLocation(pk.toPath() + "/" + fileName));
+    BaseTaskWriter<Record> writer = new PartitionedAppendWriter(
+        eventTable.spec(), format, appenderFactory, fileFactory, eventTable.io(), Long.MAX_VALUE, eventTable.schema());
 
-    FileAppender<Record> writer;
     try {
-      writer = Parquet.write(out)
-          .createWriterFunc(GenericParquetWriter::buildWriter)
-          .forTable(eventTable)
-          .overwrite()
-          .build();
-
-      try (Closeable toClose = writer) {
-        writer.addAll(icebergRecords);
+      for (Record icebergRecord : icebergRecords) {
+        writer.write(icebergRecord);
       }
+
+      writer.close();
+      WriteResult files = writer.complete();
+      AppendFiles appendFiles = eventTable.newAppend();
+      Arrays.stream(files.dataFiles()).forEach(appendFiles::appendFile);
+      appendFiles.commit();
 
     } catch (IOException e) {
       LOGGER.error("Failed committing events to iceberg table!", e);
-      throw new RuntimeException("Failed commiting events to iceberg table!", e);
+      throw new DebeziumException("Failed committing events to iceberg table!", e);
     }
 
-    DataFile dataFile = DataFiles.builder(eventTable.spec())
-        .withFormat(FileFormat.PARQUET)
-        .withPath(out.location())
-        .withFileSizeInBytes(writer.length())
-        .withSplitOffsets(writer.splitOffsets())
-        .withMetrics(writer.metrics())
-        .withPartition(pk)
-        .build();
-
-    LOGGER.debug("Appending new file '{}'", dataFile.path());
-    eventTable.newAppend()
-        .appendFile(dataFile)
-        .commit();
-    LOGGER.info("Committed {} events to table {}", icebergRecords.size(), eventTable.location());
+    LOGGER.info("Committed {} events to table! {}", icebergRecords.size(), eventTable.location());
   }
 
 }

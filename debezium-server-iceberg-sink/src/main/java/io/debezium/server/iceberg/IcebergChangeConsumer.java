@@ -163,7 +163,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
-    // even its should be saved to file periodically
+    // even it's should be saved to file periodically
     for (ChangeEvent<Object, Object> record : records) {
       LOGGER.trace("Processed event '{}'", record);
       committer.markProcessed(record);
