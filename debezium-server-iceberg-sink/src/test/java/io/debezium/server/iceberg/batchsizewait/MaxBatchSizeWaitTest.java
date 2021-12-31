@@ -45,8 +45,8 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
         df.createOrReplaceGlobalTempView("test_data_batch_size");
         df = spark
             .sql("SELECT substring(input_file,94,60) as input_file, " +
-                "count(*) as batch_size FROM global_temp.test_data_batch_size group " +
-                "by 1");
+                 "count(*) as batch_size FROM global_temp.test_data_batch_size group " +
+                 "by 1");
         //df.show(false);
         return df.filter("batch_size = " + maxBatchSize).count() >= 5;
       } catch (Exception e) {

@@ -18,7 +18,7 @@ public interface InterfaceBatchSizeWait {
   default void initizalize() {
   }
 
-  default void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException{
+  default void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException {
   }
 
 }

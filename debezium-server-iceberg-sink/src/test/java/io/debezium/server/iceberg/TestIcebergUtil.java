@@ -34,64 +34,66 @@ class TestIcebergUtil {
   @Test
   public void testNestedJsonRecord() throws JsonProcessingException {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(serdeWithSchema).get("payload"),null,
-        mapper.readTree(serdeWithSchema).get("schema"),null);
-    Schema schema =  e.getSchema();
+        mapper.readTree(serdeWithSchema).get("payload"), null,
+        mapper.readTree(serdeWithSchema).get("schema"), null);
+    Schema schema = e.getSchema();
     assertTrue(schema.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, " +
-                                     "4:"));
+                                          "4:"));
   }
 
   @Test
   public void testUnwrapJsonRecord() throws IOException {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithSchema).get("payload"),null, 
-        mapper.readTree(unwrapWithSchema).get("schema"),null);
-    Schema schema =  e.getSchema();
-    GenericRecord record = e.getIcebergRecord(schema);
+        mapper.readTree(unwrapWithSchema).get("payload"), null,
+        mapper.readTree(unwrapWithSchema).get("schema"), null);
+    Schema schema = e.getSchema();
+    GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
+    System.out.println(schema);
+    System.out.println(record);
   }
 
   @Test
   public void testNestedArrayJsonRecord() throws JsonProcessingException {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithArraySchema).get("payload"),null,
-        mapper.readTree(unwrapWithArraySchema).get("schema"),null);
-    Schema schema =  e.getSchema();
+        mapper.readTree(unwrapWithArraySchema).get("payload"), null,
+        mapper.readTree(unwrapWithArraySchema).get("schema"), null);
+    Schema schema = e.getSchema();
     assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 4: schedule: optional list<string>, 6:"));
     System.out.println(schema.asStruct());
     System.out.println(schema.findField("pay_by_quarter").type().asListType().elementType());
     System.out.println(schema.findField("schedule").type().asListType().elementType());
-    assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(),"int");
-    assertEquals(schema.findField("schedule").type().asListType().elementType().toString(),"string");
-    GenericRecord record = e.getIcebergRecord(schema);
+    assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
+    assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
+    GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(record);
-    assertTrue( record.toString().contains("[10000, 10001, 10002, 10003]"));
+    assertTrue(record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
-  
+
   @Test
   public void testNestedArray2JsonRecord() throws JsonProcessingException {
     assertThrows(RuntimeException.class, () -> {
       IcebergChangeEvent e = new IcebergChangeEvent("test",
-          mapper.readTree(unwrapWithArraySchema2).get("payload"),null,
-          mapper.readTree(unwrapWithArraySchema2).get("schema"),null);
-      Schema schema =  e.getSchema();
-        System.out.println(schema.asStruct());
-        System.out.println(schema);
-        System.out.println(schema.findField("tableChanges"));
-        System.out.println(schema.findField("tableChanges").type().asListType().elementType());
-      });
+          mapper.readTree(unwrapWithArraySchema2).get("payload"), null,
+          mapper.readTree(unwrapWithArraySchema2).get("schema"), null);
+      Schema schema = e.getSchema();
+      System.out.println(schema.asStruct());
+      System.out.println(schema);
+      System.out.println(schema.findField("tableChanges"));
+      System.out.println(schema.findField("tableChanges").type().asListType().elementType());
+    });
     //GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
     //System.out.println(record);
   }
-  
+
   @Test
   public void testNestedGeomJsonRecord() throws JsonProcessingException {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithGeomSchema).get("payload"),null,
-        mapper.readTree(unwrapWithGeomSchema).get("schema"),null);
-    Schema schema =  e.getSchema();
-    GenericRecord record = e.getIcebergRecord(schema);
+        mapper.readTree(unwrapWithGeomSchema).get("payload"), null,
+        mapper.readTree(unwrapWithGeomSchema).get("schema"), null);
+    Schema schema = e.getSchema();
+    GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(schema);
     //System.out.println(record);
     assertTrue(schema.toString().contains("g: optional struct<3: wkb: optional string, 4: srid: optional int>"));

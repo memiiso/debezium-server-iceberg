@@ -15,7 +15,7 @@ import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
-import io.debezium.server.iceberg.tableoperator.InterfaceIcebergTableOperator;
+import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
@@ -104,9 +104,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   InterfaceBatchSizeWait batchSizeWait;
   Catalog icebergCatalog;
   @Inject
-  @Any
-  Instance<InterfaceIcebergTableOperator> icebergTableOperatorInstances;
-  InterfaceIcebergTableOperator icebergTableOperator;
+  IcebergTableOperator icebergTableOperator;
 
   @PostConstruct
   void connect() {
@@ -127,9 +125,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, batchSizeWaitName);
     batchSizeWait.initizalize();
 
-    final String icebergTableOperatorName = upsert ? "IcebergTableOperatorUpsert" : "IcebergTableOperatorAppend";
-    icebergTableOperator = IcebergUtil.selectInstance(icebergTableOperatorInstances, icebergTableOperatorName);
-    icebergTableOperator.initialize();
     // configure and set 
     valSerde.configure(Collections.emptyMap(), false);
     valDeserializer = valSerde.deserializer();
@@ -169,7 +164,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
                                          "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
             }
             return IcebergUtil.createIcebergTable(icebergCatalog, tableIdentifier,
-                event.getValue().get(0).getSchema(), writeFormat);
+                event.getValue().get(0).getSchema(), writeFormat, !upsert);
           });
       //addToTable(icebergTable, event.getValue());
       icebergTableOperator.addToTable(icebergTable, event.getValue());
