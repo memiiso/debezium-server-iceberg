@@ -52,9 +52,10 @@ public class IcebergTableOperator {
     for (IcebergChangeEvent e : events) {
       GenericRecord icebergRecord = e.asIcebergRecord(schema);
 
-      // only replace it if its newer
+      // deduplicate over key(PK)
       if (icebergRecordsmap.containsKey(e.key())) {
 
+        // replace it if it's new
         if (this.compareByTsThenOp(icebergRecordsmap.get(e.key()), icebergRecord) <= 0) {
           icebergRecordsmap.put(e.key(), icebergRecord);
         }
