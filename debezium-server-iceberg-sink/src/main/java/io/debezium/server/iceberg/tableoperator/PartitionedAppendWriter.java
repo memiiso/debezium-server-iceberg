@@ -11,14 +11,14 @@ import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.PartitionedWriter;
 
-public class IcebergPartitionedWriter extends PartitionedWriter<Record> {
+public class PartitionedAppendWriter extends PartitionedWriter<Record> {
   private final PartitionKey partitionKey;
   InternalRecordWrapper wrapper;
 
-  public IcebergPartitionedWriter(PartitionSpec spec, FileFormat format,
-                                  FileAppenderFactory<Record> appenderFactory,
-                                  OutputFileFactory fileFactory, FileIO io, long targetFileSize,
-                                  Schema schema) {
+  public PartitionedAppendWriter(PartitionSpec spec, FileFormat format,
+                                 FileAppenderFactory<Record> appenderFactory,
+                                 OutputFileFactory fileFactory, FileIO io, long targetFileSize,
+                                 Schema schema) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
     this.partitionKey = new PartitionKey(spec, schema);
     this.wrapper = new InternalRecordWrapper(schema.asStruct());

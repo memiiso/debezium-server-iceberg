@@ -47,7 +47,7 @@ public class IcebergTableWriterFactory {
         writer = new UnpartitionedWriter<>(
             icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), Long.MAX_VALUE);
       } else {
-        writer = new IcebergPartitionedWriter(
+        writer = new PartitionedAppendWriter(
             icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), Long.MAX_VALUE, icebergTable.schema());
       }
     } else if (icebergTable.spec().isUnpartitioned()) {
