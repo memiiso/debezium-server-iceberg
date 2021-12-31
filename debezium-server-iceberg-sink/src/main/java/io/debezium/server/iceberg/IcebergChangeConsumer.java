@@ -155,20 +155,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
             })
             .collect(Collectors.groupingBy(IcebergChangeEvent::destinationTable));
 
+    // consume list of events to each destination table
     for (Map.Entry<String, List<IcebergChangeEvent>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      Table icebergTable = IcebergUtil.loadIcebergTable(icebergCatalog, tableIdentifier)
-          .orElseGet(() -> {
-            if (!eventSchemaEnabled) {
-              throw new RuntimeException("Table '" + tableIdentifier + "' not found! " +
-                                         "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
-            }
-            return IcebergUtil.createIcebergTable(icebergCatalog, tableIdentifier,
-                event.getValue().get(0).getSchema(), writeFormat, !upsert);
-          });
-      //addToTable(icebergTable, event.getValue());
+      Table icebergTable = this.loadIcebergTable(icebergCatalog, tableIdentifier, event.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, event.getValue());
     }
+
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
     // even its should be saved to file periodically
     for (ChangeEvent<Object, Object> record : records) {
@@ -180,6 +173,15 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
 
+  }
+
+  public Table loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
+    return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
+      if (!eventSchemaEnabled) {
+        throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+      }
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.getSchema(), writeFormat, !upsert);
+    });
   }
 
   protected void logConsumerProgress(long numUploadedEvents) {
