@@ -91,9 +91,9 @@ public class IcebergTableOperator {
 
   public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
 
-    List<Record> batchEvents;
+    final List<Record> batchEvents;
+    // when its operation mode is not upsert deduplicate the events to avoid inserting duplicate row
     if (upsert && !icebergTable.schema().identifierFieldIds().isEmpty()) {
-      // deduplicate the events to avoid inserting duplicate row
       batchEvents = deduplicatedBatchRecords(icebergTable.schema(), events);
     } else {
       batchEvents = events.stream().
