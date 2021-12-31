@@ -68,8 +68,8 @@ public class IcebergUtil {
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
 
-    PartitionSpec ps;
-    if (partition) {
+    final PartitionSpec ps;
+    if (partition && schema.findField("__source_ts") != null) {
       ps = PartitionSpec.builderFor(schema).day("__source_ts").build();
     } else {
       ps = PartitionSpec.builderFor(schema).build();

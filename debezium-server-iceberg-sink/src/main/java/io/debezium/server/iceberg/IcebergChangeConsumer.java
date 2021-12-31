@@ -155,7 +155,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
             })
             .collect(Collectors.groupingBy(IcebergChangeEvent::destinationTable));
 
-    // consume list of events to each destination table
+    // consume list of events for each destination table
     for (Map.Entry<String, List<IcebergChangeEvent>> event : result.entrySet()) {
       final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
       Table icebergTable = this.loadIcebergTable(icebergCatalog, tableIdentifier, event.getValue().get(0));
@@ -174,6 +174,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
   }
 
+  /**
+   * @param icebergCatalog iceberg catalog
+   * @param tableId        iceberg table identifier
+   * @param sampleEvent    sample debezium event. event schema used to create iceberg table when table not found
+   * @return iceberg table, throws RuntimeException when table not found and it's not possible to create it
+   */
   public Table loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
       if (!eventSchemaEnabled) {
@@ -183,6 +189,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     });
   }
 
+  /**
+   * @param numUploadedEvents periodically log number of events consumed
+   */
   protected void logConsumerProgress(long numUploadedEvents) {
     numConsumedEvents += numUploadedEvents;
     if (logTimer.expired()) {
