@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 
@@ -89,18 +90,22 @@ public class IcebergTableOperator {
   }
 
   public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
+
+    List<Record> batchEvents;
+    if (upsert && !icebergTable.schema().identifierFieldIds().isEmpty()) {
+      // deduplicate the events to avoid inserting duplicate row
+      batchEvents = deduplicatedBatchRecords(icebergTable.schema(), events);
+    } else {
+      batchEvents = events.stream().
+          map(e -> e.asIcebergRecord(icebergTable.schema())).
+          collect(Collectors.toList());
+    }
+
     // Initialize a task writer to write both INSERT and equality DELETE.
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try {
-      if (upsert && !icebergTable.schema().identifierFieldIds().isEmpty()) {
-        ArrayList<Record> icebergRecords = deduplicatedBatchRecords(icebergTable.schema(), events);
-        for (Record icebergRecord : icebergRecords) {
-          writer.write(icebergRecord);
-        }
-      } else {
-        for (IcebergChangeEvent e : events) {
-          writer.write(e.asIcebergRecord(icebergTable.schema()));
-        }
+      for (Record icebergRecord : batchEvents) {
+        writer.write(icebergRecord);
       }
 
       writer.close();
