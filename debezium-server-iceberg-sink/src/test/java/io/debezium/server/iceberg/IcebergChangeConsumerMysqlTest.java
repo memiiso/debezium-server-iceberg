@@ -77,4 +77,46 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
   }
 
+  @Test
+  public void testFieldAddition() throws Exception {
+
+    String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_field_addition (" +
+                       " field1 INTEGER ," +
+                       " field4 INTEGER ," +
+                       " field5 TEXT," +
+                       " PRIMARY KEY (field1)" +
+                       " );";
+    SourceMysqlDB.runSQL(sqlCreate);
+    SourceMysqlDB.runSQL("INSERT INTO inventory.test_field_addition (field1, field4, field5) " +
+                         "VALUES  (1,1,'data1');");
+    SourceMysqlDB.runSQL("ALTER TABLE inventory.test_field_addition ADD COLUMN field2 TEXT AFTER field1;");
+    SourceMysqlDB.runSQL("INSERT INTO inventory.test_field_addition (field1, field2, field4, field5) " +
+                         "VALUES  (2,'data2',2,'data2');");
+    SourceMysqlDB.runSQL("ALTER TABLE inventory.test_field_addition ADD COLUMN field6 TEXT;");
+    SourceMysqlDB.runSQL("INSERT INTO inventory.test_field_addition (field1, field2, field4, field5, field6) " +
+                         "VALUES  (3,'data3',3,'data3', 'data3');");
+
+
+//    AtomicReference<Table> table = null;
+//    Awaitility.await().atMost(Duration.ofSeconds(20)).until(() -> {
+//      try {
+//        table.set(getTable("testc.inventory.test_field_addition"));
+//        return true;
+//      } catch (Exception e) {
+//        return false;
+//      }
+//    });
+//    table.get().history().forEach(System.out::println);
+
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.test_field_addition");
+        df.show(false);
+        return df.count() == 3;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+
 }
