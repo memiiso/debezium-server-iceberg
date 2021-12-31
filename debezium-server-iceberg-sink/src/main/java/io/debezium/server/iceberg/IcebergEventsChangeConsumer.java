@@ -12,6 +12,7 @@ import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
+import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.PartitionedAppendWriter;
@@ -22,20 +23,18 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.literal.NamedLiteral;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
@@ -48,6 +47,8 @@ import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
@@ -64,23 +65,32 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Dependent
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
+  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+  protected static final ObjectMapper mapper = new ObjectMapper();
+  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   static final Schema TABLE_SCHEMA = new Schema(
       required(1, "event_destination", Types.StringType.get()),
-      optional(2, "event_key", Types.StringType.get()),
-      optional(3, "event_value", Types.StringType.get()),
-      optional(4, "event_sink_epoch_ms", Types.LongType.get()),
-      optional(5, "event_sink_timestamptz", Types.TimestampType.withZone())
+      optional(2, "event_key_schema", Types.StringType.get()),
+      optional(3, "event_key_payload", Types.StringType.get()),
+      optional(4, "event_value_schema", Types.StringType.get()),
+      optional(5, "event_value_payload", Types.StringType.get()),
+      optional(6, "event_sink_epoch_ms", Types.LongType.get()),
+      optional(7, "event_sink_timestamptz", Types.TimestampType.withZone())
   );
+
   static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA)
       .identity("event_destination")
       .hour("event_sink_timestamptz")
       .build();
   static final SortOrder TABLE_SORT_ORDER = SortOrder.builderFor(TABLE_SCHEMA)
       .asc("event_sink_epoch_ms", NullOrder.NULLS_LAST)
+      .asc("event_sink_timestamptz", NullOrder.NULLS_LAST)
       .build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
-  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
   private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  static Deserializer<JsonNode> valDeserializer;
+  static Deserializer<JsonNode> keyDeserializer;
   final Configuration hadoopConf = new Configuration();
   final Map<String, String> icebergProperties = new ConcurrentHashMap<>();
   @ConfigProperty(name = "debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
@@ -103,7 +113,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   InterfaceBatchSizeWait batchSizeWait;
   Catalog icebergCatalog;
   Table eventTable;
-
 
   @PostConstruct
   void connect() {
@@ -139,20 +148,41 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
 
-    Instance<InterfaceBatchSizeWait> instance = batchSizeWaitInstances.select(NamedLiteral.of(batchSizeWaitName));
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, batchSizeWaitName);
     batchSizeWait.initizalize();
+
+    // configure and set 
+    valSerde.configure(Collections.emptyMap(), false);
+    valDeserializer = valSerde.deserializer();
+    // configure and set 
+    keySerde.configure(Collections.emptyMap(), true);
+    keyDeserializer = keySerde.deserializer();
+
     LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
 
-  public GenericRecord getIcebergRecord(String destination, ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {
-    GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
-    rec.setField("event_destination", destination);
-    rec.setField("event_key", getString(record.key()));
-    rec.setField("event_value", getString(record.value()));
-    rec.setField("event_sink_epoch_ms", batchTime.toEpochSecond());
-    rec.setField("event_sink_timestamptz", batchTime);
-    return rec;
+  public GenericRecord getIcebergRecord(ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {
+
+    try {
+      // deserialize
+      JsonNode valueSchema = record.value() == null ? null : mapper.readTree(getBytes(record.value())).get("schema");
+      JsonNode valuePayload = valDeserializer.deserialize(record.destination(), getBytes(record.value()));
+      JsonNode keyPayload = record.key() == null ? null : keyDeserializer.deserialize(record.destination(), getBytes(record.key()));
+      JsonNode keySchema = record.key() == null ? null : mapper.readTree(getBytes(record.key())).get("schema");
+      // convert to GenericRecord
+      GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
+      rec.setField("event_destination", record.destination());
+      rec.setField("event_key_schema", mapper.writeValueAsString(keySchema));
+      rec.setField("event_key_payload", mapper.writeValueAsString(keyPayload));
+      rec.setField("event_value_schema", mapper.writeValueAsString(valueSchema));
+      rec.setField("event_value_payload", mapper.writeValueAsString(valuePayload));
+      rec.setField("event_sink_epoch_ms", batchTime.toEpochSecond());
+      rec.setField("event_sink_timestamptz", batchTime);
+      
+      return rec;
+    } catch (IOException e) {
+      throw new DebeziumException(e);
+    }
   }
 
   public String map(String destination) {
@@ -166,7 +196,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     OffsetDateTime batchTime = OffsetDateTime.now(ZoneOffset.UTC);
     ArrayList<Record> icebergRecords = records.stream()
-        .map(e -> getIcebergRecord(e.destination(), e, batchTime))
+        .map(e -> getIcebergRecord(e, batchTime))
         .collect(Collectors.toCollection(ArrayList::new));
     commitBatch(icebergRecords);
 
