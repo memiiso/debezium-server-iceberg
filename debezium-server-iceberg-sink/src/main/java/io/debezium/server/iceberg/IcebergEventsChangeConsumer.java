@@ -178,7 +178,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       rec.setField("event_value_payload", mapper.writeValueAsString(valuePayload));
       rec.setField("event_sink_epoch_ms", batchTime.toEpochSecond());
       rec.setField("event_sink_timestamptz", batchTime);
-      
+
       return rec;
     } catch (IOException e) {
       throw new DebeziumException(e);
