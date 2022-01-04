@@ -36,7 +36,7 @@ class TestIcebergUtil {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         mapper.readTree(serdeWithSchema).get("payload"), null,
         mapper.readTree(serdeWithSchema).get("schema"), null);
-    Schema schema = e.getSchema();
+    Schema schema = e.icebergSchema();
     assertTrue(schema.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, " +
                                           "4:"));
   }
@@ -46,7 +46,7 @@ class TestIcebergUtil {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         mapper.readTree(unwrapWithSchema).get("payload"), null,
         mapper.readTree(unwrapWithSchema).get("schema"), null);
-    Schema schema = e.getSchema();
+    Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
@@ -59,7 +59,7 @@ class TestIcebergUtil {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         mapper.readTree(unwrapWithArraySchema).get("payload"), null,
         mapper.readTree(unwrapWithArraySchema).get("schema"), null);
-    Schema schema = e.getSchema();
+    Schema schema = e.icebergSchema();
     assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 4: schedule: optional list<string>, 6:"));
     System.out.println(schema.asStruct());
     System.out.println(schema.findField("pay_by_quarter").type().asListType().elementType());
@@ -77,7 +77,7 @@ class TestIcebergUtil {
       IcebergChangeEvent e = new IcebergChangeEvent("test",
           mapper.readTree(unwrapWithArraySchema2).get("payload"), null,
           mapper.readTree(unwrapWithArraySchema2).get("schema"), null);
-      Schema schema = e.getSchema();
+      Schema schema = e.icebergSchema();
       System.out.println(schema.asStruct());
       System.out.println(schema);
       System.out.println(schema.findField("tableChanges"));
@@ -92,7 +92,7 @@ class TestIcebergUtil {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         mapper.readTree(unwrapWithGeomSchema).get("payload"), null,
         mapper.readTree(unwrapWithGeomSchema).get("schema"), null);
-    Schema schema = e.getSchema();
+    Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(schema);
     //System.out.println(record);
