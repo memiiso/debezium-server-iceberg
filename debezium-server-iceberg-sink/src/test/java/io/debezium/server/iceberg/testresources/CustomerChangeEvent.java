@@ -30,8 +30,15 @@ public class CustomerChangeEvent {
         .addField("__deleted", operation.equals("d"))
         .build();
 
-    return new TestChangeEvent<>(t.key().toString(), t.value().toString(),
-        "testc.inventory.customers_upsert_compositekey");
+    String key = "{" +
+                 "\"schema\":" + t.jsonSchema().keySchema() + "," +
+                 "\"payload\":" + t.key() +
+                 "} ";
+    String val = "{" +
+                 "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+                 "\"payload\":" + t.value() +
+                 "} ";
+    return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert_compositekey");
   }
 
   public static TestChangeEvent<Object, Object> ofCompositeKey(Integer id, String operation, String name,
@@ -46,8 +53,16 @@ public class CustomerChangeEvent {
         .addField("__deleted", operation.equals("d"))
         .build();
 
-    return new TestChangeEvent<>(t.key().toString(), t.value().toString(),
-        "testc.inventory.customers_upsert_compositekey");
+    String key = "{" +
+                 "\"schema\":" + t.jsonSchema().keySchema() + "," +
+                 "\"payload\":" + t.key() +
+                 "} ";
+    String val = "{" +
+                 "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+                 "\"payload\":" + t.value() +
+                 "} ";
+
+    return new TestChangeEvent<>(key, val, "testc.inventory.customers_upsert_compositekey");
   }
 
   public static TestChangeEvent<Object, Object> of(Integer id, String operation) {
@@ -74,8 +89,11 @@ public class CustomerChangeEvent {
         .addField("__deleted", operation.equals("d"))
         .build();
 
-    return new TestChangeEvent<>(null, t.value().toString(),
-        "testc.inventory.customers_upsert_compositekey");
+    String val = "{" +
+                 "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+                 "\"payload\":" + t.value() +
+                 "} ";
+    return new TestChangeEvent<>(null, val, "testc.inventory.customers_upsert_compositekey");
   }
 
 }
