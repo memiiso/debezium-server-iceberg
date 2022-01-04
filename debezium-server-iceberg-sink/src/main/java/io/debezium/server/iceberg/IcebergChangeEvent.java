@@ -33,8 +33,7 @@ public class IcebergChangeEvent {
   protected final String destination;
   protected final JsonNode value;
   protected final JsonNode key;
-  protected final JsonNode valueSchema;
-  protected final JsonNode keySchema;
+  JsonSchema jsonSchema;
 
   public IcebergChangeEvent(String destination,
                             JsonNode value,
@@ -44,12 +43,23 @@ public class IcebergChangeEvent {
     this.destination = destination;
     this.value = value;
     this.key = key;
-    this.valueSchema = valueSchema;
-    this.keySchema = keySchema;
+    this.jsonSchema = new JsonSchema(valueSchema, keySchema);
   }
 
   public JsonNode key() {
     return key;
+  }
+
+  public JsonNode value() {
+    return value;
+  }
+
+  public JsonSchema jsonSchema() {
+    return jsonSchema;
+  }
+
+  public Schema icebergSchema() {
+    return jsonSchema.icebergSchema();
   }
 
   public String destinationTable() {
@@ -69,49 +79,6 @@ public class IcebergChangeEvent {
     return record;
   }
 
-  public String schemaHashCode() {
-    return valueSchema.hashCode() + "-" + keySchema.hashCode();
-  }
-
-  public Schema getSchema() {
-
-    if (this.valueSchema == null) {
-      throw new RuntimeException("Failed to get event schema, event value is null, destination:" + this.destination);
-    }
-
-    final List<Types.NestedField> tableColumns = valueSchemaFields();
-
-    if (tableColumns.isEmpty()) {
-      throw new RuntimeException("Failed to get schema destination:" + this.destination);
-    }
-
-    final List<Types.NestedField> keyColumns = KeySchemaFields();
-    Set<Integer> identifierFieldIds = new HashSet<>();
-
-    for (Types.NestedField ic : keyColumns) {
-      boolean found = false;
-
-      ListIterator<Types.NestedField> colsIterator = tableColumns.listIterator();
-      while (colsIterator.hasNext()) {
-        Types.NestedField tc = colsIterator.next();
-        if (Objects.equals(tc.name(), ic.name())) {
-          identifierFieldIds.add(tc.fieldId());
-          // set column as required its part of identifier filed
-          colsIterator.set(tc.asRequired());
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
-      }
-
-    }
-
-    return new Schema(tableColumns, identifierFieldIds);
-  }
-
   private GenericRecord asIcebergRecord(Types.StructType tableFields, JsonNode data) {
     LOGGER.debug("Processing nested field:{}", tableFields);
     GenericRecord record = GenericRecord.create(tableFields);
@@ -127,25 +94,6 @@ public class IcebergChangeEvent {
     }
 
     return record;
-  }
-
-  //getIcebergFieldsFromEventSchema
-  private List<Types.NestedField> KeySchemaFields() {
-    if (keySchema != null && keySchema.has("fields") && keySchema.get("fields").isArray()) {
-      LOGGER.debug(keySchema.toString());
-      return icebergSchema(keySchema, "", 0);
-    }
-    LOGGER.trace("Key schema not found!");
-    return new ArrayList<>();
-  }
-
-  private List<Types.NestedField> valueSchemaFields() {
-    if (valueSchema != null && valueSchema.has("fields") && valueSchema.get("fields").isArray()) {
-      LOGGER.debug(valueSchema.toString());
-      return icebergSchema(valueSchema, "", 0, true);
-    }
-    LOGGER.trace("Event schema not found!");
-    return new ArrayList<>();
   }
 
   private Type.PrimitiveType icebergFieldType(String fieldType) {
@@ -173,59 +121,6 @@ public class IcebergChangeEvent {
         return Types.StringType.get();
       //throw new RuntimeException("'" + fieldName + "' has "+fieldType+" type, "+fieldType+" not supported!");
     }
-  }
-
-  private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
-    return icebergSchema(eventSchema, schemaName, columnId, false);
-  }
-
-  private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId,
-                                                boolean addSourceTsField) {
-    List<Types.NestedField> schemaColumns = new ArrayList<>();
-    String schemaType = eventSchema.get("type").textValue();
-    LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
-    for (JsonNode jsonSchemaFieldNode : eventSchema.get("fields")) {
-      columnId++;
-      String fieldName = jsonSchemaFieldNode.get("field").textValue();
-      String fieldType = jsonSchemaFieldNode.get("type").textValue();
-      LOGGER.debug("Processing Field: [{}] {}.{}::{}", columnId, schemaName, fieldName, fieldType);
-      switch (fieldType) {
-        case "array":
-          JsonNode items = jsonSchemaFieldNode.get("items");
-          if (items != null && items.has("type")) {
-            String listItemType = items.get("type").textValue();
-            if (listItemType.equals("struct") || listItemType.equals("array") || listItemType.equals("map")) {
-              throw new RuntimeException("Complex Array types are not supported array[" + listItemType + "], field " + fieldName);
-            }
-            Type.PrimitiveType item = icebergFieldType(listItemType);
-            schemaColumns.add(Types.NestedField.optional(
-                columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
-            //throw new RuntimeException("'" + fieldName + "' has Array type, Array type not supported!");
-          } else {
-            throw new RuntimeException("Unexpected Array type for field " + fieldName);
-          }
-          break;
-        case "map":
-          throw new RuntimeException("'" + fieldName + "' has Map type, Map type not supported!");
-          //schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StringType.get()));
-          //break;
-        case "struct":
-          // create it as struct, nested type
-          List<Types.NestedField> subSchema = icebergSchema(jsonSchemaFieldNode, fieldName, columnId);
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema)));
-          columnId += subSchema.size();
-          break;
-        default: //primitive types
-          schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldType)));
-          break;
-      }
-    }
-
-    if (addSourceTsField) {
-      columnId++;
-      schemaColumns.add(Types.NestedField.optional(columnId, "__source_ts", Types.TimestampType.withZone()));
-    }
-    return schemaColumns;
   }
 
   private Object jsonValToIcebergVal(Types.NestedField field,
@@ -279,6 +174,150 @@ public class IcebergChangeEvent {
     }
 
     return val;
+  }
+
+  public class JsonSchema {
+    private final JsonNode valueSchema;
+    private final JsonNode keySchema;
+
+    JsonSchema(JsonNode valueSchema, JsonNode keySchema) {
+      this.valueSchema = valueSchema;
+      this.keySchema = keySchema;
+    }
+
+    public JsonNode valueSchema() {
+      return valueSchema;
+    }
+
+    public JsonNode keySchema() {
+      return keySchema;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      JsonSchema that = (JsonSchema) o;
+      return Objects.equals(valueSchema, that.valueSchema) && Objects.equals(keySchema, that.keySchema);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(valueSchema, keySchema);
+    }
+
+    //getIcebergFieldsFromEventSchema
+    private List<Types.NestedField> KeySchemaFields() {
+      if (keySchema != null && keySchema.has("fields") && keySchema.get("fields").isArray()) {
+        LOGGER.debug(keySchema.toString());
+        return icebergSchema(keySchema, "", 0);
+      }
+      LOGGER.trace("Key schema not found!");
+      return new ArrayList<>();
+    }
+
+    private List<Types.NestedField> valueSchemaFields() {
+      if (valueSchema != null && valueSchema.has("fields") && valueSchema.get("fields").isArray()) {
+        LOGGER.debug(valueSchema.toString());
+        return icebergSchema(valueSchema, "", 0, true);
+      }
+      LOGGER.trace("Event schema not found!");
+      return new ArrayList<>();
+    }
+
+    public Schema icebergSchema() {
+
+      if (this.valueSchema == null) {
+        throw new RuntimeException("Failed to get event schema, event schema is null");
+      }
+
+      final List<Types.NestedField> tableColumns = valueSchemaFields();
+
+      if (tableColumns.isEmpty()) {
+        throw new RuntimeException("Failed to get event schema, event schema has no fields!");
+      }
+
+      final List<Types.NestedField> keyColumns = KeySchemaFields();
+      Set<Integer> identifierFieldIds = new HashSet<>();
+
+      for (Types.NestedField ic : keyColumns) {
+        boolean found = false;
+
+        ListIterator<Types.NestedField> colsIterator = tableColumns.listIterator();
+        while (colsIterator.hasNext()) {
+          Types.NestedField tc = colsIterator.next();
+          if (Objects.equals(tc.name(), ic.name())) {
+            identifierFieldIds.add(tc.fieldId());
+            // set column as required its part of identifier filed
+            colsIterator.set(tc.asRequired());
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
+        }
+
+      }
+
+      return new Schema(tableColumns, identifierFieldIds);
+    }
+
+    private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
+      return icebergSchema(eventSchema, schemaName, columnId, false);
+    }
+
+    private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId,
+                                                  boolean addSourceTsField) {
+      List<Types.NestedField> schemaColumns = new ArrayList<>();
+      String schemaType = eventSchema.get("type").textValue();
+      LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
+      for (JsonNode jsonSchemaFieldNode : eventSchema.get("fields")) {
+        columnId++;
+        String fieldName = jsonSchemaFieldNode.get("field").textValue();
+        String fieldType = jsonSchemaFieldNode.get("type").textValue();
+        LOGGER.debug("Processing Field: [{}] {}.{}::{}", columnId, schemaName, fieldName, fieldType);
+        switch (fieldType) {
+          case "array":
+            JsonNode items = jsonSchemaFieldNode.get("items");
+            if (items != null && items.has("type")) {
+              String listItemType = items.get("type").textValue();
+
+              if (listItemType.equals("struct") || listItemType.equals("array") || listItemType.equals("map")) {
+                throw new RuntimeException("Complex nested array types are not supported," +
+                                           " array[" + listItemType + "], field " + fieldName);
+              }
+
+              Type.PrimitiveType item = icebergFieldType(listItemType);
+              schemaColumns.add(Types.NestedField.optional(
+                  columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
+            } else {
+              throw new RuntimeException("Unexpected Array type for field " + fieldName);
+            }
+            break;
+          case "map":
+            throw new RuntimeException("'" + fieldName + "' has Map type, Map type not supported!");
+            //break;
+          case "struct":
+            // create it as struct, nested type
+            List<Types.NestedField> subSchema = icebergSchema(jsonSchemaFieldNode, fieldName, columnId);
+            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.StructType.of(subSchema)));
+            columnId += subSchema.size();
+            break;
+          default: //primitive types
+            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldType)));
+            break;
+        }
+      }
+
+      if (addSourceTsField) {
+        columnId++;
+        schemaColumns.add(Types.NestedField.optional(columnId, "__source_ts", Types.TimestampType.withZone()));
+      }
+      return schemaColumns;
+    }
+
   }
 
 }

@@ -138,6 +138,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throws InterruptedException {
     Instant start = Instant.now();
 
+    //group events by destination
     Map<String, List<IcebergChangeEvent>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
@@ -185,7 +186,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (!eventSchemaEnabled) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.getSchema(), writeFormat, !upsert);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat, !upsert);
     });
   }
 

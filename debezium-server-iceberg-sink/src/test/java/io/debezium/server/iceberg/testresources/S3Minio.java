@@ -70,11 +70,11 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     try {
       List<Bucket> bucketList = client.listBuckets();
       for (Bucket bucket : bucketList) {
-        System.out.printf("Bucket:%s ROOT", bucket.name());
+        System.out.printf("Bucket:%s ROOT\n", bucket.name());
         Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucket.name()).recursive(true).build());
         for (Result<Item> result : results) {
           Item item = result.get();
-          System.out.printf("Bucket:%s Item:%s Size:%s", bucket.name(), item.objectName(), item.size());
+          System.out.printf("Bucket:%s Item:%s Size:%s\n", bucket.name(), item.objectName(), item.size());
         }
       }
     } catch (Exception e) {
