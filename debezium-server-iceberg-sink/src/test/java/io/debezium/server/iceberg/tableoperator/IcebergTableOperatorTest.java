@@ -42,6 +42,7 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 @QuarkusTestResource(S3Minio.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
+  static String testTable = "inventory.test_table_operator";
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   String tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
@@ -50,10 +51,8 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   boolean upsert;
   @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
   String writeFormat;
-
   @Inject
   IcebergTableOperator icebergTableOperator;
-  static String testTable = "inventory.test_table_operator";
   IcebergChangeEventBuilder eventBuilder = new IcebergChangeEventBuilder().destination(testTable);
 
   public Table createTable(IcebergChangeEvent sampleEvent) {
@@ -77,9 +76,17 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     events.add(eventBuilder.addKeyField("id", 2).addField("data", "record2").build());
     icebergTableOperator.addToTable(icebergTable, events);
 
-    Dataset<Row> ds = getTableData(namespace + "." + testTable);
+    Assertions.assertEquals(2, getTableData(testTable).count());
+    events.clear();
+    events.add(eventBuilder
+        .addKeyField("id", 3)
+        .addField("user_name", "Alice")
+        .addField("data", "record3_adding_field")
+        .build());
+    icebergTableOperator.addToTable(icebergTable, events);
+    Dataset<Row> ds = getTableData(testTable);
     ds.show(false);
-
-    Assertions.assertTrue(false);
+    Assertions.assertEquals(3, getTableData(testTable).count());
+    Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice'").count());
   }
 }

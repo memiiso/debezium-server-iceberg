@@ -99,7 +99,6 @@ public class IcebergTableOperator {
     UpdateSchema us = icebergTable.updateSchema().
         unionByNameWith(newSchema).
         setIdentifierFields(newSchema.identifierFieldNames());
-    // @TODO add UNIT TEST PK change!!
     Schema newSchemaCombined = us.apply();
 
     // @NOTE avoid committing when there is no schema change. commit creates new commit even when there is no change!
@@ -107,7 +106,6 @@ public class IcebergTableOperator {
       LOGGER.warn("Extending schema of {}", icebergTable.name());
       us.commit();
     }
-    // @TODO update sort order?? us.withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
   }
 
   public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {

@@ -168,7 +168,9 @@ public class BaseSparkTest {
   }
 
   public Dataset<Row> getTableData(String table) {
-    return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM debeziumevents.debeziumcdc_" + table.replace(".", "_"));
+    table = "debeziumevents.debeziumcdc_" + table.replace(".", "_");
+    //System.out.println("--loading-->" + table);
+    return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 
 }
