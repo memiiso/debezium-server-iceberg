@@ -11,8 +11,8 @@ package io.debezium.server.iceberg.tableoperator;
 import io.debezium.server.iceberg.IcebergChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
-import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -24,6 +24,8 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.hadoop.HadoopCatalog;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -38,7 +40,6 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
  */
 @QuarkusTest
 @QuarkusTestResource(S3Minio.class)
-@QuarkusTestResource(SourcePostgresqlDB.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
@@ -52,6 +53,8 @@ class IcebergTableOperatorTest extends BaseSparkTest {
 
   @Inject
   IcebergTableOperator icebergTableOperator;
+  static String testTable = "inventory.test_table_operator";
+  IcebergChangeEventBuilder eventBuilder = new IcebergChangeEventBuilder().destination(testTable);
 
   public Table createTable(IcebergChangeEvent sampleEvent) {
     HadoopCatalog icebergCatalog = getIcebergCatalog();
@@ -64,8 +67,18 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     // setup
     List<IcebergChangeEvent> events = new ArrayList<>();
 
-    Table icebergTable = this.createTable(events.get(0));
+    eventBuilder.addKeyField("id", 1)
+        .addField("data", "record1")
+        .addField("preferences", "feature1", true)
+        .addField("preferences", "feature2", true);
+    Table icebergTable = this.createTable(eventBuilder.build());
+
+    events.add(eventBuilder.build());
+    events.add(eventBuilder.addKeyField("id", 2).addField("data", "record2").build());
     icebergTableOperator.addToTable(icebergTable, events);
+
+    Dataset<Row> ds = getTableData(namespace + "." + testTable);
+    ds.show(false);
 
     Assertions.assertTrue(false);
   }
