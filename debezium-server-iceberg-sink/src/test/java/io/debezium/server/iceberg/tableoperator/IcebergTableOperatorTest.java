@@ -68,6 +68,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
             .destination(testTable)
             .addKeyField("id", 1)
             .addField("data", "record1")
+            .addField("preferences", "feature1", true)
             .build()
     );
 
@@ -100,18 +101,14 @@ class IcebergTableOperatorTest extends BaseSparkTest {
         .addKeyField("id", 3)
         .addField("user_name", "Alice-Updated")
         .addField("data", "record3_updated")
-        .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", "feature2Val2")
         .addField("__op", "u")
         .build()
     );
     icebergTableOperator.addToTable(icebergTable, events);
     getTableData(testTable).show(false);
-    Assertions.assertEquals(3, getTableData(testTable).count());
+    Assertions.assertEquals(4, getTableData(testTable).count());
     Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice-Updated'").count());
-    Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature1 == true").count());
     Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature2 == 'feature2Val2'").count());
-
-    // expect PK change exception!!
   }
 }

@@ -21,8 +21,7 @@ public class IcebergChangeConsumerMysqlTestProfile implements QuarkusTestProfile
     Map<String, String> config = new HashMap<>();
     config.put("quarkus.profile", "mysql");
     config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
-    config.put("%mysql.debezium.source.table.whitelist",
-        "inventory.customers,inventory.test_delete_table,inventory.test_field_addition");
+    config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
     return config;
   }
 
