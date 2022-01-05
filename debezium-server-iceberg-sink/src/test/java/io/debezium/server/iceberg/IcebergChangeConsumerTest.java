@@ -17,8 +17,6 @@ import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
 
-import org.apache.iceberg.Table;
-import org.apache.iceberg.types.Types;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
@@ -165,16 +163,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
     // added columns are not recognized by iceberg
     getTableData("testc.inventory.customers").show();
-
-    // TEST add new columns to iceberg table then check if its data populated!
-    Table table = getTable("testc.inventory.customers");
-    // NOTE column list below are in reverse order!! testing the behaviour!
-    table.updateSchema()
-        // NOTE test_date_column is Long type because debezium serializes date type as number
-        .addColumn("test_date_column", Types.LongType.get())
-        .addColumn("test_boolean_column", Types.BooleanType.get())
-        .addColumn("test_varchar_column", Types.StringType.get())
-        .commit();
     // insert row after defining new column in target iceberg table
     SourcePostgresqlDB.runSQL("INSERT INTO inventory.customers VALUES " +
                               "(default,'After-Defining-Iceberg-fields','Thomas',null,'value1',false, '2020-01-01');");
@@ -197,20 +185,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     });
     getTableData("testc.inventory.customers").show();
 
-    // CASE 1:(Adding new column to source) (A column missing in iceberg table)
-    // data of the new column is ignored till same column defined in iceberg table
-    // for example: if a column not found in iceberg table its data is dropped ignored and not copied to target!
-    // once iceberg table adds same column then data for this column recognized and populated
-
-    // CASE 2:(Removing column from source) (An extra column in iceberg table)
-    // these columns are populated with null value
-
-    // CASE 3:(Renaming column from source) 
-    // this is CASE 2 + CASE 1 : old column will be populated with null values and new column will not be recognized 
-    // and populated till it's added to iceberg table
-
     S3Minio.listFiles();
-
   }
 
   @Test
