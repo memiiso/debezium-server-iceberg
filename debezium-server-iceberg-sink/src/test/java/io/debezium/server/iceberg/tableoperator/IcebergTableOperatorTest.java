@@ -24,8 +24,6 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.hadoop.HadoopCatalog;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -65,28 +63,55 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   public void testIcebergTableOperator() {
     // setup
     List<IcebergChangeEvent> events = new ArrayList<>();
+    Table icebergTable = this.createTable(
+        new IcebergChangeEventBuilder()
+            .destination(testTable)
+            .addKeyField("id", 1)
+            .addField("data", "record1")
+            .build()
+    );
 
-    eventBuilder.addKeyField("id", 1)
+    events.add(new IcebergChangeEventBuilder()
+        .destination(testTable)
+        .addKeyField("id", 1)
         .addField("data", "record1")
-        .addField("preferences", "feature1", true)
-        .addField("preferences", "feature2", true);
-    Table icebergTable = this.createTable(eventBuilder.build());
-
-    events.add(eventBuilder.build());
-    events.add(eventBuilder.addKeyField("id", 2).addField("data", "record2").build());
-    icebergTableOperator.addToTable(icebergTable, events);
-
-    Assertions.assertEquals(2, getTableData(testTable).count());
-    events.clear();
-    events.add(eventBuilder
+        .build()
+    );
+    events.add(new IcebergChangeEventBuilder()
+        .destination(testTable)
+        .addKeyField("id", 2)
+        .addField("data", "record2")
+        .build()
+    );
+    events.add(new IcebergChangeEventBuilder()
+        .destination(testTable)
         .addKeyField("id", 3)
         .addField("user_name", "Alice")
         .addField("data", "record3_adding_field")
-        .build());
+        .build()
+    );
     icebergTableOperator.addToTable(icebergTable, events);
-    Dataset<Row> ds = getTableData(testTable);
-    ds.show(false);
+
+    getTableData(testTable).show(false);
     Assertions.assertEquals(3, getTableData(testTable).count());
-    Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice'").count());
+    events.clear();
+    events.add(new IcebergChangeEventBuilder()
+        .destination(testTable)
+        .addKeyField("id", 3)
+        .addField("user_name", "Alice-Updated")
+        .addField("data", "record3_updated")
+        .addField("preferences", "feature1", true)
+        .addField("preferences", "feature2", "feature2Val2")
+        .addField("__op", "u")
+        .build()
+    );
+    icebergTableOperator.addToTable(icebergTable, events);
+    getTableData(testTable).show(false);
+    Assertions.assertEquals(3, getTableData(testTable).count());
+    Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice-Updated'").count());
+    Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature1 == true").count());
+    Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature2 == 'feature2Val2'").count());
+
+    // expect PK change exception!!
   }
 }
