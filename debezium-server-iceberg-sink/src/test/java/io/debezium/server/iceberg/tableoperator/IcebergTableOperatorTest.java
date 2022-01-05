@@ -9,15 +9,26 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.IcebergChangeEvent;
+import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
+import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.types.Types;
+import java.util.ArrayList;
+import java.util.List;
+import javax.inject.Inject;
+
+import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.hadoop.HadoopCatalog;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import static org.apache.iceberg.types.Types.NestedField.optional;
-import static org.apache.iceberg.types.Types.NestedField.required;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
 
 /**
@@ -26,33 +37,36 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  * @author Ismail Simsek
  */
 @QuarkusTest
+@QuarkusTestResource(S3Minio.class)
+@QuarkusTestResource(SourcePostgresqlDB.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
+  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
+  String tablePrefix;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
+  boolean upsert;
+  @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
+  String writeFormat;
+
+  @Inject
+  IcebergTableOperator icebergTableOperator;
+
+  public Table createTable(IcebergChangeEvent sampleEvent) {
+    HadoopCatalog icebergCatalog = getIcebergCatalog();
+    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destinationTable());
+    return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat, !upsert);
+  }
+
   @Test
-  public void testIcebergChangeEventBuilder() {
+  public void testIcebergTableOperator() {
+    // setup
+    List<IcebergChangeEvent> events = new ArrayList<>();
 
-    IcebergChangeEventBuilder b = new IcebergChangeEventBuilder();
-    IcebergChangeEvent t = b.
-        addKeyField("id", 1)
-        .addField("data", "testdatavalue")
-        .addField("preferences", "feature1", true)
-        .addField("preferences", "feature2", true)
-        .build();
-    System.out.println(t.jsonSchema().keySchema());
+    Table icebergTable = this.createTable(events.get(0));
+    icebergTableOperator.addToTable(icebergTable, events);
 
-    b = new IcebergChangeEventBuilder();
-    b.addField("id", 1);
-    b.addField("preferences", "feature1", true);
-    b.addField("preferences", "feature2", true);
-
-    Schema schema1 = new Schema(
-        required(1, "id", Types.IntegerType.get()),
-        optional(2, "preferences", Types.StructType.of(
-            required(3, "feature1", Types.BooleanType.get()),
-            optional(4, "feature2", Types.BooleanType.get())
-        ))
-    );
-
-    System.out.println(b.build().icebergSchema());
+    Assertions.assertTrue(false);
   }
 }
