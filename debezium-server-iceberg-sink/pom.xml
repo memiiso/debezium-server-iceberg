@@ -50,7 +50,7 @@
         <!-- Iceberg  -->
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-runtime-3.2_2.12</artifactId>
+            <artifactId>iceberg-spark-runtime-3.1_2.12</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
 
