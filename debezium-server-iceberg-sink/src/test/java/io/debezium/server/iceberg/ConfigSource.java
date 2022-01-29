@@ -36,7 +36,7 @@ public class ConfigSource extends TestConfigSource {
     config.put("debezium.sink.iceberg.warehouse", "s3a://" + S3_BUCKET + "/iceberg_warehouse");
     config.put("debezium.sink.iceberg.type", "hadoop");
     config.put("debezium.sink.iceberg.catalog-name", "mycatalog");
-    config.put("debezium.sink.iceberg.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog");
+    //config.put("debezium.sink.iceberg.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog");
 
     // enable disable schema
     config.put("debezium.format.value.schemas.enable", "true");
