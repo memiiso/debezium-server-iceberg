@@ -30,8 +30,8 @@
         <version.groovy>3.0.9</version.groovy>
         <version.assembly.plugin>3.3.0</version.assembly.plugin>
         <version.jackson>2.12.6</version.jackson>
-        <version.iceberg>0.12.1</version.iceberg>
-        <version.spark>3.1.2</version.spark>
+        <version.iceberg>0.13.0</version.iceberg>
+        <version.spark>3.2.1</version.spark>
         <version.hadoop>3.3.1</version.hadoop>
         <version.awssdk>2.17.120</version.awssdk>
         <version.parquet>1.12.2</version.parquet>
@@ -43,6 +43,14 @@
         <!-- Quarkus -->
         <version.quarkus>2.7.0.Final</version.quarkus>
     </properties>
+
+
+    <repositories>
+        <repository>
+            <id>orgapacheiceberg-rc</id>
+            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1080/</url>
+        </repository>
+    </repositories>
 
     <dependencyManagement>
         <dependencies>
