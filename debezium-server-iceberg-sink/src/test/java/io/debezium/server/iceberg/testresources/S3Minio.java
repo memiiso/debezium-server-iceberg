@@ -47,7 +47,8 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
       .withEnv("MINIO_ACCESS_KEY", MINIO_ACCESS_KEY)
       .withEnv("MINIO_SECRET_KEY", MINIO_SECRET_KEY)
       .withEnv("MINIO_REGION_NAME", ConfigSource.S3_REGION)
-      .withCommand("server " + DEFAULT_STORAGE_DIRECTORY);
+      .withCommand("server " + DEFAULT_STORAGE_DIRECTORY)
+      .withExposedPorts(MINIO_DEFAULT_PORT);
   public static MinioClient client;
 
   public static List<Item> getObjectList(String bucketName) {

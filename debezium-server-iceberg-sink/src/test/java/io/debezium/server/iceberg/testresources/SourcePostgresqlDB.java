@@ -40,6 +40,7 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
       .withEnv("POSTGRES_DB", POSTGRES_DBNAME)
       .withEnv("POSTGRES_INITDB_ARGS", "-E UTF8")
       .withEnv("LANG", "en_US.utf8")
+      .withExposedPorts(POSTGRES_PORT_DEFAULT)
       .withStartupTimeout(Duration.ofSeconds(30));
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {

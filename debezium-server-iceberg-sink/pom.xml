@@ -27,6 +27,10 @@
             <artifactId>debezium-server-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.debezium</groupId>
             <artifactId>debezium-scripting</artifactId>
         </dependency>
@@ -46,7 +50,7 @@
         <!-- Iceberg  -->
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark3-runtime</artifactId>
+            <artifactId>iceberg-spark-runtime-3.2_2.12</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
 
@@ -147,7 +151,7 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
-            <version>42.2.19</version>
+            <version>42.3.1</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -157,7 +161,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.3.1</version>
+            <version>8.3.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -169,7 +173,7 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.1.0</version>
+            <version>4.1.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>

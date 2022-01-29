@@ -41,6 +41,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
       .withEnv("MYSQL_USER", MYSQL_USER)
       .withEnv("MYSQL_PASSWORD", MYSQL_PASSWORD)
       .withEnv("MYSQL_ROOT_PASSWORD", MYSQL_ROOT_PASSWORD)
+      .withExposedPorts(MYSQL_PORT_DEFAULT)
       .withStartupTimeout(Duration.ofSeconds(30));
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
