@@ -38,22 +38,14 @@
         <version.testcontainers>1.15.3</version.testcontainers>
         <version.kafkaclients>3.1.0</version.kafkaclients>
         <!-- Debezium -->
-        <version.debezium>1.8.0.Final</version.debezium>
+        <version.debezium>1.9.2.Final</version.debezium>
         <version.mysql.driver>8.0.28</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.7.0.Final</version.quarkus>
+        <version.quarkus>2.8.2.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version pulled in via debezium -->
         <version.antlr>4.8</version.antlr>
     </properties>
-
-
-    <repositories>
-        <repository>
-            <id>orgapacheiceberg-rc</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1080/</url>
-        </repository>
-    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -73,6 +65,7 @@
                 <artifactId>bom</artifactId>
                 <version>${version.awssdk}</version>
                 <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- parquet -->
             <dependency>
