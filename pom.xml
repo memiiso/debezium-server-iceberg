@@ -47,14 +47,6 @@
         <version.antlr>4.8</version.antlr>
     </properties>
 
-
-    <repositories>
-        <repository>
-            <id>orgapacheiceberg-rc</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1080/</url>
-        </repository>
-    </repositories>
-
     <dependencyManagement>
         <dependencies>
             <dependency>
