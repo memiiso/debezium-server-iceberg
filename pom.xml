@@ -65,6 +65,7 @@
                 <artifactId>bom</artifactId>
                 <version>${version.awssdk}</version>
                 <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- parquet -->
             <dependency>
