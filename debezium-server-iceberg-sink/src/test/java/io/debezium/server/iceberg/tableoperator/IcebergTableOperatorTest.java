@@ -55,7 +55,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
 
   public Table createTable(IcebergChangeEvent sampleEvent) {
     HadoopCatalog icebergCatalog = getIcebergCatalog();
-    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destinationTable());
+    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destination());
     return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat, !upsert);
   }
 

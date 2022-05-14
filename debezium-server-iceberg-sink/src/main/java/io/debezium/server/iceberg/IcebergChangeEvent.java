@@ -62,8 +62,8 @@ public class IcebergChangeEvent {
     return jsonSchema.icebergSchema();
   }
 
-  public String destinationTable() {
-    return destination.replace(".", "_");
+  public String destination() {
+    return destination;
   }
 
   public GenericRecord asIcebergRecord(Schema schema) {
