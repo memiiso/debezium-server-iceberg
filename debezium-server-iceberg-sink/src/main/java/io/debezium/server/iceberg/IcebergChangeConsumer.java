@@ -9,7 +9,6 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
-import io.debezium.annotation.VisibleForTesting;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
@@ -163,9 +162,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
             .collect(Collectors.groupingBy(IcebergChangeEvent::destination));
 
     // consume list of events for each destination table
-    for (Map.Entry<String, List<IcebergChangeEvent>> event : result.entrySet()) {
-      Table icebergTable = this.loadIcebergTable(icebergCatalog, mapDestination(event.getKey()), event.getValue().get(0));
-      icebergTableOperator.addToTable(icebergTable, event.getValue());
+    for (Map.Entry<String, List<IcebergChangeEvent>> tableEvents : result.entrySet()) {
+      Table icebergTable = this.loadIcebergTable(icebergCatalog, mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+      icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
@@ -208,8 +207,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
   }
 
-  @VisibleForTesting
-  TableIdentifier mapDestination(String destination) {
+  public TableIdentifier mapDestination(String destination) {
     final String tableName = destination
         .replaceAll(destinationRegexp.orElse(""), destinationRegexpReplace.orElse(""))
         .replace(".", "_");
