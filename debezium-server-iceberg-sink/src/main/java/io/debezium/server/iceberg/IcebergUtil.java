@@ -42,7 +42,7 @@ public class IcebergUtil {
     for (String propName : config.getPropertyNames()) {
       if (propName.startsWith(prefix)) {
         final String newPropName = propName.substring(prefix.length());
-        ret.put(newPropName, config.getValue(propName, String.class));
+        ret.put(newPropName, config.getConfigValue(propName).getValue());
       }
     }
 
