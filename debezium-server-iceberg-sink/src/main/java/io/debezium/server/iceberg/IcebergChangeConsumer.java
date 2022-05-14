@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
+import io.debezium.annotation.VisibleForTesting;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
@@ -207,6 +208,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
   }
 
+  @VisibleForTesting
   TableIdentifier mapDestination(String destination) {
     final String tableName = destination
         .replaceAll(destinationRegexp.orElse(""), destinationRegexpReplace.orElse(""))

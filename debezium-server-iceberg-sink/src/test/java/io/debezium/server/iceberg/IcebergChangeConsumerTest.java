@@ -16,7 +16,10 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
+import javax.inject.Inject;
 
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
@@ -41,6 +44,11 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
+
+  @Inject
+  IcebergChangeConsumer icebergConsumer;
+  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
+  String namespace;
 
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
@@ -275,6 +283,12 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       }
     });
     S3Minio.listFiles();
+  }
+
+  @Test
+  public void testMapDestination() {
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "table"), icebergConsumer.mapDestination("table1"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "table"), icebergConsumer.mapDestination("table2"));
   }
 
 }
