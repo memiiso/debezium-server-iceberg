@@ -287,8 +287,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testMapDestination() {
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "table"), icebergConsumer.mapDestination("table1"));
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "table"), icebergConsumer.mapDestination("table2"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
   }
 
 }
