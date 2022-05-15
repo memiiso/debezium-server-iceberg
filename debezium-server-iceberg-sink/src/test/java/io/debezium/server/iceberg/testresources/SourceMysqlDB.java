@@ -30,7 +30,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String MYSQL_PASSWORD = "mysqlpw";
   public static final String MYSQL_DEBEZIUM_USER = "debezium";
   public static final String MYSQL_DEBEZIUM_PASSWORD = "dbz";
-  public static final String MYSQL_IMAGE = "debezium/example-mysql:1.7.0.Final";
+  public static final String MYSQL_IMAGE = "debezium/example-mysql:1.9.2.Final";
   public static final String MYSQL_HOST = "127.0.0.1";
   public static final String MYSQL_DATABASE = "inventory";
   public static final Integer MYSQL_PORT_DEFAULT = 3306;

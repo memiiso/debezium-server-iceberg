@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -84,6 +85,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
   String defaultFs;
+  @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp", defaultValue = "")
+  protected Optional<String> destinationRegexp;
+  @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp-replace", defaultValue = "")
+  protected Optional<String> destinationRegexpReplace;
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   String tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
@@ -154,13 +159,12 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
                 throw new DebeziumException(ex);
               }
             })
-            .collect(Collectors.groupingBy(IcebergChangeEvent::destinationTable));
+            .collect(Collectors.groupingBy(IcebergChangeEvent::destination));
 
     // consume list of events for each destination table
-    for (Map.Entry<String, List<IcebergChangeEvent>> event : result.entrySet()) {
-      final TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), tablePrefix + event.getKey());
-      Table icebergTable = this.loadIcebergTable(icebergCatalog, tableIdentifier, event.getValue().get(0));
-      icebergTableOperator.addToTable(icebergTable, event.getValue());
+    for (Map.Entry<String, List<IcebergChangeEvent>> tableEvents : result.entrySet()) {
+      Table icebergTable = this.loadIcebergTable(icebergCatalog, mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+      icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
@@ -203,4 +207,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     }
   }
 
+  public TableIdentifier mapDestination(String destination) {
+    final String tableName = destination
+        .replaceAll(destinationRegexp.orElse(""), destinationRegexpReplace.orElse(""))
+        .replace(".", "_");
+
+    return TableIdentifier.of(Namespace.of(namespace), tablePrefix + tableName);
+  }
 }
