@@ -127,7 +127,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   @Override
   public String destination() {
-    return destination.replace(".", "_");
+    return destination;
   }
 
   @Override
