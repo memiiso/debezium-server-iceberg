@@ -13,7 +13,7 @@ import org.apache.iceberg.io.PartitionedWriter;
 
 public class PartitionedAppendWriter extends PartitionedWriter<Record> {
   private final PartitionKey partitionKey;
-  InternalRecordWrapper wrapper;
+  final InternalRecordWrapper wrapper;
 
   public PartitionedAppendWriter(PartitionSpec spec, FileFormat format,
                                  FileAppenderFactory<Record> appenderFactory,

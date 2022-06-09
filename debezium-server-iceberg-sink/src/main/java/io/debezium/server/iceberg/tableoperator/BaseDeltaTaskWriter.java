@@ -18,6 +18,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final Schema schema;
   private final Schema deleteSchema;
   private final InternalRecordWrapper wrapper;
+  private final InternalRecordWrapper keyWrapper;
   private final boolean upsert;
   private final boolean upsertKeepDeletes;
 
@@ -35,6 +36,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(equalityFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
+    this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
     this.upsert = upsert;
     this.upsertKeepDeletes = upsertKeepDeletes;
   }
@@ -70,6 +72,11 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     @Override
     protected StructLike asStructLike(Record data) {
       return wrapper.wrap(data);
+    }
+
+    @Override
+    protected StructLike asStructLikeKey(Record data) {
+      return keyWrapper.wrap(data);
     }
   }
 }

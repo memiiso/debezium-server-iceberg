@@ -33,7 +33,7 @@ public class IcebergChangeEvent {
   protected final String destination;
   protected final JsonNode value;
   protected final JsonNode key;
-  JsonSchema jsonSchema;
+  final JsonSchema jsonSchema;
 
   public IcebergChangeEvent(String destination,
                             JsonNode value,
