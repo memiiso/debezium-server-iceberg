@@ -52,7 +52,6 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     RowDataDeltaWriter writer = route(row);
     if (upsert && !row.getField("__op").equals("c")) {// anything which not an insert is upsert
       writer.delete(row);
-      //System.out.println("->" + row);
     }
     // if its deleted row and upsertKeepDeletes = true then add deleted record to target table
     // else deleted records are deleted from target table
