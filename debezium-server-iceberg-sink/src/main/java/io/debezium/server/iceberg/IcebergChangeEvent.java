@@ -35,11 +35,7 @@ public class IcebergChangeEvent {
   protected final JsonNode key;
   JsonSchema jsonSchema;
 
-  public IcebergChangeEvent(String destination,
-                            JsonNode value,
-                            JsonNode key,
-                            JsonNode valueSchema,
-                            JsonNode keySchema) {
+  public IcebergChangeEvent(String destination, JsonNode value, JsonNode key, JsonNode valueSchema, JsonNode keySchema) {
     this.destination = destination;
     this.value = value;
     this.key = key;
@@ -125,8 +121,7 @@ public class IcebergChangeEvent {
     }
   }
 
-  private Object jsonValToIcebergVal(Types.NestedField field,
-                                     JsonNode node) {
+  private Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
     final Object val;
     switch (field.type().typeId()) {
@@ -156,8 +151,7 @@ public class IcebergChangeEvent {
         try {
           val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
-          LOGGER.error("Failed to convert binary value to iceberg value, field:" + field.name(), e);
-          throw new RuntimeException("Failed Processing Event!", e);
+          throw new RuntimeException("Failed to convert binary value to iceberg value, field: " + field.name(), e);
         }
         break;
       case LIST:
@@ -273,8 +267,7 @@ public class IcebergChangeEvent {
       return icebergSchema(eventSchema, schemaName, columnId, false);
     }
 
-    private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId,
-                                                  boolean addSourceTsField) {
+    private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId, boolean addSourceTsField) {
       List<Types.NestedField> schemaColumns = new ArrayList<>();
       String schemaType = eventSchema.get("type").textValue();
       LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
@@ -290,13 +283,11 @@ public class IcebergChangeEvent {
               String listItemType = items.get("type").textValue();
 
               if (listItemType.equals("struct") || listItemType.equals("array") || listItemType.equals("map")) {
-                throw new RuntimeException("Complex nested array types are not supported," +
-                                           " array[" + listItemType + "], field " + fieldName);
+                throw new RuntimeException("Complex nested array types are not supported," + " array[" + listItemType + "], field " + fieldName);
               }
 
               Type.PrimitiveType item = icebergFieldType(listItemType);
-              schemaColumns.add(Types.NestedField.optional(
-                  columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
+              schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
             } else {
               throw new RuntimeException("Unexpected Array type for field " + fieldName);
             }
