@@ -114,6 +114,8 @@ public class IcebergChangeEvent {
         return Types.BooleanType.get();
       case "string":
         return Types.StringType.get();
+      case "uuid":
+        return Types.UUIDType.get();
       case "bytes":
         return Types.BinaryType.get();
       default:
@@ -146,6 +148,9 @@ public class IcebergChangeEvent {
       case STRING:
         // if the node is not a value node (method isValueNode returns false), convert it to string.
         val = node.isValueNode() ? node.asText(null) : node.toString();
+        break;
+      case UUID:
+        val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
         break;
       case BINARY:
         try {
