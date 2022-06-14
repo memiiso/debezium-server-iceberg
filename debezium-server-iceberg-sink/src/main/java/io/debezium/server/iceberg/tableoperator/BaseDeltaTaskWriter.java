@@ -18,6 +18,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final Schema schema;
   private final Schema deleteSchema;
   private final InternalRecordWrapper wrapper;
+  private final InternalRecordWrapper keyWrapper;
   private final boolean upsert;
   private final boolean upsertKeepDeletes;
 
@@ -35,6 +36,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(equalityFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
+    this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
     this.upsert = upsert;
     this.upsertKeepDeletes = upsertKeepDeletes;
   }
@@ -50,7 +52,6 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     RowDataDeltaWriter writer = route(row);
     if (upsert && !row.getField("__op").equals("c")) {// anything which not an insert is upsert
       writer.delete(row);
-      //System.out.println("->" + row);
     }
     // if its deleted row and upsertKeepDeletes = true then add deleted record to target table
     // else deleted records are deleted from target table
@@ -70,6 +71,11 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     @Override
     protected StructLike asStructLike(Record data) {
       return wrapper.wrap(data);
+    }
+
+    @Override
+    protected StructLike asStructLikeKey(Record data) {
+      return keyWrapper.wrap(data);
     }
   }
 }
