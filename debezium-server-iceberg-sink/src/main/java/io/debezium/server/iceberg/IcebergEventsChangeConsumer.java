@@ -99,8 +99,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
-  String defaultFs;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
@@ -130,10 +128,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
     conf.forEach(this.hadoopConf::set);
     this.icebergProperties.putAll(conf);
-
-    if (warehouseLocation == null || warehouseLocation.trim().isEmpty()) {
-      warehouseLocation = defaultFs + "/iceberg_warehouse";
-    }
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
 

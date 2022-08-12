@@ -83,8 +83,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String keyFormat;
   @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation;
-  @ConfigProperty(name = "debezium.sink.iceberg.fs.defaultFS")
-  String defaultFs;
   @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp", defaultValue = "")
   protected Optional<String> destinationRegexp;
   @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp-replace", defaultValue = "")
