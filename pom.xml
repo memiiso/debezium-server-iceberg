@@ -24,24 +24,24 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <release>8</release>
+        <release>11</release>
         <skipITs>true</skipITs>
 
-        <version.groovy>3.0.9</version.groovy>
+        <version.groovy>3.0.12</version.groovy>
         <version.assembly.plugin>3.3.0</version.assembly.plugin>
-        <version.jackson>2.12.6</version.jackson>
+        <version.jackson>2.13.3</version.jackson>
         <version.iceberg>0.14.0</version.iceberg>
-        <version.spark>3.2.1</version.spark>
-        <version.hadoop>3.3.1</version.hadoop>
-        <version.awssdk>2.17.120</version.awssdk>
-        <version.parquet>1.12.2</version.parquet>
-        <version.testcontainers>1.17.1</version.testcontainers>
-        <version.kafkaclients>3.1.0</version.kafkaclients>
+        <version.spark>3.2.2</version.spark>
+        <version.hadoop>3.3.3</version.hadoop>
+        <version.awssdk>2.17.243</version.awssdk>
+        <version.parquet>1.12.3</version.parquet>
+        <version.testcontainers>1.17.3</version.testcontainers>
+        <version.kafkaclients>3.2.0</version.kafkaclients>
         <!-- Debezium -->
         <version.debezium>1.9.5.Final</version.debezium>
         <version.mysql.driver>8.0.28</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.8.2.Final</version.quarkus>
+        <version.quarkus>2.11.2.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version pulled in via debezium -->
         <version.antlr>4.8</version.antlr>
@@ -132,7 +132,12 @@
                 <version>4.9.2</version>
                 <scope>test</scope>
             </dependency>
-
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>3.2.0</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
