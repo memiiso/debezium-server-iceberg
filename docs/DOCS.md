@@ -6,66 +6,81 @@ Replicates database CDC events to Iceberg(Cloud storage, hdfs) without using Spa
 
 ## `iceberg` Consumer
 
-Iceberg consumer replicates debezium CDC events to destination Iceberg tables. It is possible to replicate source database one to one or run it with append mode and keep all change events in iceberg table. When event and key schema
-enabled (`debezium.format.value.schemas.enable=true`, `debezium.format.key.schemas.enable=true`) destination Iceberg
+Iceberg consumer replicates database CDC events to destination Iceberg tables. It is possible to replicate source
+database upsert or append modes.
+When event and key schema enabled (`debezium.format.value.schemas.enable=true`
+, `debezium.format.key.schemas.enable=true`) destination Iceberg
 tables created automatically with initial job.
+
+#### Configuration properties
+
+| Config                                             | Default           | Description                                                                                                      |
+|----------------------------------------------------|-------------------|------------------------------------------------------------------------------------------------------------------|
+| `debezium.sink.iceberg.warehouse`                  |                   | The root path of the Iceberg data warehouse                                                                      |
+| `debezium.sink.iceberg.catalog-name`               | `default`         | User-specified catalog name.                                                                                     |
+| `debezium.sink.iceberg.table-namespace`            | `default`         | A namespace in the catalog. ex: `SELECT * FROM prod.db.table -- catalog: prod, namespace: db, table: table`      |
+| `debezium.sink.iceberg.table-prefix`               | ``                | Prefix added to destination iceberg table names.                                                                 |
+| `debezium.sink.iceberg.write.format.default`       | `parquet`         | Default file format for the table; `parquet`, `avro`, or `orc`                                                   |
+| `debezium.sink.iceberg.allow-field-addition`       | `true`            | Allow field addition to target tables                                                                            |
+| `debezium.sink.iceberg.upsert`                     | `true`            | Running upsert mode overwriting updated rows. explained below.                                                   |
+| `debezium.sink.iceberg.upsert-keep-deletes`        | `true`            | With upsert mode, keeps deleted rows in target table.                                                            |
+| `debezium.sink.iceberg.upsert-dedup-column`        | `__source_ts_ms`  | With upsert mode used to deduplicate data. row with highest `__source_ts_ms` kept. _
+dont change!_                |
+| `debezium.sink.iceberg.upsert-op-column`           | `__op`            | Used with upsert mode. _dont
+change!_                                                                            |
+| `debezium.sink.iceberg.destination-regexp`         | ``                | Regexp to modify destination table. With this its possible to map `table_ptt1`,`table_ptt2` to `table_combined`. |
+| `debezium.sink.iceberg.destination-regexp-replace` | ``                | Regexp Replace part to modify destination table                                                                  |
+| `debezium.sink.batch.batch-size-wait`              | `NoBatchSizeWait` | Batch size wait strategy to optimize data files and upload interval. explained below.                            |
+| `debezium.sink.iceberg.{iceberg.prop.name}`        |                   | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) passed to Iceberg, and to hadoopConf     |
 
 ### Upsert
 
-By default, Iceberg consumer is running with upsert mode `debezium.sink.iceberg.upsert=true`. 
-Upsert mode uses source Primary Key and does upsert on target table(delete followed by insert). For the tables without Primary Key consumer falls back to append mode.
+By default, Iceberg consumer is running with upsert mode `debezium.sink.iceberg.upsert=true`.
+Upsert mode uses source Primary Key and does upsert on target table(delete followed by insert). For the tables without
+Primary Key consumer falls back to append mode.
 
-#### Data Deduplication
+#### Upsert Mode Data Deduplication
 
-With upsert mode per batch data deduplication is done. Deduplication is done based on `__source_ts_ms` value and event type `__op`.
-its is possible to change field using `debezium.sink.iceberg.upsert-dedup-column=__source_ts_ms`. Currently only
-Long field type supported.
+With upsert mode data deduplication is done. Deduplication is done based on `__source_ts_ms` value and event type `__op`
+.
+its is possible to change this field using `debezium.sink.iceberg.upsert-dedup-column=__source_ts_ms` (Currently only
+Long field type supported.)
 
 Operation type priorities are `{"c":1, "r":2, "u":3, "d":4}`. When two records with same key and same `__source_ts_ms`
-values received then the record with higher `__op` priority is kept and added to destination table and duplicate record is dropped.
+values received then the record with higher `__op` priority is kept and added to destination table and duplicate record
+is dropped from stream.
 
 ### Append
-Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to append. With append mode data deduplication is not done and all received records are appended to destination table.
-Note: For the tables without primary key operation mode falls back to append even configuration is set to upsert mode
+
+Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to append. With append mode data deduplication
+is not done and all received records are appended to destination table.
+Note: For the tables without primary key operation mode falls back to append even configuration is set to upsert mode.
 
 #### Keeping Deleted Records
 
 By default `debezium.sink.iceberg.upsert-keep-deletes=true` keeps deletes in the Iceberg table, setting it to false
-will remove deleted records from the destination Iceberg table. With this config it's possible to keep last version of a
-record in the destination Iceberg table(doing soft delete).
+will remove deleted records from the destination Iceberg table too. With this config it's possible to keep last version
+of a
+record in the destination Iceberg table(doing soft delete for this records `__deleted` is set to `true`).
 
 ### Optimizing batch size (or commit interval)
 
 Debezium extracts database events in real time and this could cause too frequent commits or too many small files
-which is not optimal for batch processing especially when near realtime data feed is sufficient. 
-To avoid this problem following batch-size-wait classes are used. 
+which is not optimal for batch processing especially when near realtime data feed is sufficient.
+To avoid this problem following batch-size-wait classes are available to adjust batch size and interval.
 
-Batch size wait adds delay between consumer calls to increase total number of events received per call and meanwhile events are collected in memory.
-This setting should be configured together with `debezium.source.max.queue.size` and `debezium.source.max.batch.size` debezium properties
-
+Batch size wait adds delay between consumer calls to increase total number of events consumed per call. Meanwhile,
+events are collected in memory.
+This setting should be configured together with `debezium.source.max.queue.size` and `debezium.source.max.batch.size`
+debezium properties
 
 #### NoBatchSizeWait
 
 This is default configuration by default consumer will not use any wait. All the events are consumed immediately.
 
-#### DynamicBatchSizeWait
-**Deprecated** 
-This wait strategy dynamically adds wait to increase batch size. Wait duration is calculated based on number of processed events in
-last 3 batches. if last batch sizes are lower than `max.batch.size` Wait duration will increase and if last batch sizes
-are bigger than 90% of `max.batch.size` Wait duration will decrease
-
-This strategy optimizes batch size between 85%-90% of the `max.batch.size`, it does not guarantee consistent batch size.
-
-example setup to receive ~2048 events per commit. maximum wait is set to 5 seconds
-```properties
-debezium.source.max.queue.size=16000
-debezium.source.max.batch.size=2048
-debezium.sink.batch.batch-size-wait=DynamicBatchSizeWait
-debezium.sink.batch.batch-size-wait.max-wait-ms=5000
-```
 #### MaxBatchSizeWait
 
-MaxBatchSizeWait uses debezium metrics to optimize batch size, this strategy is more precise compared to DynamicBatchSizeWait.
+MaxBatchSizeWait uses debezium metrics to optimize batch size.
 MaxBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size`. 
 Maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties.
 
@@ -119,16 +134,21 @@ Read [application.properties.example](../debezium-server-iceberg-sink/src/main/r
 
 ## Schema Change Behaviour
 
-It is possible to get out of sync schemas between source and target tables. Foexample when the source database change its schema, adds or drops field. Here we documented possible schema changes and current behavior of the Iceberg consumer.
+It is possible to get out of sync schemas between source and target tables. For Example when the source database change
+its schema, adds or drops field. Below possible schema changes and current behavior of the Iceberg consumer id
+documented.
 
 #### Adding new column to source (A column missing in destination iceberg table)
-Data of the new column is ignored till same column added to destination iceberg table
 
-Dor example: if a column not found in iceberg table its data is dropped ignored and not copied to target!
+When `debezium.sink.iceberg.allow-field-addition` is `false` data of the new column is ignored till the column added to
+destination iceberg table.
+
+For example: if a column not found in iceberg table its data ignored and not copied to target!
 once iceberg table adds same column then data for this column recognized and populated
 
 #### Removing column from source (An extra column in iceberg table)
-These columns are populated with null value
+
+These columns are populated with null value.
 
 #### Renaming column in source
 This is combination of above two cases : old column will be populated with null values and new column will not be recognized and populated till it's added to iceberg table
@@ -143,17 +163,16 @@ If representation cannot be converted to a long (including structured types like
 
 ## `icebergevents` Consumer
 
-This is second consumer in this project. This consumer appends CDC events to single Iceberg table as json string. 
-This table partitioned by `event_destination,event_sink_timestamptz` and sorted by `event_sink_epoch_ms`
+This consumer appends CDC events to single Iceberg table as json string.
+This table partitioned by `event_destination,event_sink_timestamptz` ~~WIP and sorted by `event_sink_epoch_ms`~~
 
-#### Example Configuration
 
 ````properties
 debezium.sink.type=icebergevents
 debezium.sink.iceberg.catalog-name=default
 ````
 
-Iceberg table definition:
+Destination table definition:
 
 ```java
 static final String TABLE_NAME="debezium_events";
