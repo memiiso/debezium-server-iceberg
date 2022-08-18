@@ -36,7 +36,7 @@ It's possible to use python to run,operate debezium server
 example:
 
 ```commandline
-pip install git+https://github.com/ismailsimsek/debezium-server-iceberg.git@master#subdirectory=python
+pip install git+https://github.com/memiiso/debezium-server-iceberg.git@master#subdirectory=python
 debezium
 # running with custom arguments
 debezium --debezium_dir=/my/debezium_server/dir/ --java_home=/my/java/homedir/
