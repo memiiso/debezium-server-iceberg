@@ -45,4 +45,6 @@ jobs:
           body: Release ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: false
-          files: debezium-server-iceberg-dist/target/debezium-server-iceberg-dist-${{ env.RELEASE_NAME }}.zip
+          files: |
+            debezium-server-iceberg-sink/target/debezium-server-iceberg-sink-${{ env.RELEASE_NAME }}.jar
+            debezium-server-iceberg-dist/target/debezium-server-iceberg-dist-${{ env.RELEASE_NAME }}.zip
