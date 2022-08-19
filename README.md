@@ -42,6 +42,27 @@ debezium
 debezium --debezium_dir=/my/debezium_server/dir/ --java_home=/my/java/homedir/
 ```
 
+```python
+from debezium import Debezium
+
+d = Debezium(debezium_dir="/dbz/server/dir", java_home='/java/home/dir')
+java_args = []
+java_args.append("-Dquarkus.log.file.enable=true")
+java_args.append("-Dquarkus.log.file.path=/logs/dbz_logfile.log")
+d.run(*java_args)
+```
+
+```python
+from debezium import DebeziumRunAsyn
+
+java_args = []
+java_args.append("-Dquarkus.log.file.enable=true")
+java_args.append("-Dquarkus.log.file.path=/logs/dbz_logfile.log")
+d = DebeziumRunAsyn(debezium_dir="/dbz/server/dir", java_home='/java/home/dir', java_args=java_args)
+d.run()
+d.join()
+```
+
 # Contributing
 
 The Memiiso community welcomes anyone that wants to help out in any way, whether that includes reporting problems,
