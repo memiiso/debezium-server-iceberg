@@ -59,6 +59,12 @@
                 <artifactId>kafka-clients</artifactId>
                 <version>${version.kafkaclients}</version>
             </dependency>
+            <!-- log -->
+            <dependency>
+                <groupId>org.jboss.slf4j</groupId>
+                <artifactId>slf4j-jboss-logmanager</artifactId>
+                <version>[1.2.0.Final,)</version>
+            </dependency>
             <!-- aws -->
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
