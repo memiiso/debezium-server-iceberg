@@ -67,6 +67,7 @@ debezium.transforms.unwrap.drop.tombstones=true
 
 # ############ SET LOG LEVELS ############
 quarkus.log.level=INFO
+quarkus.log.console.json=false
 # hadoop, parquet
 quarkus.log.category."org.apache.hadoop".level=WARN
 quarkus.log.category."org.apache.parquet".level=WARN
