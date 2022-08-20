@@ -53,6 +53,27 @@
             <artifactId>iceberg-spark-runtime-3.2_2.13</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <!-- Google -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
+            <version>2.11.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-nio</artifactId>
+            <version>0.124.14</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>gcs-connector</artifactId>
+            <version>hadoop3-2.2.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud.bigdataoss</groupId>
+            <artifactId>gcsio</artifactId>
+            <version>2.2.7</version>
+        </dependency>
         <!-- AWS  -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
@@ -103,12 +124,30 @@
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${version.hadoop}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-reload4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Testing -->
