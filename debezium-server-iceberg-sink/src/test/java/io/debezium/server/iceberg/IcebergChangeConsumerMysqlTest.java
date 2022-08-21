@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(S3Minio.class)
-@QuarkusTestResource(SourceMysqlDB.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
