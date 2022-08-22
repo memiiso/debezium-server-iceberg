@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(S3Minio.class)
-@QuarkusTestResource(SourcePostgresqlDB.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 

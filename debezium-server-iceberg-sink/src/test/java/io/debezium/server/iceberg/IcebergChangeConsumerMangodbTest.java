@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(S3Minio.class)
-@QuarkusTestResource(SourceMangoDB.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourceMangoDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMangodbTestProfile.class)
 public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
 

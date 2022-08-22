@@ -37,7 +37,7 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(S3Minio.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   static String testTable = "inventory.test_table_operator";

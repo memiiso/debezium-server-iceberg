@@ -36,8 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(S3Minio.class)
-@QuarkusTestResource(SourcePostgresqlDB.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerTestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
 
