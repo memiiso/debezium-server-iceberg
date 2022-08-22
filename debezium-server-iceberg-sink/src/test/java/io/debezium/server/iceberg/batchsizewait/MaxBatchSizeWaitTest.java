@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.batchsizewait;
 
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 @TestProfile(MaxBatchSizeWaitTestProfile.class)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 class MaxBatchSizeWaitTest extends BaseSparkTest {
