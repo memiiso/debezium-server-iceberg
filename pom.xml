@@ -33,15 +33,15 @@
         <version.iceberg>0.14.0</version.iceberg>
         <version.spark>3.2.2</version.spark>
         <version.hadoop>3.3.3</version.hadoop>
-        <version.awssdk>2.17.243</version.awssdk>
+        <version.awssdk>2.17.256</version.awssdk>
         <version.parquet>1.12.3</version.parquet>
         <version.testcontainers>1.17.3</version.testcontainers>
-        <version.kafkaclients>3.2.0</version.kafkaclients>
+        <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
         <version.debezium>1.9.5.Final</version.debezium>
         <version.mysql.driver>8.0.28</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.11.2.Final</version.quarkus>
+        <version.quarkus>2.11.3.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version pulled in via debezium -->
         <version.antlr>4.8</version.antlr>
