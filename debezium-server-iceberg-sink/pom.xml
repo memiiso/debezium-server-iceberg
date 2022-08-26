@@ -189,7 +189,7 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
-            <version>42.4.1</version>
+            <version>42.4.2</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -199,7 +199,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.3.5</version>
+            <version>8.4.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -211,7 +211,7 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>4.1.1</version>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
