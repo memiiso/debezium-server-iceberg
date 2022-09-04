@@ -51,8 +51,6 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
   }
 
   public static class IcebergChangeConsumerMangodbTestProfile implements QuarkusTestProfile {
-
-    //This method allows us to override configuration properties.
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
@@ -64,7 +62,6 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
       config.put("%mongodb.debezium.source.mongodb.name", "testc");
       config.put("%mongodb.debezium.source.database.include.list", "inventory"); // ok
       config.put("%mongodb.debezium.source.collection.include.list", "inventory.products");
-
       // IMPORTANT !!! FIX MongoDbConnector KEY FIELD NAME "id"=>"_id" !!!
       config.put("%mongodb.debezium.transforms", "unwrap,renamekeyfield");
       config.put("%mongodb.debezium.transforms.renamekeyfield.type",
@@ -78,7 +75,6 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
     public String getConfigProfile() {
       return "mongodb";
     }
-
   }
 
 }
