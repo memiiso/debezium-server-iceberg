@@ -13,9 +13,12 @@ import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -30,7 +33,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerMysqlTestProfile.class)
+@TestProfile(IcebergChangeConsumerMysqlTest.IcebergChangeConsumerMysqlTestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
   @Test
@@ -74,6 +77,25 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
         return false;
       }
     });
+
+  }
+
+  public static class IcebergChangeConsumerMysqlTestProfile implements QuarkusTestProfile {
+
+    //This method allows us to override configuration properties.
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      Map<String, String> config = new HashMap<>();
+      config.put("quarkus.profile", "mysql");
+      config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
+      config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
+      return config;
+    }
+
+    @Override
+    public String getConfigProfile() {
+      return "mysql";
+    }
 
   }
 

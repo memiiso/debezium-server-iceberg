@@ -9,8 +9,11 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
+import java.util.HashMap;
+import java.util.Map;
 import javax.inject.Inject;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -18,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@TestProfile(DynamicBatchSizeWaitTestProfile.class)
+@TestProfile(DynamicBatchSizeWaitTest.DynamicBatchSizeWaitTestProfile.class)
 class DynamicBatchSizeWaitTest {
 
   @Inject
@@ -66,6 +69,19 @@ class DynamicBatchSizeWaitTest {
     dynamicSleep.getWaitMs(120);
     dynamicSleep.getWaitMs(120);
     Assertions.assertTrue(dynamicSleep.getWaitMs(120) <= 100);
+  }
+
+  public static class DynamicBatchSizeWaitTestProfile implements QuarkusTestProfile {
+
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      Map<String, String> config = new HashMap<>();
+      config.put("quarkus.arc.selected-alternatives", "DynamicBatchSizeWait");
+      config.put("debezium.source.max.batch.size", "100");
+      config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "5000");
+      config.put("debezium.source.poll.interval.ms", "5000");
+      return config;
+    }
   }
 
 }
