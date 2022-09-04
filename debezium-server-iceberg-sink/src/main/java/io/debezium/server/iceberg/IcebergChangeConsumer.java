@@ -95,6 +95,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String catalogName;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
+  @ConfigProperty(name = "debezium.sink.iceberg.partition-field", defaultValue = "__ts_ms")
+  String partitionField;
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
@@ -188,7 +190,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (!eventSchemaEnabled) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat, !upsert);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat,
+          !upsert, // partition if its append mode
+          partitionField);
     });
   }
 

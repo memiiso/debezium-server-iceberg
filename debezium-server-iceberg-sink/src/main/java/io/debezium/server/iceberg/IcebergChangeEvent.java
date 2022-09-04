@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 public class IcebergChangeEvent {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
+  public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
   protected final String destination;
   protected final JsonNode value;
   protected final JsonNode key;
@@ -63,19 +64,10 @@ public class IcebergChangeEvent {
   }
 
   public GenericRecord asIcebergRecord(Schema schema) {
-    final GenericRecord record = asIcebergRecord(schema.asStruct(), value);
-
-    if (value != null && value.has("__source_ts_ms") && value.get("__source_ts_ms") != null) {
-      final long source_ts_ms = value.get("__source_ts_ms").longValue();
-      final OffsetDateTime odt = OffsetDateTime.ofInstant(Instant.ofEpochMilli(source_ts_ms), ZoneOffset.UTC);
-      record.setField("__source_ts", odt);
-    } else {
-      record.setField("__source_ts", null);
-    }
-    return record;
+    return asIcebergRecord(schema.asStruct(), value);
   }
 
-  private GenericRecord asIcebergRecord(Types.StructType tableFields, JsonNode data) {
+  private static GenericRecord asIcebergRecord(Types.StructType tableFields, JsonNode data) {
     LOGGER.debug("Processing nested field:{}", tableFields);
     GenericRecord record = GenericRecord.create(tableFields);
 
@@ -92,14 +84,18 @@ public class IcebergChangeEvent {
     return record;
   }
 
-  private Type.PrimitiveType icebergFieldType(String fieldType) {
+  private static Type.PrimitiveType icebergFieldType(String fieldName, String fieldType) {
     switch (fieldType) {
       case "int8":
       case "int16":
       case "int32": // int 4 bytes
         return Types.IntegerType.get();
       case "int64": // long 8 bytes
-        return Types.LongType.get();
+        if (TS_MS_FIELDS.contains(fieldName)) {
+          return Types.TimestampType.withZone();
+        } else {
+          return Types.LongType.get();
+        }
       case "float8":
       case "float16":
       case "float32": // float is represented in 32 bits,
@@ -121,7 +117,7 @@ public class IcebergChangeEvent {
     }
   }
 
-  private Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
+  private static Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
     final Object val;
     switch (field.type().typeId()) {
@@ -146,6 +142,15 @@ public class IcebergChangeEvent {
         break;
       case UUID:
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
+        break;
+      case TIMESTAMP:
+        if (node.isLong() && TS_MS_FIELDS.contains(field.name())) {
+          val = OffsetDateTime.ofInstant(Instant.ofEpochMilli(node.longValue()), ZoneOffset.UTC);
+        } else if (node.isTextual()) {
+          val = OffsetDateTime.parse(node.asText());
+        } else {
+          throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+        }
         break;
       case BINARY:
         try {
@@ -218,7 +223,7 @@ public class IcebergChangeEvent {
     private List<Types.NestedField> valueSchemaFields() {
       if (valueSchema != null && valueSchema.has("fields") && valueSchema.get("fields").isArray()) {
         LOGGER.debug(valueSchema.toString());
-        return icebergSchema(valueSchema, "", 0, true);
+        return icebergSchema(valueSchema, "", 0);
       }
       LOGGER.trace("Event schema not found!");
       return new ArrayList<>();
@@ -264,10 +269,6 @@ public class IcebergChangeEvent {
     }
 
     private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId) {
-      return icebergSchema(eventSchema, schemaName, columnId, false);
-    }
-
-    private List<Types.NestedField> icebergSchema(JsonNode eventSchema, String schemaName, int columnId, boolean addSourceTsField) {
       List<Types.NestedField> schemaColumns = new ArrayList<>();
       String schemaType = eventSchema.get("type").textValue();
       LOGGER.debug("Converting Schema of: {}::{}", schemaName, schemaType);
@@ -286,7 +287,7 @@ public class IcebergChangeEvent {
                 throw new RuntimeException("Complex nested array types are not supported," + " array[" + listItemType + "], field " + fieldName);
               }
 
-              Type.PrimitiveType item = icebergFieldType(listItemType);
+              Type.PrimitiveType item = icebergFieldType(fieldName, listItemType);
               schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
             } else {
               throw new RuntimeException("Unexpected Array type for field " + fieldName);
@@ -302,15 +303,11 @@ public class IcebergChangeEvent {
             columnId += subSchema.size();
             break;
           default: //primitive types
-            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldType)));
+            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldName, fieldType)));
             break;
         }
       }
 
-      if (addSourceTsField) {
-        columnId++;
-        schemaColumns.add(Types.NestedField.optional(columnId, "__source_ts", Types.TimestampType.withZone()));
-      }
       return schemaColumns;
     }
 
