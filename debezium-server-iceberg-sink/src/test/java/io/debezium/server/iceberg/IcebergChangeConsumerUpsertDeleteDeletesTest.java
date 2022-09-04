@@ -8,7 +8,10 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.*;
+import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.TestChangeEvent;
+import io.debezium.server.iceberg.testresources.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -32,17 +35,17 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
   @Inject
   IcebergChangeConsumer consumer;
+  final static Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
   public void testSimpleUpsert() throws Exception {
 
-    String dest = "inventory.customers_upsert";
+    String dest = "testc.inventory.customers_upsert";
     List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
     records.add(TestChangeEvent.of(dest, 1, "c"));
     records.add(TestChangeEvent.of(dest, 2, "c"));
@@ -72,17 +75,17 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
 
     records.clear();
     // incase of duplicate records it should only keep the latest by epoch ts
-    records.add(TestChangeEvent.of(dest, 3, "r", "UpdatednameV2", 1L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV3", 2L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV4", 3L));
-    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V1", 4L));
-    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V2", 5L));
-    records.add(TestChangeEvent.of(dest, 4, "d", "Updatedname-4-V3", 6L));
-    records.add(TestChangeEvent.of(dest, 5, "d", 7L));
-    records.add(TestChangeEvent.of(dest, 6, "r", 8L));
-    records.add(TestChangeEvent.of(dest, 6, "r", 9L));
-    records.add(TestChangeEvent.of(dest, 6, "u", 10L));
-    records.add(TestChangeEvent.of(dest, 6, "u", "Updatedname-6-V1", 11L));
+    records.add(TestChangeEvent.of(dest, 3, "r", "UpdatednameV2", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV3", TEST_EPOCH_MS + 2L));
+    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV4", TEST_EPOCH_MS + 3L));
+    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V1", TEST_EPOCH_MS + 4L));
+    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V2", TEST_EPOCH_MS + 5L));
+    records.add(TestChangeEvent.of(dest, 4, "d", "Updatedname-4-V3", TEST_EPOCH_MS + 6L));
+    records.add(TestChangeEvent.of(dest, 5, "d", TEST_EPOCH_MS + 7L));
+    records.add(TestChangeEvent.of(dest, 6, "r", TEST_EPOCH_MS + 8L));
+    records.add(TestChangeEvent.of(dest, 6, "r", TEST_EPOCH_MS + 9L));
+    records.add(TestChangeEvent.of(dest, 6, "u", TEST_EPOCH_MS + 10L));
+    records.add(TestChangeEvent.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 11L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -95,10 +98,10 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     // in case of duplicate records including epoch ts, its should keep latest one based on operation priority
     // ("c", 1, "r", 2, "u", 3, "d", 4);
     records.clear();
-    records.add(TestChangeEvent.of(dest, 3, "d", "UpdatednameV5", 1L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV6", 1L));
-    records.add(TestChangeEvent.of(dest, 6, "c", "Updatedname-6-V2", 1L));
-    records.add(TestChangeEvent.of(dest, 6, "r", "Updatedname-6-V3", 1L));
+    records.add(TestChangeEvent.of(dest, 3, "d", "UpdatednameV5", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV6", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.of(dest, 6, "c", "Updatedname-6-V2", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.of(dest, 6, "r", "Updatedname-6-V3", TEST_EPOCH_MS + 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -107,10 +110,10 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
-    records.add(TestChangeEvent.of(dest, 7, "u", 1L));
-    records.add(TestChangeEvent.of(dest, 7, "d", 2L));
-    records.add(TestChangeEvent.of(dest, 7, "r", 3L));
-    records.add(TestChangeEvent.of(dest, 7, "u", "Updatedname-7-V1", 4L));
+    records.add(TestChangeEvent.of(dest, 7, "u", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.of(dest, 7, "d", TEST_EPOCH_MS + 2L));
+    records.add(TestChangeEvent.of(dest, 7, "r", TEST_EPOCH_MS + 3L));
+    records.add(TestChangeEvent.of(dest, 7, "u", "Updatedname-7-V1", TEST_EPOCH_MS + 4L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -120,13 +123,13 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
 
   @Test
   public void testSimpleUpsertCompositeKey() throws Exception {
-    String dest = "inventory.customers_upsert_compositekey";
+    String dest = "testc.inventory.customers_upsert_compositekey";
     // test simple inserts
     List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user1", 1L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user2", 1L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user1", 2L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "r", "user1", 3L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
     consumer.handleBatch(records, TestUtil.getCommitter());
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_compositekey");
@@ -135,10 +138,10 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.where("id = 1").count(), 2);
 
     records.clear();
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user1", 2L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "r", "user1", 3L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "d", "user1", 3L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "d", "user2", 1L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "d", "user1", TEST_EPOCH_MS + 3L));
+    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "d", "user2", TEST_EPOCH_MS + 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
@@ -147,12 +150,9 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
   }
 
   public static class IcebergChangeConsumerUpsertTestDeleteDeletesProfile implements QuarkusTestProfile {
-
-    //This method allows us to override configuration properties.
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
-
       config.put("debezium.sink.iceberg.upsert", "true");
       config.put("debezium.sink.iceberg.upsert-keep-deletes", "false");
       return config;

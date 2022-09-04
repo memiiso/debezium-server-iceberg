@@ -81,8 +81,6 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
   }
 
   public static class IcebergChangeConsumerMysqlTestProfile implements QuarkusTestProfile {
-
-    //This method allows us to override configuration properties.
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
@@ -96,7 +94,6 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
     public String getConfigProfile() {
       return "mysql";
     }
-
   }
 
 }

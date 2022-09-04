@@ -254,7 +254,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
-        ds.show();
+        ds.show(false);
         return ds.count() >= 3;
       } catch (Exception e) {
         return false;
@@ -295,15 +295,12 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   }
 
   public static class IcebergChangeConsumerTestProfile implements QuarkusTestProfile {
-
-    //This method allows us to override configuration properties.
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
       config.put("debezium.sink.iceberg.write.format.default", "orc");
       config.put("debezium.sink.iceberg.destination-regexp", "\\d");
       //config.put("debezium.sink.iceberg.destination-regexp-replace", "");
-
       return config;
     }
   }

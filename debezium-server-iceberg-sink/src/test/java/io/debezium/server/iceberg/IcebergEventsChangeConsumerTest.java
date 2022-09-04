@@ -58,14 +58,10 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   }
 
   public static class IcebergEventsChangeConsumerTestProfile implements QuarkusTestProfile {
-
-    //This method allows us to override configuration properties.
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
-
       config.put("debezium.sink.type", "icebergevents");
-
       return config;
     }
   }
