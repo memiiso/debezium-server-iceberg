@@ -13,9 +13,12 @@ import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import javax.inject.Inject;
 
 import org.apache.iceberg.catalog.Namespace;
@@ -38,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerTestProfile.class)
+@TestProfile(IcebergChangeConsumerTest.IcebergChangeConsumerTestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
@@ -289,6 +292,20 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   public void testMapDestination() {
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
+  }
+
+  public static class IcebergChangeConsumerTestProfile implements QuarkusTestProfile {
+
+    //This method allows us to override configuration properties.
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      Map<String, String> config = new HashMap<>();
+      config.put("debezium.sink.iceberg.write.format.default", "orc");
+      config.put("debezium.sink.iceberg.destination-regexp", "\\d");
+      //config.put("debezium.sink.iceberg.destination-regexp-replace", "");
+
+      return config;
+    }
   }
 
 }

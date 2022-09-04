@@ -11,10 +11,13 @@ package io.debezium.server.iceberg;
 import io.debezium.server.iceberg.testresources.*;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.inject.Inject;
 
 import org.apache.spark.sql.Dataset;
@@ -30,7 +33,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
+@TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
   @Inject
@@ -142,5 +145,18 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.count(), 0);
     Assertions.assertEquals(ds.where("first_name= 'user2'").count(), 0);
   }
-  
+
+  public static class IcebergChangeConsumerUpsertTestDeleteDeletesProfile implements QuarkusTestProfile {
+
+    //This method allows us to override configuration properties.
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      Map<String, String> config = new HashMap<>();
+
+      config.put("debezium.sink.iceberg.upsert", "true");
+      config.put("debezium.sink.iceberg.upsert-keep-deletes", "false");
+      return config;
+    }
+  }
+
 }
