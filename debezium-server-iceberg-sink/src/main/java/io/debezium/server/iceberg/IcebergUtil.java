@@ -63,14 +63,19 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat, boolean partition) {
+                                         Schema schema, String writeFormat, boolean partition, String partitionField) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
 
     final PartitionSpec ps;
-    if (partition && schema.findField("__source_ts") != null) {
-      ps = PartitionSpec.builderFor(schema).day("__source_ts").build();
+    if (partition) {
+      if (schema.findField(partitionField) == null) {
+        LOGGER.warn("Table schema dont contain partition field {}! Creating table without partition", partition);
+        ps = PartitionSpec.builderFor(schema).build();
+      } else {
+        ps = PartitionSpec.builderFor(schema).day(partitionField).build();
+      }
     } else {
       ps = PartitionSpec.builderFor(schema).build();
     }

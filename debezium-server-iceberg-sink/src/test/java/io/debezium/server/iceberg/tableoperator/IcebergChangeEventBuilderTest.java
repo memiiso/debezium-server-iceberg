@@ -36,8 +36,7 @@ class IcebergChangeEventBuilderTest {
             optional(3, "preferences", Types.StructType.of(
                 optional(4, "feature1", Types.BooleanType.get()),
                 optional(5, "feature2", Types.BooleanType.get())
-            )),
-            optional(6, "__source_ts", Types.TimestampType.withZone())
+            ))
         )
         , Set.of(1)
     );
@@ -57,8 +56,7 @@ class IcebergChangeEventBuilderTest {
         optional(3, "preferences", Types.StructType.of(
             optional(4, "feature1", Types.BooleanType.get()),
             optional(5, "feature2", Types.BooleanType.get())
-        )),
-        optional(6, "__source_ts", Types.TimestampType.withZone())
+        ))
     );
 
     b = new IcebergChangeEventBuilder();
