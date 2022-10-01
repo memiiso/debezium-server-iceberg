@@ -32,7 +32,6 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
 
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to s3 destination.
  *
  * @author Ismail Simsek
  */
