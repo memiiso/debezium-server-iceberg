@@ -10,7 +10,7 @@ package io.debezium.server.iceberg.batchsizewait;
 
 import io.debezium.DebeziumException;
 import io.debezium.config.CommonConnectorConfig;
-import io.debezium.server.iceberg.DebeziumMetrics;
+import io.debezium.server.DebeziumMetrics;
 
 import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
@@ -45,7 +45,6 @@ public class MaxBatchSizeWait implements InterfaceBatchSizeWait {
   @Override
   public void initizalize() throws DebeziumException {
     assert waitIntervalMs < maxWaitMs : "`wait-interval-ms` cannot be bigger than `max-wait-ms`";
-    dbzMetrics.initizalize();
   }
 
   @Override
