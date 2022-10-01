@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to s3 destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
  *
  * @author Ismail Simsek
  */

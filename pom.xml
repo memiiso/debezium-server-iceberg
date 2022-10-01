@@ -38,10 +38,10 @@
         <version.testcontainers>1.17.3</version.testcontainers>
         <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
-        <version.debezium>1.9.5.Final</version.debezium>
+        <version.debezium>1.9.6.Final</version.debezium>
         <version.mysql.driver>8.0.28</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.12.1.Final</version.quarkus>
+        <version.quarkus>2.12.3.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version pulled in via debezium -->
         <version.antlr>4.8</version.antlr>

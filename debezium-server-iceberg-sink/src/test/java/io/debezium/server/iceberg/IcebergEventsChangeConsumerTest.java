@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to s3.
  *
  * @author Ismail Simsek
  */
