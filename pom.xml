@@ -39,7 +39,7 @@
         <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
         <version.debezium>1.9.6.Final</version.debezium>
-        <version.mysql.driver>8.0.28</version.mysql.driver>
+        <version.mysql.driver>8.0.30</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>2.13.2.Final</version.quarkus>
         <!-- ANTLR -->
