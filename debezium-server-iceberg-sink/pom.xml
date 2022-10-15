@@ -199,7 +199,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.4.3</version>
+            <version>8.4.5</version>
             <scope>test</scope>
         </dependency>
         <dependency>
