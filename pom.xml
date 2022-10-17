@@ -35,7 +35,7 @@
         <version.hadoop>3.3.4</version.hadoop>
         <version.awssdk>2.17.256</version.awssdk>
         <version.parquet>1.12.3</version.parquet>
-        <version.testcontainers>1.17.3</version.testcontainers>
+        <version.testcontainers>1.17.5</version.testcontainers>
         <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
         <version.debezium>1.9.6.Final</version.debezium>
