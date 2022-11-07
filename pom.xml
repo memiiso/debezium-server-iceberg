@@ -38,7 +38,7 @@
         <version.testcontainers>1.17.5</version.testcontainers>
         <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
-        <version.debezium>1.9.6.Final</version.debezium>
+        <version.debezium>1.9.7.Final</version.debezium>
         <version.mysql.driver>8.0.30</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>2.13.3.Final</version.quarkus>
