@@ -74,7 +74,7 @@ class Debezium():
         >>> dbz._sanitize("source.secret=pswd")
         'source.secret=*****'
         """
-        if any(x not in jvm_option.lower() for x in ('pwd', 'password', 'secret', 'apikey', 'apitoken')):
+        if any(x in jvm_option.lower() for x in ['pwd', 'password', 'secret', 'apikey', 'apitoken']):
             head, sep, tail = jvm_option.partition('=')
             return head + '=*****'
         else:
@@ -82,6 +82,16 @@ class Debezium():
 
     # pylint: disable=no-name-in-module
     def run(self, *args: str):
+        """Starts debezium process
+        >>> log.addHandler(logging.StreamHandler(sys.stdout))
+        >>> dbz = Debezium() #doctest:+ELLIPSIS
+        VM Classpath...
+        >>> try: 
+        ...     dbz.run(*["source.pwd=pswd","source.password=pswd","abc.xyz=123"]) #doctest:+IGNORE_EXCEPTION_DETAIL
+        ... except Exception as e:
+        ...     pass
+        Configured jvm options:['source.pwd=*****', 'source.password=*****', 'abc.xyz=123']
+        """
 
         try:
             jnius_config.add_options(*args)
