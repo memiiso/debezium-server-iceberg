@@ -85,7 +85,7 @@ class Debezium():
         """Starts debezium process
         >>> log.addHandler(logging.StreamHandler(sys.stdout))
         >>> dbz = Debezium() #doctest:+ELLIPSIS
-        VM Classpath...
+        VM Classpath...debezium/*',...debezium/lib/*',...jnius/src']
         >>> try: 
         ...     dbz.run(*["source.pwd=pswd","source.password=pswd","abc.xyz=123"]) #doctest:+IGNORE_EXCEPTION_DETAIL
         ... except Exception as e:
