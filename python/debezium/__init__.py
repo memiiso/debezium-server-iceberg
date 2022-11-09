@@ -64,7 +64,16 @@ class Debezium():
         os.environ["JAVA_HOME"] = java_home
         log.info("JAVA_HOME set to %s" % java_home)
 
-    def __sanitize(self, jvm_option: str):
+    def _sanitize(self, jvm_option: str):
+        """Sanitizes jvm argument like `my.property.secret=xyz` if it contains secret.
+        >>> dbz = Debezium()
+        >>> dbz._sanitize("source.pwd=pswd")
+        'source.pwd=*****'
+        >>> dbz._sanitize("source.password=pswd")
+        'source.password=*****'
+        >>> dbz._sanitize("source.secret=pswd")
+        'source.secret=*****'
+        """
         if any(x not in jvm_option.lower() for x in ('pwd', 'password', 'secret', 'apikey', 'apitoken')):
             head, sep, tail = jvm_option.partition('=')
             return head + '=*****'
@@ -76,7 +85,7 @@ class Debezium():
 
         try:
             jnius_config.add_options(*args)
-            __jvm_options: list = [self.__sanitize(p) for p in jnius_config.get_options()]
+            __jvm_options: list = [self._sanitize(p) for p in jnius_config.get_options()]
             log.info("Configured jvm options:%s" % __jvm_options)
 
             from jnius import autoclass
