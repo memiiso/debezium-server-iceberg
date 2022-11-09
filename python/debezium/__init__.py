@@ -91,6 +91,10 @@ class Debezium():
         ... except Exception as e:
         ...     pass
         Configured jvm options:['source.pwd=*****', 'source.password=*****', 'abc.xyz=123']
+        >>> dbz.run(*["source.pwd=pswd","source.password=pswd","abc.xyz=123"]) #doctest:+ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        SystemError: JVM failed to start: -1
         """
 
         try:
