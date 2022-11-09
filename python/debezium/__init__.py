@@ -1,11 +1,12 @@
 import argparse
-import jnius_config
 import logging
 import os
 import sys
 #####  loggger
 import threading
 from pathlib import Path
+
+import jnius_config
 
 log = logging.getLogger(name="debezium")
 log.setLevel(logging.INFO)
@@ -63,12 +64,20 @@ class Debezium():
         os.environ["JAVA_HOME"] = java_home
         log.info("JAVA_HOME set to %s" % java_home)
 
+    def __sanitize(self, jvm_option: str):
+        if any(x not in jvm_option.lower() for x in ('pwd', 'password', 'secret', 'apikey', 'apitoken')):
+            head, sep, tail = jvm_option.partition('=')
+            return head + '=*****'
+        else:
+            return jvm_option
+
     # pylint: disable=no-name-in-module
     def run(self, *args: str):
 
         try:
             jnius_config.add_options(*args)
-            log.info("Configured jvm options:%s" % jnius_config.get_options())
+            __jvm_options: list = [self.__sanitize(p) for p in jnius_config.get_options()]
+            log.info("Configured jvm options:%s" % __jvm_options)
 
             from jnius import autoclass
             DebeziumServer = autoclass('io.debezium.server.Main')
