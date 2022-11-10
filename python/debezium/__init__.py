@@ -1,11 +1,12 @@
 import argparse
-import jnius_config
 import logging
 import os
 import sys
 #####  loggger
 import threading
 from pathlib import Path
+
+import jnius_config
 
 log = logging.getLogger(name="debezium")
 log.setLevel(logging.INFO)
@@ -63,12 +64,43 @@ class Debezium():
         os.environ["JAVA_HOME"] = java_home
         log.info("JAVA_HOME set to %s" % java_home)
 
+    def _sanitize(self, jvm_option: str):
+        """Sanitizes jvm argument like `my.property.secret=xyz` if it contains secret.
+        >>> dbz = Debezium()
+        >>> dbz._sanitize("source.pwd=pswd")
+        'source.pwd=*****'
+        >>> dbz._sanitize("source.password=pswd")
+        'source.password=*****'
+        >>> dbz._sanitize("source.secret=pswd")
+        'source.secret=*****'
+        """
+        if any(x in jvm_option.lower() for x in ['pwd', 'password', 'secret', 'apikey', 'apitoken']):
+            head, sep, tail = jvm_option.partition('=')
+            return head + '=*****'
+        else:
+            return jvm_option
+
     # pylint: disable=no-name-in-module
     def run(self, *args: str):
+        """Starts debezium process
+        >>> log.addHandler(logging.StreamHandler(sys.stdout))
+        >>> dbz = Debezium() #doctest:+ELLIPSIS
+        VM Classpath...debezium/*',...debezium/lib/*',...debezium/conf',...jnius/src']
+        >>> try: 
+        ...     dbz.run(*["source.pwd=pswd","source.password=pswd","abc.xyz=123"]) #doctest:+IGNORE_EXCEPTION_DETAIL
+        ... except Exception as e:
+        ...     pass
+        Configured jvm options:['source.pwd=*****', 'source.password=*****', 'abc.xyz=123']
+        >>> dbz.run(*["source.pwd=pswd","source.password=pswd","abc.xyz=123"]) #doctest:+ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        SystemError: JVM failed to start: -1
+        """
 
         try:
             jnius_config.add_options(*args)
-            log.info("Configured jvm options:%s" % jnius_config.get_options())
+            __jvm_options: list = [self._sanitize(p) for p in jnius_config.get_options()]
+            log.info("Configured jvm options:%s" % __jvm_options)
 
             from jnius import autoclass
             DebeziumServer = autoclass('io.debezium.server.Main')
