@@ -36,7 +36,7 @@
         <version.awssdk>2.18.7</version.awssdk>
         <version.parquet>1.12.3</version.parquet>
         <version.testcontainers>1.17.5</version.testcontainers>
-        <version.kafkaclients>3.2.1</version.kafkaclients>
+        <version.kafkaclients>3.3.1</version.kafkaclients>
         <!-- Debezium -->
         <version.debezium>1.9.7.Final</version.debezium>
         <version.mysql.driver>8.0.30</version.mysql.driver>
