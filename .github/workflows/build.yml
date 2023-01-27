@@ -5,21 +5,18 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, '*.*' ]
     paths-ignore:
       - '.github/**'
       - '.idea/**'
       - '.run/**'
   pull_request:
-    branches: [ master ]
+    branches: [ master, '*.*' ]
     paths-ignore:
       - '.github/**'
       - '.idea/**'
       - '.run/**'
 
-env:
-  SPARK_LOCAL_IP: 127.0.0.1
-  
 jobs:
   build:
 
