@@ -60,16 +60,17 @@ public class IcebergTableOperator {
 
     ConcurrentHashMap<JsonNode, IcebergChangeEvent> deduplicatedEvents = new ConcurrentHashMap<>();
 
-    for (IcebergChangeEvent e : events) {
-      // deduplicate using key(PK)
-      deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-        if (this.compareByTsThenOp(oldValue.value(), newValue.value()) <= 0) {
-          return newValue;
-        } else {
-          return oldValue;
-        }
-      });
-    }
+    events.forEach(e ->
+        // deduplicate using key(PK)
+        deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+          if (this.compareByTsThenOp(oldValue.value(), newValue.value()) <= 0) {
+            return newValue;
+          } else {
+            return oldValue;
+          }
+        })
+    );
+
     return new ArrayList<>(deduplicatedEvents.values());
   }
 
