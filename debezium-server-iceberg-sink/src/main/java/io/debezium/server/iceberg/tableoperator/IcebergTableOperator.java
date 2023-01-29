@@ -58,24 +58,20 @@ public class IcebergTableOperator {
 
   private List<IcebergChangeEvent> deduplicateBatch(List<IcebergChangeEvent> events) {
 
-    ConcurrentHashMap<JsonNode, IcebergChangeEvent> icebergRecordsmap = new ConcurrentHashMap<>();
+    ConcurrentHashMap<JsonNode, IcebergChangeEvent> deduplicatedEvents = new ConcurrentHashMap<>();
 
-    for (IcebergChangeEvent e : events) {
+    events.forEach(e ->
+        // deduplicate using key(PK)
+        deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+          if (this.compareByTsThenOp(oldValue.value(), newValue.value()) <= 0) {
+            return newValue;
+          } else {
+            return oldValue;
+          }
+        })
+    );
 
-      // deduplicate using key(PK) @TODO improve using map.merge
-      if (icebergRecordsmap.containsKey(e.key())) {
-
-        // replace it if it's new
-        if (this.compareByTsThenOp(icebergRecordsmap.get(e.key()).value(), e.value()) <= 0) {
-          icebergRecordsmap.put(e.key(), e);
-        }
-
-      } else {
-        icebergRecordsmap.put(e.key(), e);
-      }
-
-    }
-    return new ArrayList<>(icebergRecordsmap.values());
+    return new ArrayList<>(deduplicatedEvents.values());
   }
 
   /**
