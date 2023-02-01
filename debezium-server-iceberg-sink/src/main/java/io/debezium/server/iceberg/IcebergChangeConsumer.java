@@ -68,7 +68,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
-  private static final String PROP_PREFIX = "debezium.sink.iceberg.";
+  public static final String PROP_PREFIX = "debezium.sink.iceberg.";
   static Deserializer<JsonNode> valDeserializer;
   static Deserializer<JsonNode> keyDeserializer;
   protected final Clock clock = Clock.system();
