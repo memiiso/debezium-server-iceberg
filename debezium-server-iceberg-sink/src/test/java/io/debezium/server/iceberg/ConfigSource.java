@@ -50,6 +50,7 @@ public class ConfigSource extends TestConfigSource {
 
     // DEBEZIUM SOURCE conf
     config.put("debezium.source.offset.storage", "org.apache.kafka.connect.storage.MemoryOffsetBackingStore");
+    //config.put("debezium.source.offset.storage", "io.debezium.server.iceberg.offset.IcebergOffsetBackingStore");
     config.put("debezium.source.database.history", "io.debezium.relational.history.MemoryDatabaseHistory");
     config.put("debezium.source.offset.flush.interval.ms", "60000");
     config.put("debezium.source.database.server.name", "testc");
