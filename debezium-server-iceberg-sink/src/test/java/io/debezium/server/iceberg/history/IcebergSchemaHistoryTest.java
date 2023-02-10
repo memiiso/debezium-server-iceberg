@@ -66,8 +66,10 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
       Map<String, String> config = new HashMap<>();
       config.put("quarkus.profile", "mysql");
       config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
-      config.put("debezium.source.database.history", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
-      config.put("debezium.source.database.history.iceberg.table-name", "debezium_database_history_storage_test");
+      config.put("debezium.source.schema.history", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
+      config.put("debezium.source.schema.history.iceberg.table-name", "debezium_database_history_storage_test");
+      config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
+      config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_test");
       config.put("debezium.source.table.whitelist", "inventory.customers");
       return config;
     }
