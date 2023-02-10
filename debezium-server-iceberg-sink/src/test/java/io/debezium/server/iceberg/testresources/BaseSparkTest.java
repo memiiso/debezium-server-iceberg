@@ -24,7 +24,7 @@ import org.apache.spark.sql.SparkSession;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeAll;
-import static io.debezium.server.iceberg.ConfigSource.S3_BUCKET;
+import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
 
 /**
  * Integration test that uses spark to consumer data is consumed.

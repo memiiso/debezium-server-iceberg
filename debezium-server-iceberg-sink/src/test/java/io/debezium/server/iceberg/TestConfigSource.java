@@ -8,14 +8,20 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.TestConfigSource;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
-public class ConfigSource extends TestConfigSource {
+import org.eclipse.microprofile.config.spi.ConfigSource;
+
+public class TestConfigSource implements ConfigSource {
 
   public static final String S3_REGION = "us-east-1";
   public static final String S3_BUCKET = "test-bucket";
+  protected Map<String, String> config = new HashMap<>();
 
-  public ConfigSource() {
+
+  public TestConfigSource() {
     config.put("quarkus.profile", "postgresql");
     // common sink conf
     config.put("debezium.sink.type", "iceberg");
@@ -69,9 +75,22 @@ public class ConfigSource extends TestConfigSource {
   }
 
   @Override
-  public int getOrdinal() {
-    // Configuration property precedence is based on ordinal values and since we override the
-    // properties in TestConfigSource, we should give this a higher priority.
-    return super.getOrdinal() + 1;
+  public Map<String, String> getProperties() {
+    return config;
+  }
+
+  @Override
+  public String getName() {
+    return "test";
+  }
+
+  @Override
+  public Set<String> getPropertyNames() {
+    return config.keySet();
+  }
+
+  @Override
+  public String getValue(String propertyName) {
+    return config.get(propertyName);
   }
 }

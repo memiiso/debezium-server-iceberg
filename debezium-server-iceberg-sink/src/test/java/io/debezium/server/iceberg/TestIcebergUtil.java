@@ -9,9 +9,10 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.serde.DebeziumSerdes;
-import io.debezium.util.Testing;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,11 +26,14 @@ import static io.debezium.server.iceberg.IcebergChangeConsumer.mapper;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestIcebergUtil {
-  final String serdeWithSchema = Testing.Files.readResourceAsString("json/serde-with-schema.json");
-  final String unwrapWithSchema = Testing.Files.readResourceAsString("json/unwrap-with-schema.json");
-  final String unwrapWithGeomSchema = Testing.Files.readResourceAsString("json/serde-with-schema_geom.json");
-  final String unwrapWithArraySchema = Testing.Files.readResourceAsString("json/serde-with-array.json");
-  final String unwrapWithArraySchema2 = Testing.Files.readResourceAsString("json/serde-with-array2.json");
+  final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
+  final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
+  final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
+  final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
+  final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
+
+  TestIcebergUtil() throws IOException {
+  }
 
   @Test
   public void testNestedJsonRecord() throws JsonProcessingException {
