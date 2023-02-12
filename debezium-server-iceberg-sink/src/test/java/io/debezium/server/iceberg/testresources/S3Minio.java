@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.testresources;
 
-import io.debezium.server.iceberg.ConfigSource;
+import io.debezium.server.iceberg.TestConfigSource;
 import io.minio.ListObjectsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -46,7 +46,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
           .withStartupTimeout(Duration.ofSeconds(30)))
       .withEnv("MINIO_ACCESS_KEY", MINIO_ACCESS_KEY)
       .withEnv("MINIO_SECRET_KEY", MINIO_SECRET_KEY)
-      .withEnv("MINIO_REGION_NAME", ConfigSource.S3_REGION)
+      .withEnv("MINIO_REGION_NAME", TestConfigSource.S3_REGION)
       .withCommand("server " + DEFAULT_STORAGE_DIRECTORY)
       .withExposedPorts(MINIO_DEFAULT_PORT);
   public static MinioClient client;
@@ -120,8 +120,8 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     try {
       client.ignoreCertCheck();
       client.makeBucket(MakeBucketArgs.builder()
-          .region(ConfigSource.S3_REGION)
-          .bucket(ConfigSource.S3_BUCKET)
+          .region(TestConfigSource.S3_REGION)
+          .bucket(TestConfigSource.S3_BUCKET)
           .build());
     } catch (Exception e) {
       e.printStackTrace();

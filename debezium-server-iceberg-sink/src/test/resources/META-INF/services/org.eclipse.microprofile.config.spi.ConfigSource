@@ -30,4 +30,4 @@
 #  */
 #
 
-io.debezium.server.iceberg.ConfigSource
+io.debezium.server.iceberg.TestConfigSource
