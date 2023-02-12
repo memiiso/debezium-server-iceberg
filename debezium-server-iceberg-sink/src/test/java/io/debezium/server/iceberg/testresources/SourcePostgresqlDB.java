@@ -63,7 +63,6 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
     container.start();
 
     Map<String, String> params = new ConcurrentHashMap<>();
-    params.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
     params.put("debezium.source.database.hostname", POSTGRES_HOST);
     params.put("debezium.source.database.port", container.getMappedPort(POSTGRES_PORT_DEFAULT).toString());
     params.put("debezium.source.database.user", POSTGRES_USER);

@@ -12,11 +12,14 @@ import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
 import io.debezium.config.Field;
 import io.debezium.server.iceberg.IcebergChangeConsumer;
+import io.debezium.util.Strings;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.HashMap;
@@ -44,10 +47,12 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.util.Callback;
+import org.apache.kafka.connect.util.SafeObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.iceberg.types.Types.NestedField.optional;
@@ -72,14 +77,14 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   private String tableFullName;
   private TableIdentifier tableId;
   private Table offsetTable;
-
+  IcebergOffsetBackingStoreConfig offsetConfig;
   public IcebergOffsetBackingStore() {
   }
 
   @Override
   public void configure(WorkerConfig config) {
     super.configure(config);
-    IcebergOffsetBackingStoreConfig offsetConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()));
+    offsetConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()));
     icebergCatalog = CatalogUtil.buildIcebergCatalog(offsetConfig.catalogName(),
         offsetConfig.icebergProperties(), offsetConfig.hadoopConfig());
     tableFullName = String.format("%s.%s", offsetConfig.catalogName(), offsetConfig.tableName());
@@ -103,7 +108,34 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       if (!icebergCatalog.tableExists(tableId)) {
         throw new DebeziumException("Failed to create table " + tableId + " to store offset");
       }
+
+      if (!Strings.isNullOrEmpty(offsetConfig.getMigrateOffsetFile().strip())) {
+        LOG.warn("Migrating offset from file {}", offsetConfig.getMigrateOffsetFile());
+        this.loadFileOffset(new File(offsetConfig.getMigrateOffsetFile()));
+      }
+
     }
+  }
+
+  private void loadFileOffset(File file) {
+    try (SafeObjectInputStream is = new SafeObjectInputStream(Files.newInputStream(file.toPath()))) {
+      Object obj = is.readObject();
+
+      if (!(obj instanceof HashMap))
+        throw new ConnectException("Expected HashMap but found " + obj.getClass());
+
+      Map<byte[], byte[]> raw = (Map<byte[], byte[]>) obj;
+      for (Map.Entry<byte[], byte[]> mapEntry : raw.entrySet()) {
+        ByteBuffer key = (mapEntry.getKey() != null) ? ByteBuffer.wrap(mapEntry.getKey()) : null;
+        ByteBuffer value = (mapEntry.getValue() != null) ? ByteBuffer.wrap(mapEntry.getValue()) : null;
+        data.put(fromByteBuffer(key), fromByteBuffer(value));
+      }
+    } catch (IOException | ClassNotFoundException e) {
+      throw new DebeziumException("Failed migrating offset from file", e);
+    }
+
+    LOG.warn("Loaded file offset, saving it to iceberg offset storage");
+    save();
   }
 
   protected void save() {
@@ -235,6 +267,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
 
     public String tableName() {
       return this.config.getString(Field.create("offset.storage.iceberg.table-name").withDefault("debezium_offset_storage"));
+    }
+
+    public String getMigrateOffsetFile() {
+      return this.config.getString(Field.create("offset.storage.iceberg.migrate-offset-file").withDefault(""));
     }
 
     public org.apache.hadoop.conf.Configuration hadoopConfig() {
