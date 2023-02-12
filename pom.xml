@@ -41,7 +41,7 @@
         <version.debezium>1.9.7.Final</version.debezium>
         <version.mysql.driver>8.0.30</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.14.0.Final</version.quarkus>
+        <version.quarkus>2.15.3.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version pulled in via debezium -->
         <version.antlr>4.8</version.antlr>
