@@ -110,9 +110,28 @@ debezium.sink.iceberg.table-prefix=cdc_
 
 With above config database table = `inventory.customers` is replicated to `default.testc_cdc_inventory_customers`
 
+## IcebergOffsetBackingStore Offset Storage
+
+This implementation saves CDC offset to an iceberg table.
+
+```
+debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
+debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_table
+```
+
+## IcebergSchemaHistory Database History Storage
+
+This implementation saves database history to an iceberg table.
+
+```properties
+debezium.source.database.history=io.debezium.server.iceberg.history.IcebergSchemaHistory
+debezium.source.database.history.iceberg.table-name=debezium_database_history_storage_table
+```
+
 ## Debezium Event Flattening
 
 Iceberg consumer requires event flattening.
+
 ```properties
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
