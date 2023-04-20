@@ -55,13 +55,13 @@ import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
 /**
- * A {@link DatabaseHistory} implementation that stores the schema history to database table
+ * A {@link SchemaHistory} implementation that stores the schema history to database table
  *
  * @author Ismail Simsek
  */
 @ThreadSafe
 @Incubating
-public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
+public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
   public static final String DATABASE_HISTORY_STORAGE_TABLE_INSERT = "INSERT INTO %s VALUES ( ?, ?, ? )";
   public static final String DATABASE_HISTORY_STORAGE_TABLE_SELECT = "SELECT id, history_data, record_insert_ts FROM %s ORDER BY " +
@@ -84,7 +84,7 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
   private Table historyTable;
 
   @Override
-  public void configure(Configuration config, HistoryRecordComparator comparator, DatabaseHistoryListener listener, boolean useCatalogBeforeSchema) {
+  public void configure(Configuration config, HistoryRecordComparator comparator, SchemaHistoryListener listener, boolean useCatalogBeforeSchema) {
     super.configure(config, comparator, listener, useCatalogBeforeSchema);
     this.historyConfig = new IcebergSchemaHistoryConfig(config);
     icebergCatalog = CatalogUtil.buildIcebergCatalog(this.historyConfig.catalogName(),
@@ -93,7 +93,7 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
     tableId = TableIdentifier.of(Namespace.of(this.historyConfig.catalogName()), this.historyConfig.tableName());
 
     if (running.get()) {
-      throw new DatabaseHistoryException("Bigquery database history process already initialized table: " + tableFullName);
+      throw new SchemaHistoryException("Bigquery database history process already initialized table: " + tableFullName);
     }
   }
 
@@ -107,7 +107,7 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
             initializeStorage();
           }
         } catch (Exception e) {
-          throw new DatabaseHistoryException("Unable to create history table: " + tableFullName + " : " + e.getMessage(),
+          throw new SchemaHistoryException("Unable to create history table: " + tableFullName + " : " + e.getMessage(),
               e);
         }
       }
@@ -119,7 +119,7 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
   }
 
   @Override
-  protected void storeRecord(HistoryRecord record) throws DatabaseHistoryException {
+  protected void storeRecord(HistoryRecord record) throws SchemaHistoryException {
     if (record == null) {
       return;
     }
@@ -161,7 +161,7 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
         /// END iceberg append
         LOG.trace("Successfully saved history data to bigquery table");
       } catch (IOException e) {
-        throw new DatabaseHistoryException("Failed to store record: " + record, e);
+        throw new SchemaHistoryException("Failed to store record: " + record, e);
       }
     });
   }
@@ -239,17 +239,17 @@ public final class IcebergSchemaHistory extends AbstractDatabaseHistory {
 
         if (!Strings.isNullOrEmpty(historyConfig.getMigrateHistoryFile().strip())) {
           LOG.warn("Migrating history from file {}", historyConfig.getMigrateHistoryFile());
-          this.loadFileDatabaseHistory(new File(historyConfig.getMigrateHistoryFile()));
+          this.loadFileSchemaHistory(new File(historyConfig.getMigrateHistoryFile()));
         }
       } catch (Exception e) {
-        throw new DatabaseHistoryException("Creation of database history topic failed, please create the topic manually", e);
+        throw new SchemaHistoryException("Creation of database history topic failed, please create the topic manually", e);
       }
     } else {
       LOG.debug("Storage is exists, skipping initialization");
     }
   }
 
-  private void loadFileDatabaseHistory(File file) {
+  private void loadFileSchemaHistory(File file) {
     LOG.warn(String.format("Migrating file database history from:'%s' to Bigquery database history storage: %s",
         file.toPath(), tableFullName));
     AtomicInteger numRecords = new AtomicInteger();

@@ -29,36 +29,24 @@
 
         <version.groovy>3.0.13</version.groovy>
         <version.assembly.plugin>3.4.2</version.assembly.plugin>
-        <version.jackson>2.13.4.20221013</version.jackson>
-        <version.iceberg>1.2.0</version.iceberg>
+        <version.jackson>2.13.5</version.jackson>
+        <version.iceberg>1.2.1</version.iceberg>
         <version.spark>3.3.1</version.spark>
         <version.hadoop>3.3.4</version.hadoop>
         <version.awssdk>2.19.4</version.awssdk>
-        <version.parquet>1.12.3</version.parquet>
         <version.testcontainers>1.17.6</version.testcontainers>
-        <version.kafkaclients>3.2.1</version.kafkaclients>
         <!-- Debezium -->
-        <version.debezium>1.9.7.Final</version.debezium>
-        <version.mysql.driver>8.0.30</version.mysql.driver>
+        <version.debezium>2.1.4.Final</version.debezium>
+        <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.15.3.Final</version.quarkus>
+        <version.quarkus>2.16.6.Final</version.quarkus>
         <!-- ANTLR -->
-        <!-- Align with Antlr runtime version pulled in via debezium -->
-        <version.antlr>4.8</version.antlr>
+        <!-- Align with Antlr runtime version with spark for unit tests -->
+        <version.antlr>4.9.3</version.antlr>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.antlr</groupId>
-                <artifactId>antlr4-runtime</artifactId>
-                <version>${version.antlr}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kafka</groupId>
-                <artifactId>kafka-clients</artifactId>
-                <version>${version.kafkaclients}</version>
-            </dependency>
             <!-- log -->
             <dependency>
                 <groupId>org.jboss.slf4j</groupId>
@@ -72,12 +60,6 @@
                 <version>${version.awssdk}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <!-- parquet -->
-            <dependency>
-                <groupId>org.apache.parquet</groupId>
-                <artifactId>parquet-hadoop-bundle</artifactId>
-                <version>${version.parquet}</version>
             </dependency>
             <dependency>
                 <groupId>io.quarkus</groupId>
@@ -123,7 +105,6 @@
                 <artifactId>groovy-jsr223</artifactId>
                 <version>${version.groovy}</version>
             </dependency>
-
             <!-- jackson version for spark -->
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
