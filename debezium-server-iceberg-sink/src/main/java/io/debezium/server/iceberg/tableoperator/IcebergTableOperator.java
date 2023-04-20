@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import javax.enterprise.context.Dependent;
-import javax.inject.Inject;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Inject;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;

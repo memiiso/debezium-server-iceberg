@@ -8,8 +8,8 @@
 
 package io.debezium.server.iceberg.batchsizewait;
 
-import javax.enterprise.context.Dependent;
-import javax.inject.Named;
+import jakarta.enterprise.context.Dependent;
+import jakarta.inject.Named;
 
 /**
  * Optimizes batch size around 85%-90% of max,batch.size using dynamically calculated sleep(ms)

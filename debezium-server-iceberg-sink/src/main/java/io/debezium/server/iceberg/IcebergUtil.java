@@ -14,10 +14,10 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import javax.enterprise.inject.Instance;
-import javax.enterprise.inject.literal.NamedLiteral;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.literal.NamedLiteral;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;

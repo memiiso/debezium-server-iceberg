@@ -18,8 +18,8 @@ import io.quarkus.test.junit.QuarkusTest;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.inject.Inject;
 
+import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
