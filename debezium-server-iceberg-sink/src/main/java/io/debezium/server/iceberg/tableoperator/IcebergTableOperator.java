@@ -23,10 +23,7 @@ import javax.inject.Inject;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
-import org.apache.iceberg.RowDelta;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.Table;
-import org.apache.iceberg.UpdateSchema;
+import org.apache.iceberg.*;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
@@ -179,10 +176,16 @@ public class IcebergTableOperator {
 
       writer.close();
       WriteResult files = writer.complete();
-      RowDelta newRowDelta = icebergTable.newRowDelta();
-      Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
-      Arrays.stream(files.deleteFiles()).forEach(newRowDelta::addDeletes);
-      newRowDelta.commit();
+      if (files.deleteFiles().length > 0) {
+        RowDelta newRowDelta = icebergTable.newRowDelta();
+        Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
+        Arrays.stream(files.deleteFiles()).forEach(newRowDelta::addDeletes);
+        newRowDelta.commit();
+      } else {
+        AppendFiles appendFiles = icebergTable.newAppend();
+        Arrays.stream(files.dataFiles()).forEach(appendFiles::appendFile);
+        appendFiles.commit();
+      }
 
     } catch (IOException ex) {
       throw new DebeziumException(ex);
