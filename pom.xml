@@ -36,10 +36,10 @@
         <version.awssdk>2.19.4</version.awssdk>
         <version.testcontainers>1.17.6</version.testcontainers>
         <!-- Debezium -->
-        <version.debezium>2.1.4.Final</version.debezium>
+        <version.debezium>2.2.0.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>2.16.6.Final</version.quarkus>
+        <version.quarkus>3.0.0.Final</version.quarkus>
         <!-- ANTLR -->
         <!-- Align with Antlr runtime version with spark for unit tests -->
         <version.antlr>4.9.3</version.antlr>
