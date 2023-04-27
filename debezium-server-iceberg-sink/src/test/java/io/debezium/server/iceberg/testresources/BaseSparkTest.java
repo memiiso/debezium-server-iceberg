@@ -17,7 +17,6 @@ import javax.inject.Inject;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
@@ -28,7 +27,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeAll;
 import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
 
@@ -44,12 +42,6 @@ public class BaseSparkTest {
       .setMaster("local[2]");
   private static final String SPARK_PROP_PREFIX = "debezium.sink.sparkbatch.";
   protected static SparkSession spark;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
-  String tablePrefix;
-  @ConfigProperty(name = "debezium.sink.iceberg.warehouse")
-  String warehouseLocation;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
   @Inject
   IcebergChangeConsumer consumer;
 
@@ -95,10 +87,6 @@ public class BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
   }
 
-  public static int PGLoadTestDataTable(int numRows) throws Exception {
-    return PGLoadTestDataTable(numRows, false);
-  }
-
   public static int PGLoadTestDataTable(int numRows, boolean addRandomDelay) {
     int numInsert = 0;
     do {
@@ -124,37 +112,6 @@ public class BaseSparkTest {
       numInsert += 100;
     } while (numInsert <= numRows);
     return numInsert;
-  }
-
-  public static void mysqlCreateTestDataTable() throws Exception {
-    // create test table
-    String sql = "\n" +
-                 "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
-                 "            c_id INTEGER ,\n" +
-                 "            c_text TEXT,\n" +
-                 "            c_varchar TEXT\n" +
-                 "          );";
-    SourceMysqlDB.runSQL(sql);
-  }
-
-  public static int mysqlLoadTestDataTable(int numRows) throws Exception {
-    int numInsert = 0;
-    do {
-      String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
-                   "VALUES ";
-      StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '" + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
-      for (int i = 0; i < 10; i++) {
-        values.append("\n,(").append(TestUtil.randomInt(15, 32)).append(", '").append(TestUtil.randomString(524)).append("', '").append(TestUtil.randomString(524)).append("')");
-      }
-      SourceMysqlDB.runSQL(sql + values);
-      numInsert += 10;
-    } while (numInsert <= numRows);
-    return numInsert;
-  }
-
-  protected org.apache.iceberg.Table getTable(String table) {
-    HadoopCatalog catalog = getIcebergCatalog();
-    return catalog.loadTable(TableIdentifier.of(Namespace.of(namespace), tablePrefix + table.replace(".", "_")));
   }
 
   protected HadoopCatalog getIcebergCatalog() {
