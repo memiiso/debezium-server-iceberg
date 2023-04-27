@@ -152,6 +152,13 @@
 
         <!-- Testing -->
         <!-- spark for tests -->
+        <!-- antlr4 version compatible with spark, testing only -->
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>${version.antlr}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.13</artifactId>
