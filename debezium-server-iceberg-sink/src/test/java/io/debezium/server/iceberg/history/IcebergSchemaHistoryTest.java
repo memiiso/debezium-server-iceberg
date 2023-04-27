@@ -20,8 +20,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import com.google.common.collect.Lists;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -39,8 +39,7 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
   public void testSimpleUpload() {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        Dataset<Row> ds = getTableData("testc.inventory.customers");
-        return ds.count() >= 3;
+        return Lists.newArrayList(getTableDataV2("testc.inventory.customers")).size() >= 3;
       } catch (Exception e) {
         return false;
       }
@@ -49,9 +48,7 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
     // test nested data(struct) consumed
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        Dataset<Row> ds = spark.newSession().sql("SELECT * FROM mycatalog.debezium_database_history_storage_test");
-        ds.show(false);
-        return ds.count() >= 5;
+        return Lists.newArrayList(getTableDataV2(TableIdentifier.of("mycatalog", "debezium_database_history_storage_test"))).size() >= 5;
       } catch (Exception e) {
         e.printStackTrace();
         return false;

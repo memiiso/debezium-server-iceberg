@@ -8,15 +8,21 @@
 
 package io.debezium.server.iceberg.testresources;
 
+import io.debezium.server.iceberg.IcebergChangeConsumer;
 import io.debezium.server.iceberg.IcebergUtil;
 
 import java.util.HashMap;
 import java.util.Map;
+import javax.inject.Inject;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.IcebergGenerics;
+import org.apache.iceberg.data.Record;
 import org.apache.iceberg.hadoop.HadoopCatalog;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -44,6 +50,8 @@ public class BaseSparkTest {
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
+  @Inject
+  IcebergChangeConsumer consumer;
 
   @BeforeAll
   static void setup() {
@@ -171,6 +179,20 @@ public class BaseSparkTest {
     table = "debeziumevents.debeziumcdc_" + table.replace(".", "_");
     //System.out.println("--loading-->" + table);
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
+  }
+
+  public CloseableIterable<Record> getTableDataV2(String table) {
+    return getTableDataV2("debeziumevents", table);
+  }
+
+  public CloseableIterable<Record> getTableDataV2(String catalog, String table) {
+    String tableName = "debeziumcdc_" + table.replace(".", "_");
+    return getTableDataV2(TableIdentifier.of(catalog, tableName));
+  }
+
+  public CloseableIterable<Record> getTableDataV2(TableIdentifier table) {
+    Table iceTable = consumer.loadIcebergTable(table, null);
+    return IcebergGenerics.read(iceTable).build();
   }
 
 }
