@@ -163,7 +163,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     // consume list of events for each destination table
     for (Map.Entry<String, List<IcebergChangeEvent>> tableEvents : result.entrySet()) {
-      Table icebergTable = this.loadIcebergTable(icebergCatalog, mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+      Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
 
@@ -180,12 +180,11 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   /**
-   * @param icebergCatalog iceberg catalog
-   * @param tableId        iceberg table identifier
-   * @param sampleEvent    sample debezium event. event schema used to create iceberg table when table not found
+   * @param tableId     iceberg table identifier
+   * @param sampleEvent sample debezium event. event schema used to create iceberg table when table not found
    * @return iceberg table, throws RuntimeException when table not found and it's not possible to create it
    */
-  public Table loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
+  public Table loadIcebergTable(TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
       if (!eventSchemaEnabled) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");

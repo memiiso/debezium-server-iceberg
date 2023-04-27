@@ -20,8 +20,9 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import com.google.common.collect.Lists;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -37,18 +38,6 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() throws Exception {
-
-    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.customers");
-        return df.filter("id is not null").count() >= 4;
-      } catch (Exception e) {
-        return false;
-      }
-    });
-    // S3Minio.listFiles();
-
-    // create test table
     String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
                        " c_id INTEGER ," +
                        " c_id2 INTEGER ," +
@@ -62,6 +51,16 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
     SourceMysqlDB.runSQL(sqlCreate);
     SourceMysqlDB.runSQL(sqlInsert);
+    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
+      try {
+
+        CloseableIterable<Record> result = getTableDataV2("testc.inventory.test_delete_table");
+        return Lists.newArrayList(result).size() == 4;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+
     SourceMysqlDB.runSQL(sqlDelete);
     SourceMysqlDB.runSQL(sqlInsert);
     SourceMysqlDB.runSQL(sqlDelete);
@@ -69,9 +68,10 @@ public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.test_delete_table");
-        df.show();
-        return df.count() == 20; // 4X3 insert 4X2 delete!
+        CloseableIterable<Record> result = getTableDataV2("testc.inventory.test_delete_table");
+        //result.forEach(System.out::println);
+        //System.out.println("======================");
+        return Lists.newArrayList(result).size() >= 20;
       } catch (Exception e) {
         return false;
       }
