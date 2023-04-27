@@ -13,8 +13,8 @@ import io.debezium.server.iceberg.IcebergUtil;
 
 import java.util.HashMap;
 import java.util.Map;
-import javax.inject.Inject;
 
+import jakarta.inject.Inject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
