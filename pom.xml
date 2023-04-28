@@ -39,10 +39,9 @@
         <version.debezium>2.2.0.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>3.0.1.Final</version.quarkus>
-        <!-- ANTLR -->
-        <!-- Align with Antlr runtime version with spark for unit tests -->
-        <version.antlr>4.9.3</version.antlr>
+        <version.quarkus>3.0.2.Final</version.quarkus>
+        <!-- FOR TESTS Align with SPARK Antlr version -->
+        <version.antlr>4.8</version.antlr>
     </properties>
 
     <dependencyManagement>

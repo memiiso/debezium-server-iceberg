@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -27,14 +27,13 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTest.IcebergChangeConsumerMysqlTestProfile.class)
-public class IcebergChangeConsumerMysqlTest extends BaseSparkTest {
+public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
   @Test
   public void testSimpleUpload() throws Exception {

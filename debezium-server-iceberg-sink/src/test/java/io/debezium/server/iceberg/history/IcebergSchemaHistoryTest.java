@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.history;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergSchemaHistoryTest.TestProfile.class)
-public class IcebergSchemaHistoryTest extends BaseSparkTest {
+public class IcebergSchemaHistoryTest extends BaseTest {
   @Test
   public void testSimpleUpload() {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {

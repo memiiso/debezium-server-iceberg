@@ -25,9 +25,9 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.util.Callback;
 import org.eclipse.microprofile.config.ConfigProvider;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
@@ -46,7 +46,7 @@ public class IcebergOffsetBackingStoreTest {
     return (data != null) ? ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_16)) : null;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() {
     firstSet.put(toByteBuffer("key"), toByteBuffer("value"));
     firstSet.put(toByteBuffer("key2"), null);
@@ -92,7 +92,7 @@ public class IcebergOffsetBackingStoreTest {
 
     Map<ByteBuffer, ByteBuffer> values = store.get(Arrays.asList(toByteBuffer("key"), toByteBuffer("bad"))).get();
     assertEquals(toByteBuffer("value"), values.get(toByteBuffer("key")));
-    Assert.assertNull(values.get(toByteBuffer("bad")));
+    Assertions.assertNull(values.get(toByteBuffer("bad")));
   }
 
   @Test

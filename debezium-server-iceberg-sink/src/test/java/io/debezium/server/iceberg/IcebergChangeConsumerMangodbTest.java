@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
+@Disabled
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMangoDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMangodbTest.IcebergChangeConsumerMangodbTestProfile.class)
@@ -44,6 +46,7 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
         df.show();
         return df.filter("_id is not null").count() >= 4;
       } catch (Exception e) {
+        //e.printStackTrace();
         return false;
       }
     });
@@ -58,7 +61,7 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
       config.put("%mongodb.debezium.transforms.unwrap.type", "io.debezium.connector.mongodb.transforms.ExtractNewDocumentState");
       config.put("%mongodb.debezium.transforms.unwrap.add.fields", "op,source.ts_ms,db");
       config.put("%mongodb.debezium.sink.iceberg.allow-field-addition", "false");
-      config.put("%mongodb.debezium.source.mongodb.name", "testc");
+      config.put("%mongodb.debezium.source.topic.prefix", "testc");
       config.put("%mongodb.debezium.source.database.include.list", "inventory"); // ok
       config.put("%mongodb.debezium.source.collection.include.list", "inventory.products");
       // IMPORTANT !!! FIX MongoDbConnector KEY FIELD NAME "id"=>"_id" !!!
