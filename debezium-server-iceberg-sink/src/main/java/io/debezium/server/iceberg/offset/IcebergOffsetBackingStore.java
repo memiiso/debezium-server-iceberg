@@ -20,7 +20,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
+import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.FileIO;
@@ -143,10 +145,13 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     try {
       String dataJson = mapper.writeValueAsString(data);
       LOG.debug("Saving offset data {}", dataJson);
-      Timestamp currentTs = new Timestamp(System.currentTimeMillis());
+      OffsetDateTime currentTs = OffsetDateTime.now(ZoneOffset.UTC);
 
       GenericRecord record = GenericRecord.create(OFFSET_STORAGE_TABLE_SCHEMA);
-      Record row = record.copy("id", UUID.randomUUID().toString(), "offset_data", "record_insert_ts", dataJson, currentTs);
+      Record row = record.copy(
+          "id", UUID.randomUUID().toString(),
+          "offset_data", dataJson,
+          "record_insert_ts", currentTs);
       OutputFile out;
       try (FileIO tableIo = offsetTable.io()) {
         out = tableIo.newOutputFile(offsetTable.locationProvider().newDataLocation(tableId.name() + "-data-001"));
@@ -166,7 +171,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
           .withSplitOffsets(writer.splitOffsets())
           .withMetrics(writer.metrics())
           .build();
-      offsetTable.newOverwrite().addFile(dataFile).commit();
+
+      Transaction t = offsetTable.newTransaction();
+      t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
+      t.newAppend().appendFile(dataFile).commit();
+      t.commitTransaction();
       LOG.debug("Successfully saved offset data to iceberg table");
 
     } catch (IOException e) {
@@ -233,11 +242,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   }
 
   public String fromByteBuffer(ByteBuffer data) {
-    return (data != null) ? String.valueOf(StandardCharsets.UTF_8.decode(data.asReadOnlyBuffer())) : null;
+    return (data != null) ? String.valueOf(StandardCharsets.UTF_16.decode(data.asReadOnlyBuffer())) : null;
   }
 
   public ByteBuffer toByteBuffer(String data) {
-    return (data != null) ? ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)) : null;
+    return (data != null) ? ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_16)) : null;
   }
 
   public static class IcebergOffsetBackingStoreConfig extends WorkerConfig {
