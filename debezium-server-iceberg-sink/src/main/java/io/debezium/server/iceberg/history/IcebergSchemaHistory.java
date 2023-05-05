@@ -93,13 +93,14 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
     tableId = TableIdentifier.of(Namespace.of(this.historyConfig.catalogName()), this.historyConfig.tableName());
 
     if (running.get()) {
-      throw new SchemaHistoryException("Bigquery database history process already initialized table: " + tableFullName);
+      throw new SchemaHistoryException("Iceberg database history process already initialized table: " + tableFullName);
     }
   }
 
   @Override
   public void start() {
     super.start();
+    LOG.info("Starting IcebergSchemaHistory storage table:" + tableFullName);
     lock.write(() -> {
       if (running.compareAndSet(false, true)) {
         try {
@@ -159,7 +160,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
             .build();
         historyTable.newOverwrite().addFile(dataFile).commit();
         /// END iceberg append
-        LOG.trace("Successfully saved history data to bigquery table");
+        LOG.trace("Successfully saved history data to Iceberg table");
       } catch (IOException e) {
         throw new SchemaHistoryException("Failed to store record: " + record, e);
       }
@@ -226,7 +227,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
   @Override
   public String toString() {
-    return "Bigquery database history storage: " + (tableFullName != null ? tableFullName : "(unstarted)");
+    return "Iceberg database history storage: " + (tableFullName != null ? tableFullName : "(unstarted)");
   }
 
   @Override
@@ -250,7 +251,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   }
 
   private void loadFileSchemaHistory(File file) {
-    LOG.warn(String.format("Migrating file database history from:'%s' to Bigquery database history storage: %s",
+    LOG.warn(String.format("Migrating file database history from:'%s' to Iceberg database history storage: %s",
         file.toPath(), tableFullName));
     AtomicInteger numRecords = new AtomicInteger();
     lock.write(() -> {
@@ -270,7 +271,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
       }
     });
     LOG.warn("Migrated {} database history record. " +
-             "Migrating file database history to Bigquery database history storage successfully completed", numRecords.get());
+             "Migrating file database history to Iceberg database history storage successfully completed", numRecords.get());
   }
 
   public static class IcebergSchemaHistoryConfig {

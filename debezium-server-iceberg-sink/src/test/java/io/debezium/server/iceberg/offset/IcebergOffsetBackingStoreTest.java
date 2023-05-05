@@ -113,7 +113,7 @@ public class IcebergOffsetBackingStoreTest {
     Map<ByteBuffer, ByteBuffer> values = restore.get(Collections.singletonList(toByteBuffer("key"))).get();
     Map<ByteBuffer, ByteBuffer> values2 = restore.get(Collections.singletonList(toByteBuffer("key1secondSet"))).get();
     Map<ByteBuffer, ByteBuffer> values3 = restore.get(Collections.singletonList(toByteBuffer("key2secondSet"))).get();
-    assertEquals(toByteBuffer("value"), values.get(toByteBuffer("key")));
+    assertEquals("value", fromByteBuffer(values.get(toByteBuffer("key"))));
     assertEquals(toByteBuffer("value1secondSet"), values2.get(toByteBuffer("key1secondSet")));
     assertEquals(toByteBuffer("value2secondSet"), values3.get(toByteBuffer("key2secondSet")));
   }
