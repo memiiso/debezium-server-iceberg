@@ -27,15 +27,15 @@ public class SourceMangoDB implements QuarkusTestResourceLifecycleManager {
           .withFileFromClasspath("start-mongodb.sh", "mongodb/start-mongodb.sh"))
 
       .waitingFor(Wait.forLogMessage(".*Successfully initialized inventory database.*", 1))
-      .withStartupTimeout(Duration.ofSeconds(60L));
+      .withStartupTimeout(Duration.ofSeconds(120L));
 
   @Override
   public Map<String, String> start() {
     container.withExposedPorts(MONGODB_PORT).start();
 
     Map<String, String> params = new ConcurrentHashMap<>();
-    params.put("%mongodb.debezium.source.mongodb.hosts",
-        "rs0/" + container.getHost() + ":" + container.getMappedPort(MONGODB_PORT)
+    params.put("%mongodb.debezium.source.mongodb.connection.string",
+        "mongodb://" + container.getHost() + ":" + container.getMappedPort(MONGODB_PORT) + "/?replicaSet=rs0"
     );
     params.put("%mongodb.debezium.source.mongodb.authsource", "admin");
     params.put("%mongodb.debezium.source.mongodb.user", "debezium");

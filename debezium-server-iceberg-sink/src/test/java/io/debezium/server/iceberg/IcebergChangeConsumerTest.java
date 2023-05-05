@@ -19,8 +19,8 @@ import io.quarkus.test.junit.TestProfile;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import javax.inject.Inject;
 
+import jakarta.inject.Inject;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.spark.sql.Dataset;

@@ -7,8 +7,8 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import javax.enterprise.context.Dependent;
 
+import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.data.GenericAppenderFactory;

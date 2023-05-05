@@ -19,8 +19,8 @@ import io.quarkus.test.junit.TestProfile;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import javax.inject.Inject;
 
+import jakarta.inject.Inject;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
