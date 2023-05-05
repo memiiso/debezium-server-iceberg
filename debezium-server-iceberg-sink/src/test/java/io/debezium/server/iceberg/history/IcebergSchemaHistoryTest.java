@@ -23,6 +23,7 @@ import java.util.Map;
 import com.google.common.collect.Lists;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
+@Disabled // @TODO remove spark with antlr4 version
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergSchemaHistoryTest.TestProfile.class)

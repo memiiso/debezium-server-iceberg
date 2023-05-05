@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@Disabled
+@Disabled // @TODO fix
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMangoDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMangodbTest.IcebergChangeConsumerMangodbTestProfile.class)

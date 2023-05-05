@@ -24,12 +24,14 @@ import com.google.common.collect.Lists;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author Ismail Simsek
  */
 @QuarkusTest
+@Disabled // @TODO remove spark with antlr4 version
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTest.IcebergChangeConsumerMysqlTestProfile.class)
