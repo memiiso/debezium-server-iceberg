@@ -68,3 +68,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:${{ env.RELEASE_NAME }}
+
+      - name: Delete all containers from repository without tags
+        uses: dylanratcliffe/delete-untagged-containers@main
+        with:
+          package_name: debezium-server-iceberg
+          token: ${{ secrets.GITHUB_TOKEN }}
