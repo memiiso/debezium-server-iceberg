@@ -90,7 +90,7 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
     assertEquals(("value"), fromByteBuffer(values.get(toByteBuffer("key"))));
     Assertions.assertNull(values.get(toByteBuffer("bad")));
 
-    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("mycatalog", "debezium_offset_storage"));
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("default", "debezium_offset_storage"));
     Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 

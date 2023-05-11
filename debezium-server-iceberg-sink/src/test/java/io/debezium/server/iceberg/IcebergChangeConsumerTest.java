@@ -278,6 +278,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_custom_table"));
+        System.out.println(Lists.newArrayList(d));
         return Lists.newArrayList(d).size() == 1;
       } catch (Exception e) {
         return false;
