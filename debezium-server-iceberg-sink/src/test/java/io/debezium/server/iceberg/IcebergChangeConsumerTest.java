@@ -30,7 +30,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -276,8 +275,14 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       }
     });
 
-    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_custom_table"));
-    Assertions.assertEquals(1, Lists.newArrayList(d).size());
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_custom_table"));
+        return Lists.newArrayList(d).size() == 1;
+      } catch (Exception e) {
+        return false;
+      }
+    });
   }
 
 
