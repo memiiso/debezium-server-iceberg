@@ -20,13 +20,17 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
 import jakarta.inject.Inject;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -271,6 +275,9 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
+
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("mycatalog", "debezium_offset_storage"));
+    Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 
 

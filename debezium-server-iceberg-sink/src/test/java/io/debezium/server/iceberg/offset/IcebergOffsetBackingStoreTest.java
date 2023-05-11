@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.collect.Lists;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.kafka.common.config.ConfigDef;
@@ -89,8 +90,7 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
     assertEquals(("value"), fromByteBuffer(values.get(toByteBuffer("key"))));
     Assertions.assertNull(values.get(toByteBuffer("bad")));
 
-    CloseableIterable<Record> d = getTableDataV2("mycatalog", "debezium_offset_storage");
-    d.forEach(System.out::println);
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("mycatalog", "debezium_offset_storage"));
     Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 
