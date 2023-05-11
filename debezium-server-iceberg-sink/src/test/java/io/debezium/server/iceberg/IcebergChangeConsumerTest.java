@@ -20,9 +20,12 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
 import jakarta.inject.Inject;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
@@ -267,6 +270,16 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         Dataset<Row> ds = getTableData("testc.inventory.geom");
         ds.show(false);
         return ds.count() >= 3;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_custom_table"));
+        System.out.println(Lists.newArrayList(d));
+        return Lists.newArrayList(d).size() == 1;
       } catch (Exception e) {
         return false;
       }

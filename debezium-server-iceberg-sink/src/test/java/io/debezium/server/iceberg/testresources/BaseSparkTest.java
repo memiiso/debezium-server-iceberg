@@ -28,7 +28,7 @@ import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
  *
  * @author Ismail Simsek
  */
-public class BaseSparkTest {
+public class BaseSparkTest extends BaseTest {
 
   protected static final SparkConf sparkconf = new SparkConf()
       .setAppName("CDC-S3-Batch-Spark-Sink")
