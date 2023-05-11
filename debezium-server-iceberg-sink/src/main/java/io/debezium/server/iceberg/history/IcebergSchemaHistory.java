@@ -63,9 +63,6 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @Incubating
 public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
-  public static final String DATABASE_HISTORY_STORAGE_TABLE_INSERT = "INSERT INTO %s VALUES ( ?, ?, ? )";
-  public static final String DATABASE_HISTORY_STORAGE_TABLE_SELECT = "SELECT id, history_data, record_insert_ts FROM %s ORDER BY " +
-                                                                     "record_insert_ts ASC";
   static final Schema DATABASE_HISTORY_TABLE_SCHEMA = new Schema(
       required(1, "id", Types.StringType.get()),
       optional(2, "history_data", Types.StringType.get()),

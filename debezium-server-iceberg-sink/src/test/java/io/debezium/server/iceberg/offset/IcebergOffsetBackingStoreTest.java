@@ -8,19 +8,20 @@
 
 package io.debezium.server.iceberg.offset;
 
+import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.QuarkusTestProfile;
-import io.quarkus.test.junit.TestProfile;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.util.Callback;
@@ -28,23 +29,16 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.fromByteBuffer;
+import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
-@TestProfile(IcebergOffsetBackingStoreTest.TestProfile.class)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-public class IcebergOffsetBackingStoreTest {
+public class IcebergOffsetBackingStoreTest extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();
   private static final Map<ByteBuffer, ByteBuffer> secondSet = new HashMap<>();
-
-  public static String fromByteBuffer(ByteBuffer data) {
-    return (data != null) ? String.valueOf(StandardCharsets.UTF_16.decode(data.asReadOnlyBuffer())) : null;
-  }
-
-  public static ByteBuffer toByteBuffer(String data) {
-    return (data != null) ? ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_16)) : null;
-  }
 
   @BeforeAll
   public static void setup() {
@@ -59,7 +53,8 @@ public class IcebergOffsetBackingStoreTest {
     for (String propName : ConfigProvider.getConfig().getPropertyNames()) {
       if (propName.startsWith("debezium")) {
         try {
-          conf.put(propName, ConfigProvider.getConfig().getValue(propName, String.class));
+          conf.put(propName.replace("debezium.source.", IcebergOffsetBackingStore.CONFIGURATION_FIELD_PREFIX_STRING)
+              , ConfigProvider.getConfig().getValue(propName, String.class));
         } catch (Exception e) {
           conf.put(propName, "");
         }
@@ -91,8 +86,12 @@ public class IcebergOffsetBackingStoreTest {
     store.set(firstSet, cb).get();
 
     Map<ByteBuffer, ByteBuffer> values = store.get(Arrays.asList(toByteBuffer("key"), toByteBuffer("bad"))).get();
-    assertEquals(toByteBuffer("value"), values.get(toByteBuffer("key")));
+    assertEquals(("value"), fromByteBuffer(values.get(toByteBuffer("key"))));
     Assertions.assertNull(values.get(toByteBuffer("bad")));
+
+    CloseableIterable<Record> d = getTableDataV2("mycatalog", "debezium_offset_storage");
+    d.forEach(System.out::println);
+    Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 
   @Test
@@ -121,17 +120,6 @@ public class IcebergOffsetBackingStoreTest {
   public static class TestWorkerConfig extends WorkerConfig {
     public TestWorkerConfig(Map<String, String> props) {
       super(new ConfigDef(), props);
-    }
-  }
-
-  public static class TestProfile implements QuarkusTestProfile {
-    @Override
-    public Map<String, String> getConfigOverrides() {
-      Map<String, String> config = new HashMap<>();
-      config.put("debezium.source.offset.storage", "io.debezium.server.iceberg.offset.IcebergOffsetBackingStore");
-      config.put("debezium.source.offset.flush.interval.ms", "60000");
-      config.put("debezium.source.offset.storage.iceberg.table-name", "debezium_offset_storage_custom_table");
-      return config;
     }
   }
 }

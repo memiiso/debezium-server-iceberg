@@ -56,10 +56,10 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.transforms.unwrap.drop.tombstones", "true");
 
     // DEBEZIUM SOURCE conf
-    config.put("debezium.source.offset.storage", "org.apache.kafka.connect.storage.MemoryOffsetBackingStore");
-    //config.put("debezium.source.offset.storage", "io.debezium.server.iceberg.offset.IcebergOffsetBackingStore");
-    config.put("debezium.source.database.history", "io.debezium.relational.history.MemorySchemaHistory");
-    config.put("debezium.source.schema.history.internal", "io.debezium.relational.history.MemorySchemaHistory");
+    config.put("debezium.source.offset.storage", "io.debezium.server.iceberg.offset.IcebergOffsetBackingStore");
+    config.put("debezium.source.offset.storage.iceberg.table-name", "debezium_offset_storage_custom_table");
+    config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
+    config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_test");
     config.put("debezium.source.offset.flush.interval.ms", "60000");
     config.put("debezium.source.database.server.name", "testc");
     config.put("debezium.source.database.server.id", "1234");
