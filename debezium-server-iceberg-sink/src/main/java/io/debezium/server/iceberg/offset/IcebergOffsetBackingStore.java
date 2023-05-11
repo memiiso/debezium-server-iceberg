@@ -94,8 +94,8 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(offsetConfig.catalogName(),
         offsetConfig.icebergProperties(), offsetConfig.hadoopConfig());
-    tableFullName = String.format("%s.%s", offsetConfig.catalogName(), offsetConfig.tableName());
-    tableId = TableIdentifier.of(Namespace.of(offsetConfig.catalogName()), offsetConfig.tableName());
+    tableFullName = String.format("%s.%s", offsetConfig.tableNamespace(), offsetConfig.tableName());
+    tableId = TableIdentifier.of(Namespace.of(offsetConfig.tableNamespace()), offsetConfig.tableName());
   }
 
   @Override
@@ -268,7 +268,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     }
 
     public String catalogName() {
-      return this.config.getString(Field.create(PROP_PREFIX + "catalog-name").withDefault("default"));
+      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.catalog-name").withDefault("default"));
+    }
+
+    public String tableNamespace() {
+      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.table-namespace").withDefault("default"));
     }
 
     public String tableName() {

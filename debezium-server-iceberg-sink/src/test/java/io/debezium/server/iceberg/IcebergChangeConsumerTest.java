@@ -276,7 +276,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       }
     });
 
-    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("mycatalog", "debezium_offset_storage"));
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_custom_table"));
     Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 
