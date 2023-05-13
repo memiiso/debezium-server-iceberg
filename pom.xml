@@ -27,7 +27,7 @@
         <release>11</release>
         <skipITs>true</skipITs>
 
-        <version.groovy>3.0.13</version.groovy>
+        <version.groovy>3.0.17</version.groovy>
         <version.assembly.plugin>3.4.2</version.assembly.plugin>
         <version.jackson>2.13.5</version.jackson>
         <version.iceberg>1.2.1</version.iceberg>
