@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.iceberg.testresources.BaseTest;
+import io.debezium.server.iceberg.testresources.JdbcCatalogDB;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -34,7 +35,8 @@ import org.junit.jupiter.api.Test;
 @Disabled // @TODO remove spark with antlr4 version
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerMysqlTest.IcebergChangeConsumerMysqlTestProfile.class)
+@QuarkusTestResource(value = JdbcCatalogDB.class, restrictToAnnotatedClass = true)
+@TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
   @Test
@@ -80,7 +82,7 @@ public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
   }
 
-  public static class IcebergChangeConsumerMysqlTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();

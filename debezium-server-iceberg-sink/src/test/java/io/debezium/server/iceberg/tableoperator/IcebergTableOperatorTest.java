@@ -12,12 +12,17 @@ import io.debezium.server.iceberg.IcebergChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
+import io.debezium.server.iceberg.testresources.JdbcCatalogDB;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
+import io.quarkus.test.junit.TestProfile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
@@ -37,6 +42,8 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = JdbcCatalogDB.class, restrictToAnnotatedClass = true)
+@TestProfile(IcebergTableOperatorTest.TestProfile.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   static String testTable = "inventory.test_table_operator";
@@ -111,5 +118,18 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     Assertions.assertEquals(4, getTableData(testTable).count());
     Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice-Updated'").count());
     //Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature2 == 'feature2Val2'").count());
+  }
+
+  public static class TestProfile implements QuarkusTestProfile {
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      Map<String, String> config = new HashMap<>();
+      config.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString());
+      config.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
+      config.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
+      config.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
+      config.put("debezium.sink.iceberg.type", "hadoop");
+      return config;
+    }
   }
 }

@@ -8,10 +8,7 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.S3Minio;
-import io.debezium.server.iceberg.testresources.TestChangeEvent;
-import io.debezium.server.iceberg.testresources.TestUtil;
+import io.debezium.server.iceberg.testresources.*;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -34,7 +31,8 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerUpsertTest.IcebergChangeConsumerUpsertTestProfile.class)
+@TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
+@QuarkusTestResource(value = JdbcCatalogDB.class, restrictToAnnotatedClass = true)
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   @Inject
@@ -170,7 +168,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'c' AND first_name= 'user2'").count(), 2);
   }
 
-  public static class IcebergChangeConsumerUpsertTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();

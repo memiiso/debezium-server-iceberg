@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg.offset;
 
 import io.debezium.server.iceberg.testresources.BaseTest;
+import io.debezium.server.iceberg.testresources.JdbcCatalogDB;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = JdbcCatalogDB.class, restrictToAnnotatedClass = true)
 public class IcebergOffsetBackingStoreTest extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();

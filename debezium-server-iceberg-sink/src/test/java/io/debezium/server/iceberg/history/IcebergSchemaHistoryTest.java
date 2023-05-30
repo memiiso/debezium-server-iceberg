@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg.history;
 
 import io.debezium.server.iceberg.testresources.BaseTest;
+import io.debezium.server.iceberg.testresources.JdbcCatalogDB;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.Test;
 @Disabled // @TODO remove spark with antlr4 version
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = JdbcCatalogDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergSchemaHistoryTest.TestProfile.class)
 public class IcebergSchemaHistoryTest extends BaseTest {
   @Test
