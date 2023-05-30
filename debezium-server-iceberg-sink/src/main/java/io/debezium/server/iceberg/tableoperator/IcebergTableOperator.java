@@ -168,8 +168,7 @@ public class IcebergTableOperator {
    */
   private void addToTablePerSchema(Table icebergTable, List<IcebergChangeEvent> events) {
     // Initialize a task writer to write both INSERT and equality DELETE.
-    BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
-    try {
+    try (BaseTaskWriter<Record> writer = writerFactory.create(icebergTable)) {
       for (IcebergChangeEvent e : events) {
         writer.write(e.asIcebergRecord(icebergTable.schema()));
       }
@@ -186,7 +185,6 @@ public class IcebergTableOperator {
         Arrays.stream(files.dataFiles()).forEach(appendFiles::appendFile);
         appendFiles.commit();
       }
-
     } catch (IOException ex) {
       throw new DebeziumException(ex);
     }

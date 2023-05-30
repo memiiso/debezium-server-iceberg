@@ -14,7 +14,6 @@ import io.debezium.config.Field;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -22,10 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
@@ -37,16 +33,12 @@ import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.expressions.Expressions;
-import org.apache.iceberg.io.CloseableIterable;
-import org.apache.iceberg.io.FileAppender;
-import org.apache.iceberg.io.FileIO;
-import org.apache.iceberg.io.OutputFile;
-import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.io.*;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -83,6 +75,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   private TableIdentifier tableId;
   private Table offsetTable;
   IcebergOffsetBackingStoreConfig offsetConfig;
+  FileFormat format;
+  GenericAppenderFactory appenderFactory;
+  OutputFileFactory fileFactory;
+
   public IcebergOffsetBackingStore() {
   }
 
@@ -111,7 +107,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       offsetTable = icebergCatalog.loadTable(tableId);
     } else {
       LOG.debug("Creating table {} to store offset", tableFullName);
-      offsetTable = icebergCatalog.createTable(tableId, OFFSET_STORAGE_TABLE_SCHEMA);
+      offsetTable = IcebergUtil.createIcebergTable(icebergCatalog, tableId, OFFSET_STORAGE_TABLE_SCHEMA);
       if (!icebergCatalog.tableExists(tableId)) {
         throw new DebeziumException("Failed to create table " + tableId + " to store offset");
       }
@@ -120,8 +116,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
         LOG.warn("Migrating offset from file {}", offsetConfig.getMigrateOffsetFile());
         this.loadFileOffset(new File(offsetConfig.getMigrateOffsetFile()));
       }
-
     }
+
+    format = IcebergUtil.getTableFileFormat(offsetTable);
+    appenderFactory = IcebergUtil.getTableAppender(offsetTable);
+    fileFactory = IcebergUtil.getTableOutputFileFactory(offsetTable, format);
   }
 
   private void loadFileOffset(File file) {
@@ -157,31 +156,21 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
           "id", UUID.randomUUID().toString(),
           "offset_data", dataJson,
           "record_insert_ts", currentTs);
-      OutputFile out;
-      try (FileIO tableIo = offsetTable.io()) {
-        out = tableIo.newOutputFile(offsetTable.locationProvider().newDataLocation(tableId.name() + "-data-001"));
-      }
-      FileAppender<Record> writer = Parquet.write(out)
-          .createWriterFunc(GenericParquetWriter::buildWriter)
-          .forTable(offsetTable)
-          .overwrite()
-          .build();
-      try (Closeable ignored = writer) {
-        writer.add(row);
-      }
-      DataFile dataFile = DataFiles.builder(offsetTable.spec())
-          .withFormat(FileFormat.PARQUET)
-          .withPath(out.location())
-          .withFileSizeInBytes(writer.length())
-          .withSplitOffsets(writer.splitOffsets())
-          .withMetrics(writer.metrics())
-          .build();
 
-      Transaction t = offsetTable.newTransaction();
-      t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
-      t.newAppend().appendFile(dataFile).commit();
-      t.commitTransaction();
-      LOG.debug("Successfully saved offset data to iceberg table");
+      try (BaseTaskWriter<Record> writer = new UnpartitionedWriter<>(
+          offsetTable.spec(), format, appenderFactory, fileFactory, offsetTable.io(), Long.MAX_VALUE)) {
+        writer.write(row);
+        writer.close();
+        WriteResult files = writer.complete();
+
+        Transaction t = offsetTable.newTransaction();
+        t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
+        AppendFiles tableAppender = t.newAppend();
+        Arrays.stream(files.dataFiles()).forEach(tableAppender::appendFile);
+        tableAppender.commit();
+        t.commitTransaction();
+        LOG.debug("Successfully saved offset data to iceberg table");
+      }
 
     } catch (IOException e) {
       throw new RuntimeException(e);
