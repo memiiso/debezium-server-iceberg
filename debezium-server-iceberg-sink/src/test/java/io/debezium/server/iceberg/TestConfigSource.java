@@ -17,7 +17,10 @@ import org.eclipse.microprofile.config.spi.ConfigSource;
 public class TestConfigSource implements ConfigSource {
 
   public static final String S3_REGION = "us-east-1";
-  public static final String S3_BUCKET = "test-bucket";
+  public static final String S3_BUCKET_NAME = "test-bucket";
+  public static final String CATALOG_TABLE_NAMESPACE = "debeziumevents";
+  public static final String ICEBERG_CATALOG_NAME = "iceberg";
+  public static final String S3_BUCKET = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
   protected Map<String, String> config = new HashMap<>();
 
 
@@ -38,12 +41,10 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.source.poll.interval.ms", "10000"); // 5 seconds!
     // iceberg
     config.put("debezium.sink.iceberg.table-prefix", "debeziumcdc_");
-    config.put("debezium.sink.iceberg.table-namespace", "debeziumevents");
-    config.put("debezium.sink.iceberg.fs.defaultFS", "s3a://" + S3_BUCKET);
-    config.put("debezium.sink.iceberg.warehouse", "s3a://" + S3_BUCKET + "/iceberg_warehouse");
+    config.put("debezium.sink.iceberg.table-namespace", CATALOG_TABLE_NAMESPACE);
+    config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
+    // use hadoop catalog for tests
     config.put("debezium.sink.iceberg.type", "hadoop");
-    config.put("debezium.sink.iceberg.catalog-name", "mycatalog");
-    //config.put("debezium.sink.iceberg.catalog-impl", "org.apache.iceberg.hadoop.HadoopCatalog");
 
     // enable disable schema
     config.put("debezium.format.value.schemas.enable", "true");

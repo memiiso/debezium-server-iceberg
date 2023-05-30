@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.utility.DockerImageName;
+import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
+import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET_NAME;
 
 public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
@@ -121,19 +123,28 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
       client.ignoreCertCheck();
       client.makeBucket(MakeBucketArgs.builder()
           .region(TestConfigSource.S3_REGION)
-          .bucket(TestConfigSource.S3_BUCKET)
+          .bucket(S3_BUCKET_NAME)
           .build());
     } catch (Exception e) {
       e.printStackTrace();
     }
     LOGGER.info("Minio Started!");
-    Map<String, String> params = new ConcurrentHashMap<>();
-    params.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + container.getMappedPort(MINIO_DEFAULT_PORT).toString());
-    params.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
-    params.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
-    params.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
+    Map<String, String> config = new ConcurrentHashMap<>();
+    // FOR JDBC CATALOG
+    config.put("debezium.sink.iceberg.s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString());
+    config.put("debezium.sink.iceberg.s3.path-style-access", "true");
+    config.put("debezium.sink.iceberg.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY);
+    config.put("debezium.sink.iceberg.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY);
+    config.put("debezium.sink.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO");
+    config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
+    // FOR HADOOP CATALOG
+    config.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString());
+    config.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
+    config.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
+    config.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
+    config.put("debezium.sink.iceberg.fs.defaultFS", "s3a://" + S3_BUCKET_NAME);
 
-    return params;
+    return config;
   }
 
 

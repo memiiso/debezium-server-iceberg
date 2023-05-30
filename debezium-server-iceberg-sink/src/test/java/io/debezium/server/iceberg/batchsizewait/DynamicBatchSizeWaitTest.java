@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@TestProfile(DynamicBatchSizeWaitTest.DynamicBatchSizeWaitTestProfile.class)
+@TestProfile(DynamicBatchSizeWaitTest.TestProfile.class)
 class DynamicBatchSizeWaitTest {
 
   @Inject
@@ -71,7 +71,7 @@ class DynamicBatchSizeWaitTest {
     Assertions.assertTrue(dynamicSleep.getWaitMs(120) <= 100);
   }
 
-  public static class DynamicBatchSizeWaitTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
 
     @Override
     public Map<String, String> getConfigOverrides() {

@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 @Disabled // @TODO fix
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMangoDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerMangodbTest.IcebergChangeConsumerMangodbTestProfile.class)
+@TestProfile(IcebergChangeConsumerMangodbTest.TestProfile.class)
 public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
 
   @Test
@@ -52,7 +52,7 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
     });
   }
 
-  public static class IcebergChangeConsumerMangodbTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();

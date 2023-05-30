@@ -28,7 +28,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@TestProfile(MaxBatchSizeWaitTest.MaxBatchSizeWaitTestProfile.class)
+@TestProfile(MaxBatchSizeWaitTest.TestProfile.class)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 class MaxBatchSizeWaitTest extends BaseSparkTest {
@@ -63,7 +63,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
     });
   }
 
-  public static class MaxBatchSizeWaitTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
