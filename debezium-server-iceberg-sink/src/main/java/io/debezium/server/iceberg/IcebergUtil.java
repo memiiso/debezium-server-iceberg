@@ -10,6 +10,9 @@ package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -20,9 +23,11 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.relocated.com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
@@ -35,6 +40,8 @@ import static org.apache.iceberg.TableProperties.*;
 public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
   protected static final ObjectMapper jsonObjectMapper = new ObjectMapper();
+  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+
 
   public static Map<String, String> getConfigSubset(Config config, String prefix) {
     final Map<String, String> ret = new HashMap<>();
@@ -62,6 +69,15 @@ public class IcebergUtil {
     return instance.get();
   }
 
+  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema) {
+
+    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(tableIdentifier.namespace())) {
+      ((SupportsNamespaces) icebergCatalog).createNamespace(tableIdentifier.namespace());
+      LOGGER.warn("Created namespace:'{}'", tableIdentifier.namespace());
+    }
+    return icebergCatalog.createTable(tableIdentifier, schema);
+  }
+
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
                                          Schema schema, String writeFormat, boolean partition, String partitionField) {
 
@@ -78,6 +94,11 @@ public class IcebergUtil {
       }
     } else {
       ps = PartitionSpec.builderFor(schema).build();
+    }
+
+    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(tableIdentifier.namespace())) {
+      ((SupportsNamespaces) icebergCatalog).createNamespace(tableIdentifier.namespace());
+      LOGGER.warn("Created namespace:'{}'", tableIdentifier.namespace());
     }
 
     return icebergCatalog.buildTable(tableIdentifier, schema)
@@ -119,6 +140,16 @@ public class IcebergUtil {
         Ints.toArray(icebergTable.schema().identifierFieldIds()),
         icebergTable.schema(),
         null);
+  }
+
+  public static OutputFileFactory getTableOutputFileFactory(Table icebergTable, FileFormat format) {
+    return OutputFileFactory.builderFor(icebergTable,
+            IcebergUtil.partitionId(), 1L)
+        .defaultSpec(icebergTable.spec()).format(format).build();
+  }
+
+  public static int partitionId() {
+    return Integer.parseInt(dtFormater.format(Instant.now()));
   }
 
 }

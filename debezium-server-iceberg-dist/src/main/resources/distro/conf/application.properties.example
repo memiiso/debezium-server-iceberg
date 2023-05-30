@@ -8,11 +8,11 @@ debezium.sink.iceberg.upsert-keep-deletes=true
 debezium.sink.iceberg.write.format.default=parquet
 debezium.sink.iceberg.catalog-name=mycatalog
 # Hadoop catalog, you can use other catalog supported by iceberg as well
+
+# S3 config with hadoop and hadoop catalog
 debezium.sink.iceberg.type=hadoop
 debezium.sink.iceberg.warehouse=s3a://my-bucket/iceberg_warehouse
 debezium.sink.iceberg.table-namespace=debeziumevents
-
-# S3 config
 debezium.sink.iceberg.fs.defaultFS=s3a://my-bucket
 debezium.sink.iceberg.com.amazonaws.services.s3.enableV4=true
 debezium.sink.iceberg.com.amazonaws.services.s3a.enableV4=true
@@ -22,11 +22,23 @@ debezium.sink.iceberg.fs.s3a.secret.key=AWS_SECRET_ACCESS_KEY
 debezium.sink.iceberg.fs.s3a.path.style.access=true
 debezium.sink.iceberg.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 
-# enable event schemas - mandate
+# S3 config without hadoop catalog. Using InMemoryCatalog catalog And S3FileIO
+### using mino as S3
+debezium.sink.iceberg.s3.endpoint=http://localhost:9000;
+debezium.sink.iceberg.s3.path-style-access=true
+debezium.sink.iceberg.s3.access-key-id=MY_ACCESS_KEY
+debezium.sink.iceberg.s3.secret-access-key=MY_SECRET_KEY
+debezium.sink.iceberg.io-impl=org.apache.iceberg.aws.s3.S3FileIO
+debezium.sink.iceberg.warehouse=s3a://my-bucket/iceberg_warehouse
+debezium.sink.iceberg.catalog-impl=org.apache.iceberg.inmemory.InMemoryCatalog
+
+# enable event schemas - mandatory
 debezium.format.value.schemas.enable=true
 debezium.format.key.schemas.enable=true
 debezium.format.value=json
 debezium.format.key=json
+
+# saving debezium state data to destination, iceberg tables
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_custom_table
 debezium.source.database.history=io.debezium.server.iceberg.history.IcebergSchemaHistory

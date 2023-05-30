@@ -16,16 +16,17 @@ import io.debezium.config.Field;
 import io.debezium.document.DocumentReader;
 import io.debezium.document.DocumentWriter;
 import io.debezium.relational.history.*;
+import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.FunctionalReadWriteLock;
 import io.debezium.util.Strings;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -38,16 +39,13 @@ import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.exceptions.NoSuchTableException;
-import org.apache.iceberg.io.CloseableIterable;
-import org.apache.iceberg.io.FileAppender;
-import org.apache.iceberg.io.FileIO;
-import org.apache.iceberg.io.OutputFile;
-import org.apache.iceberg.parquet.Parquet;
+import org.apache.iceberg.expressions.Expressions;
+import org.apache.iceberg.io.*;
 import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +77,9 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   private String tableFullName;
   private TableIdentifier tableId;
   private Table historyTable;
+  FileFormat format;
+  GenericAppenderFactory appenderFactory;
+  OutputFileFactory fileFactory;
 
   @Override
   public void configure(Configuration config, HistoryRecordComparator comparator, SchemaHistoryListener listener, boolean useCatalogBeforeSchema) {
@@ -110,6 +111,11 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
         }
       }
     });
+
+    historyTable = icebergCatalog.loadTable(tableId);
+    format = IcebergUtil.getTableFileFormat(historyTable);
+    appenderFactory = IcebergUtil.getTableAppender(historyTable);
+    fileFactory = IcebergUtil.getTableOutputFileFactory(historyTable, format);
   }
 
   public String getTableFullName() {
@@ -136,28 +142,19 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
             "history_data", recordDocString,
             "record_insert_ts", currentTs
         );
-        OutputFile out;
-        try (FileIO tableIo = historyTable.io()) {
-          out = tableIo.newOutputFile(historyTable.locationProvider().newDataLocation(UUID.randomUUID() + "-data-001"));
+
+        try (BaseTaskWriter<Record> writer = new UnpartitionedWriter<>(
+            historyTable.spec(), format, appenderFactory, fileFactory, historyTable.io(), Long.MAX_VALUE)) {
+          writer.write(row);
+          writer.close();
+          WriteResult files = writer.complete();
+
+          Transaction t = historyTable.newTransaction();
+          t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
+          Arrays.stream(files.dataFiles()).forEach(t.newAppend()::appendFile);
+          t.commitTransaction();
+          LOG.trace("Successfully saved history data to Iceberg table");
         }
-        FileAppender<Record> writer = Parquet.write(out)
-            .createWriterFunc(GenericParquetWriter::buildWriter)
-            .forTable(historyTable)
-            .overwrite()
-            .build();
-        try (Closeable ignored = writer) {
-          writer.add(row);
-        }
-        DataFile dataFile = DataFiles.builder(historyTable.spec())
-            .withFormat(FileFormat.PARQUET)
-            .withPath(out.location())
-            .withFileSizeInBytes(writer.length())
-            .withSplitOffsets(writer.splitOffsets())
-            .withMetrics(writer.metrics())
-            .build();
-        historyTable.newOverwrite().addFile(dataFile).commit();
-        /// END iceberg append
-        LOG.trace("Successfully saved history data to Iceberg table");
       } catch (IOException e) {
         throw new SchemaHistoryException("Failed to store record: " + record, e);
       }
@@ -232,7 +229,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
     if (!storageExists()) {
       try {
         LOG.debug("Creating table {} to store database history", tableFullName);
-        historyTable = icebergCatalog.createTable(tableId, DATABASE_HISTORY_TABLE_SCHEMA);
+        historyTable = IcebergUtil.createIcebergTable(icebergCatalog, tableId, DATABASE_HISTORY_TABLE_SCHEMA);
         LOG.warn("Created database history storage table {} to store history", tableFullName);
 
         if (!Strings.isNullOrEmpty(historyConfig.getMigrateHistoryFile().strip())) {

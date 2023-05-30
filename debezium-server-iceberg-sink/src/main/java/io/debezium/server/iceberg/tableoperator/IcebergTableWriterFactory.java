@@ -2,9 +2,6 @@ package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.IcebergUtil;
 
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,16 +19,11 @@ import org.slf4j.LoggerFactory;
 
 @Dependent
 public class IcebergTableWriterFactory {
-  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
   boolean upsertKeepDeletes;
-
-  private static int partitionId() {
-    return Integer.parseInt(dtFormater.format(Instant.now()));
-  }
 
   public BaseTaskWriter<Record> create(Table icebergTable) {
 
@@ -39,8 +31,7 @@ public class IcebergTableWriterFactory {
     FileFormat format = IcebergUtil.getTableFileFormat(icebergTable);
     // appender factory
     GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(icebergTable);
-    OutputFileFactory fileFactory = OutputFileFactory.builderFor(icebergTable, partitionId(), 1L)
-        .defaultSpec(icebergTable.spec()).format(format).build();
+    OutputFileFactory fileFactory = IcebergUtil.getTableOutputFileFactory(icebergTable, format);
     // equality Field Ids
     List<Integer> equalityFieldIds = new ArrayList<>(icebergTable.schema().identifierFieldIds());
 
