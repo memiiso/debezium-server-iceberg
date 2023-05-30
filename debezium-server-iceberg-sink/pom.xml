@@ -53,6 +53,36 @@
             <artifactId>iceberg-spark-runtime-3.3_2.13</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-hive-metastore</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-metastore</artifactId>
+            <version>${version.hive}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-gcp</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-aws</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-dell</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-aliyun</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
         <!-- Google -->
         <dependency>
             <groupId>com.google.cloud</groupId>
