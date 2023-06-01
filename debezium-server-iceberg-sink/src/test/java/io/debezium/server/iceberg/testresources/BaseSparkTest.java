@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg.testresources;
 
 import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.TestConfigSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,7 +52,15 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
         .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
         .set("spark.sql.catalog.spark_catalog.default-namespaces", CATALOG_TABLE_NAMESPACE)
+        .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
         .set("spark.sql.warehouse.dir", S3_BUCKET)
+        .set("spark.sql.catalog.spark_catalog.s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString())
+        .set("spark.sql.catalog.spark_catalog.s3.path-style-access", "true")
+        .set("spark.sql.catalog.spark_catalog.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
+        .set("spark.sql.catalog.spark_catalog.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY)
+        .set("spark.sql.catalog.spark_catalog.client.region", TestConfigSource.S3_REGION)
+        .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+        .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
 //        // JdbcCatalog catalog, add additional catalog
 //        .set("spark.sql.defaultCatalog", ICEBERG_CATALOG_NAME)
 //        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME, "org.apache.iceberg.spark.SparkCatalog")
