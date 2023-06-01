@@ -19,7 +19,6 @@ on:
 
 env:
   SPARK_LOCAL_IP: 127.0.0.1
-  AWS_REGION: us-east-1
 
 jobs:
   build:
