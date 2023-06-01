@@ -19,6 +19,7 @@ on:
 
 env:
   SPARK_LOCAL_IP: 127.0.0.1
+  AWS_REGION: us-east-1
 
 jobs:
   build:
@@ -33,4 +34,4 @@ jobs:
           distribution: 'temurin'
           java-version: 11
       - name: Build with Maven
-        run: mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml -Dsurefire.skipAfterFailureCount=1
