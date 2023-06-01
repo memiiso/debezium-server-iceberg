@@ -35,7 +35,7 @@
         <version.hadoop>3.3.2</version.hadoop>
         <version.hive>3.1.3</version.hive>
         <version.awssdk>2.19.4</version.awssdk>
-        <version.testcontainers>1.17.6</version.testcontainers>
+        <version.testcontainers>1.18.3</version.testcontainers>
         <!-- Debezium -->
         <version.debezium>2.2.1.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
