@@ -22,6 +22,21 @@ debezium.sink.iceberg.fs.s3a.secret.key=AWS_SECRET_ACCESS_KEY
 debezium.sink.iceberg.fs.s3a.path.style.access=true
 debezium.sink.iceberg.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 
+# S3 config using JdbcCatalog catalog And S3FileIO
+debezium.sink.iceberg.catalog-impl=org.apache.iceberg.jdbc.JdbcCatalog
+debezium.sink.iceberg.uri=jdbc_db_url
+debezium.sink.iceberg.jdbc.user=my_user
+debezium.sink.iceberg.jdbc.password=my_password
+debezium.sink.iceberg.table-namespace=debeziumdata
+debezium.sink.iceberg.catalog-name=iceberg
+debezium.sink.iceberg.warehouse=s3a://my_bucket/iceberg_warehouse
+# Use S3FileIO
+debezium.sink.iceberg.io-impl=org.apache.iceberg.aws.s3.S3FileIO
+debezium.sink.iceberg.s3.endpoint=http://localhost:9000
+debezium.sink.iceberg.s3.path-style-access=true
+debezium.sink.iceberg.s3.access-key-id=MY_ACCESS_KEY
+debezium.sink.iceberg.s3.secret-access-key=MY_SECRET_KEY
+
 # S3 config without hadoop catalog. Using InMemoryCatalog catalog And S3FileIO
 ### using mino as S3
 debezium.sink.iceberg.s3.endpoint=http://localhost:9000;

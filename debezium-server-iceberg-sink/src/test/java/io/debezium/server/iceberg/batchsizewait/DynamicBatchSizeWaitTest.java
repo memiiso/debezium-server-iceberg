@@ -8,6 +8,8 @@
 
 package io.debezium.server.iceberg.batchsizewait;
 
+import io.debezium.server.iceberg.testresources.S3Minio;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -21,7 +23,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-@TestProfile(DynamicBatchSizeWaitTest.DynamicBatchSizeWaitTestProfile.class)
+@TestProfile(DynamicBatchSizeWaitTest.TestProfile.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 class DynamicBatchSizeWaitTest {
 
   @Inject
@@ -71,7 +74,7 @@ class DynamicBatchSizeWaitTest {
     Assertions.assertTrue(dynamicSleep.getWaitMs(120) <= 100);
   }
 
-  public static class DynamicBatchSizeWaitTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
 
     @Override
     public Map<String, String> getConfigOverrides() {

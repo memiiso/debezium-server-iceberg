@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.IcebergChangeConsumerUpsertTestDeleteDeletesProfile.class)
+@TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
   @Inject
@@ -148,7 +148,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.where("first_name= 'user2'").count(), 0);
   }
 
-  public static class IcebergChangeConsumerUpsertTestDeleteDeletesProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();

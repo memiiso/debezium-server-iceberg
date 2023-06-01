@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergEventsChangeConsumerTest.IcebergEventsChangeConsumerTestProfile.class)
+@TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
 public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
@@ -56,7 +56,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
     S3Minio.listFiles();
   }
 
-  public static class IcebergEventsChangeConsumerTestProfile implements QuarkusTestProfile {
+  public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();

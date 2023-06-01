@@ -39,17 +39,10 @@
         <version.debezium>2.2.1.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>3.0.4.Final</version.quarkus>
+        <version.quarkus>3.1.0.Final</version.quarkus>
         <!-- FOR TESTS Align with SPARK Antlr version -->
         <version.antlr>4.8</version.antlr>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>orgapacheiceberg-release</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1134/</url>
-        </repository>
-    </repositories>
 
     <dependencyManagement>
         <dependencies>
