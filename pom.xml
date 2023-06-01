@@ -44,13 +44,6 @@
         <version.antlr>4.8</version.antlr>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>orgapacheiceberg-release</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1134/</url>
-        </repository>
-    </repositories>
-
     <dependencyManagement>
         <dependencies>
             <!-- log -->
