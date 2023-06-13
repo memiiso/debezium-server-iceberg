@@ -88,7 +88,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp-replace", defaultValue = "")
   protected Optional<String> destinationRegexpReplace;
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
-  String tablePrefix;
+  Optional<String> tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
@@ -213,6 +213,6 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         .replaceAll(destinationRegexp.orElse(""), destinationRegexpReplace.orElse(""))
         .replace(".", "_");
 
-    return TableIdentifier.of(Namespace.of(namespace), tablePrefix + tableName);
+    return TableIdentifier.of(Namespace.of(namespace), tablePrefix.orElse("") + tableName);
   }
 }
