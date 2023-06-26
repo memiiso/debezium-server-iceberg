@@ -112,4 +112,32 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice-Updated'").count());
     //Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature2 == 'feature2Val2'").count());
   }
+
+  @Test
+  public void testDeduplicateBatch() throws Exception {
+    IcebergChangeEvent e1 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addKeyField("id", 1)
+        .addKeyField("first_name", "row1")
+        .addField("__op", "r")
+        .addField("__source_ts_ms", 1L)
+        .addField("__deleted", "false")
+        .build();
+    IcebergChangeEvent e2 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addKeyField("id", 1)
+        .addKeyField("first_name", "row1")
+        .addField("__op", "u")
+        .addField("__source_ts_ms", 3L)
+        .addField("__deleted", "false")
+        .build();
+    
+    List<IcebergChangeEvent> records = new ArrayList<>();
+    records.add(e1);
+    records.add(e2);
+
+    List<IcebergChangeEvent> dedups = icebergTableOperator.deduplicateBatch(records);
+    Assertions.assertEquals(1, dedups.size());
+    Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ms").asLong(0L));
+  }
 }
