@@ -119,25 +119,36 @@ class IcebergTableOperatorTest extends BaseSparkTest {
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
-        .addField("__op", "r")
         .addField("__source_ts_ms", 1L)
-        .addField("__deleted", "false")
         .build();
     IcebergChangeEvent e2 = new IcebergChangeEventBuilder()
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
-        .addField("__op", "u")
         .addField("__source_ts_ms", 3L)
-        .addField("__deleted", "false")
         .build();
-    
-    List<IcebergChangeEvent> records = new ArrayList<>();
-    records.add(e1);
-    records.add(e2);
 
+    List<IcebergChangeEvent> records = List.of(e1, e2);
     List<IcebergChangeEvent> dedups = icebergTableOperator.deduplicateBatch(records);
     Assertions.assertEquals(1, dedups.size());
     Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ms").asLong(0L));
+
+    IcebergChangeEvent e21 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addKeyField("id", 1)
+        .addField("__op", "r")
+        .addField("__source_ts_ms", 1L)
+        .build();
+    IcebergChangeEvent e22 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addKeyField("id", 1)
+        .addField("__op", "u")
+        .addField("__source_ts_ms", 1L)
+        .build();
+
+    List<IcebergChangeEvent> records2 = List.of(e21, e22);
+    List<IcebergChangeEvent> dedups2 = icebergTableOperator.deduplicateBatch(records2);
+    Assertions.assertEquals(1, dedups2.size());
+    Assertions.assertEquals("u", dedups2.get(0).value().get("__op").asText("x"));
   }
 }
