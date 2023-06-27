@@ -53,7 +53,7 @@ public class IcebergTableOperator {
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
 
-  private List<IcebergChangeEvent> deduplicateBatch(List<IcebergChangeEvent> events) {
+  protected List<IcebergChangeEvent> deduplicateBatch(List<IcebergChangeEvent> events) {
 
     ConcurrentHashMap<JsonNode, IcebergChangeEvent> deduplicatedEvents = new ConcurrentHashMap<>();
 
