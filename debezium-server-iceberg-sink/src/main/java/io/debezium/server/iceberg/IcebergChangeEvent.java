@@ -15,8 +15,12 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.exceptions.ValidationException;
@@ -29,6 +33,8 @@ import org.slf4j.LoggerFactory;
  * @author Ismail Simsek
  */
 public class IcebergChangeEvent {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
@@ -188,10 +194,29 @@ public class IcebergChangeEvent {
         }
         break;
       case LIST:
-        val = IcebergChangeConsumer.mapper.convertValue(node, ArrayList.class);
+        Types.NestedField elementNestedField = field.type().asListType().fields().get(0);
+        val = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize(node.elements(), Spliterator.ORDERED), false)
+                .map(element -> jsonValToIcebergVal(elementNestedField, element))
+                .collect(Collectors.toList());
         break;
       case MAP:
-        val = IcebergChangeConsumer.mapper.convertValue(node, Map.class);
+        Types.NestedField keyNestedField = field.type().asMapType().fields().get(0);
+        Types.NestedField valNestedField = field.type().asMapType().fields().get(1);
+        val = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize(node.fields(), Spliterator.ORDERED), false)
+                .collect(
+                        Collectors.toMap(
+                                entry -> {
+                                  try {
+                                    return jsonValToIcebergVal(keyNestedField, MAPPER.readTree(entry.getKey()));
+                                  } catch (JsonProcessingException e) {
+                                    throw new RuntimeException("Failed reading Map key as JSON", e);
+                                  }
+                                },
+                                entry -> jsonValToIcebergVal(valNestedField, entry.getValue())
+                        )
+                );
         break;
       case STRUCT:
         // create it as struct, nested type
