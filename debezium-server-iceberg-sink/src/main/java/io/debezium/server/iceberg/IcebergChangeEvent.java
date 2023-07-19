@@ -10,10 +10,7 @@ package io.debezium.server.iceberg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -167,6 +164,10 @@ public class IcebergChangeEvent {
       case UUID:
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
         break;
+      case DATE:
+        val = node.isNull() ? null
+                : LocalDate.ofEpochDay(node.asInt());
+        break;
       case TIMESTAMP:
         if (node.isLong() && TS_MS_FIELDS.contains(field.name())) {
           val = OffsetDateTime.ofInstant(Instant.ofEpochMilli(node.longValue()), ZoneOffset.UTC);
@@ -223,7 +224,6 @@ public class IcebergChangeEvent {
         // recursive call to get nested data/record
         val = asIcebergRecord(field.type().asStructType(), node);
         break;
-      case STRING:
       default:
         // default to String type
         // if the node is not a value node (method isValueNode returns false), convert it to string.

@@ -13,6 +13,7 @@ import io.debezium.serde.DebeziumSerdes;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Collections;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -53,7 +54,7 @@ class TestIcebergUtil {
     Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
-    assertEquals(16850, record.getField("order_date"));
+    assertEquals(LocalDate.ofEpochDay(16850), record.getField("order_date"));
     System.out.println(schema);
     System.out.println(record);
   }
