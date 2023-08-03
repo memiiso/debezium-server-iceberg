@@ -31,7 +31,7 @@ jobs:
         run: mvn -B package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
 
       - name: Delete previous ${{ env.RELEASE_NAME }} release
-        uses: dev-drprasad/delete-tag-and-release@v0.2.1
+        uses: dev-drprasad/delete-tag-and-release@v1.0
         with:
           delete_release: true # default: false
           tag_name: ${{ env.RELEASE_NAME }}
