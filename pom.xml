@@ -37,7 +37,7 @@
         <version.awssdk>2.19.4</version.awssdk>
         <version.testcontainers>1.19.0</version.testcontainers>
         <!-- Debezium -->
-        <version.debezium>2.2.1.Final</version.debezium>
+        <version.debezium>2.3.2.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>3.1.0.Final</version.quarkus>
