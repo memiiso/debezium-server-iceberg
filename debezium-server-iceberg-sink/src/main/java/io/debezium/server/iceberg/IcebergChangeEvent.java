@@ -10,12 +10,14 @@ package io.debezium.server.iceberg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.exceptions.ValidationException;
@@ -28,6 +30,8 @@ import org.slf4j.LoggerFactory;
  * @author Ismail Simsek
  */
 public class IcebergChangeEvent {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
@@ -84,16 +88,28 @@ public class IcebergChangeEvent {
     return record;
   }
 
-  private static Type.PrimitiveType icebergFieldType(String fieldName, String fieldType) {
+  private static Type.PrimitiveType icebergFieldType(String fieldName, String fieldType, String fieldTypeName) {
     switch (fieldType) {
       case "int8":
       case "int16":
       case "int32": // int 4 bytes
-        return Types.IntegerType.get();
+        if (fieldTypeName.equals("io.debezium.time.Date")) {
+          return Types.DateType.get();
+        }
+        else {
+          return Types.IntegerType.get();
+        }
       case "int64": // long 8 bytes
         if (TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
-        } else {
+        } else if ((fieldTypeName.equals("io.debezium.time.MicroTimestamp"))
+                || fieldTypeName.equals("io.debezium.time.Timestamp")) {
+          return Types.TimestampType.withoutZone();
+        }
+        else if (fieldTypeName.equals("io.debezium.time.MicroTime")) {
+          return Types.TimeType.get();
+        }
+        else {
           return Types.LongType.get();
         }
       case "float8":
@@ -106,7 +122,15 @@ public class IcebergChangeEvent {
       case "boolean":
         return Types.BooleanType.get();
       case "string":
-        return Types.StringType.get();
+        if (fieldTypeName.equals("io.debezium.time.ZonedTimestamp")) {
+          return Types.TimestampType.withZone();
+        }
+        else if (fieldTypeName.equals("io.debezium.time.ZonedTime")) {
+          return Types.TimeType.get();
+        }
+        else {
+          return Types.StringType.get();
+        }
       case "uuid":
         return Types.UUIDType.get();
       case "bytes":
@@ -119,7 +143,8 @@ public class IcebergChangeEvent {
   }
 
   private static Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
-    LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
+    String fieldTypeName = field.doc();
+    LOGGER.debug("Processing Field:{} Type:{} Doc:{}", field.name(), field.type(), fieldTypeName);
     final Object val;
     switch (field.type().typeId()) {
       case INTEGER: // int 4 bytes
@@ -137,18 +162,28 @@ public class IcebergChangeEvent {
       case BOOLEAN:
         val = node.isNull() ? null : node.asBoolean();
         break;
-      case STRING:
-        // if the node is not a value node (method isValueNode returns false), convert it to string.
-        val = node.isValueNode() ? node.asText(null) : node.toString();
-        break;
       case UUID:
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
+        break;
+      case DATE:
+        val = node.isNull() ? null
+                : LocalDate.ofEpochDay(node.asInt());
         break;
       case TIMESTAMP:
         if (node.isLong() && TS_MS_FIELDS.contains(field.name())) {
           val = OffsetDateTime.ofInstant(Instant.ofEpochMilli(node.longValue()), ZoneOffset.UTC);
+        } else if (node.isNumber()) {
+          Instant instant;
+          if (fieldTypeName.equals("io.debezium.time.MicroTimestamp")) {
+            instant = Instant.ofEpochSecond(0L, node.asLong() * 1000);
+          } else {
+            instant = Instant.ofEpochSecond(0L, node.asLong() * 1000000);
+          }
+          val = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
         } else if (node.isTextual()) {
           val = OffsetDateTime.parse(node.asText());
+        } else if (node.isNull()){
+          val = null;
         } else {
           throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
         }
@@ -161,10 +196,29 @@ public class IcebergChangeEvent {
         }
         break;
       case LIST:
-        val = IcebergChangeConsumer.mapper.convertValue(node, ArrayList.class);
+        Types.NestedField elementNestedField = field.type().asListType().fields().get(0);
+        val = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize(node.elements(), Spliterator.ORDERED), false)
+                .map(element -> jsonValToIcebergVal(elementNestedField, element))
+                .collect(Collectors.toList());
         break;
       case MAP:
-        val = IcebergChangeConsumer.mapper.convertValue(node, Map.class);
+        Types.NestedField keyNestedField = field.type().asMapType().fields().get(0);
+        Types.NestedField valNestedField = field.type().asMapType().fields().get(1);
+        val = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize(node.fields(), Spliterator.ORDERED), false)
+                .collect(
+                        Collectors.toMap(
+                                entry -> {
+                                  try {
+                                    return jsonValToIcebergVal(keyNestedField, MAPPER.readTree(entry.getKey()));
+                                  } catch (JsonProcessingException e) {
+                                    throw new RuntimeException("Failed reading Map key as JSON", e);
+                                  }
+                                },
+                                entry -> jsonValToIcebergVal(valNestedField, entry.getValue())
+                        )
+                );
         break;
       case STRUCT:
         // create it as struct, nested type
@@ -181,7 +235,7 @@ public class IcebergChangeEvent {
     return val;
   }
 
-  public class JsonSchema {
+  public static class JsonSchema {
     private final JsonNode valueSchema;
     private final JsonNode keySchema;
 
@@ -277,7 +331,12 @@ public class IcebergChangeEvent {
         columnId++;
         String fieldName = jsonSchemaFieldNode.get("field").textValue();
         String fieldType = jsonSchemaFieldNode.get("type").textValue();
-        LOGGER.debug("Processing Field: [{}] {}.{}::{}", columnId, schemaName, fieldName, fieldType);
+        String fieldTypeName = "";
+        JsonNode fieldTypeNameNode = jsonSchemaFieldNode.get("name");
+        if (fieldTypeNameNode != null && !fieldTypeNameNode.isMissingNode()) {
+          fieldTypeName = fieldTypeNameNode.textValue();
+        }
+        LOGGER.debug("Processing Field: [{}] {}.{}::{} ({})", columnId, schemaName, fieldName, fieldType, fieldTypeName);
         switch (fieldType) {
           case "array":
             JsonNode items = jsonSchemaFieldNode.get("items");
@@ -288,7 +347,7 @@ public class IcebergChangeEvent {
                 throw new RuntimeException("Complex nested array types are not supported," + " array[" + listItemType + "], field " + fieldName);
               }
 
-              Type.PrimitiveType item = icebergFieldType(fieldName, listItemType);
+              Type.PrimitiveType item = icebergFieldType(fieldName, listItemType, fieldTypeName);
               schemaColumns.add(Types.NestedField.optional(columnId, fieldName, Types.ListType.ofOptional(++columnId, item)));
             } else {
               throw new RuntimeException("Unexpected Array type for field " + fieldName);
@@ -304,7 +363,7 @@ public class IcebergChangeEvent {
             columnId += subSchema.size();
             break;
           default: //primitive types
-            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldName, fieldType)));
+            schemaColumns.add(Types.NestedField.optional(columnId, fieldName, icebergFieldType(fieldName, fieldType, fieldTypeName)));
             break;
         }
       }
