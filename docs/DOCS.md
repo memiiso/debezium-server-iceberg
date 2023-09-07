@@ -84,11 +84,9 @@ MaxBatchSizeWait uses debezium metrics to optimize batch size.
 MaxBatchSizeWait periodically reads streaming queue current size and waits until it reaches to `max.batch.size`. 
 Maximum wait and check intervals are controlled by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties.
 
-example setup to receive ~2048 events per commit. maximum wait is set to 30 seconds, streaming queue current size checked every 5 seconds
+example setup to receive 2048 events per commit. maximum wait is set to 30 seconds, streaming queue current size checked every 5 seconds
 ```properties
 debezium.sink.batch.batch-size-wait=MaxBatchSizeWait
-debezium.sink.batch.metrics.snapshot-mbean=debezium.postgres:type=connector-metrics,context=snapshot,server=testc
-debezium.sink.batch.metrics.streaming-mbean=debezium.postgres:type=connector-metrics,context=streaming,server=testc
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
 debezium.source.max.batch.size=2048;
 debezium.source.max.queue.size=16000";

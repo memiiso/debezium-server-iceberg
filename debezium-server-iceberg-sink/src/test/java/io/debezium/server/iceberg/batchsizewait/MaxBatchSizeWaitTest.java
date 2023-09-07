@@ -69,8 +69,6 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
       Map<String, String> config = new HashMap<>();
       // wait
       config.put("debezium.sink.batch.batch-size-wait", "MaxBatchSizeWait");
-      config.put("debezium.sink.batch.metrics.snapshot-mbean", "debezium.postgres:type=connector-metrics,context=snapshot,server=testc");
-      config.put("debezium.sink.batch.metrics.streaming-mbean", "debezium.postgres:type=connector-metrics,context=streaming,server=testc");
       config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
       config.put("debezium.source.max.batch.size", "5000");
       config.put("debezium.source.max.queue.size", "70000");
