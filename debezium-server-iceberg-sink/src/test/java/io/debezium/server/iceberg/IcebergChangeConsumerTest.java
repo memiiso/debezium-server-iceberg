@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -15,12 +16,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.google.common.collect.Lists;
 import jakarta.inject.Inject;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -34,6 +29,11 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -59,7 +59,6 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
     assertEquals(sinkType, "iceberg");
-    SourcePostgresqlDB.runSQL("CREATE EXTENSION hstore;");
     String sql = "\n" +
                  "        DROP TABLE IF EXISTS inventory.data_types;\n" +
                  "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
@@ -102,7 +101,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(true);
+        df.show(false);
         return df.where("c_text is null AND c_varchar is null AND c_int is null " +
                         "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
                         "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
@@ -114,7 +113,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(true);
+        df.show(false);
         return df.count() == 2;
       } catch (Exception e) {
         return false;
@@ -128,19 +127,23 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                  "    CREATE TABLE IF NOT EXISTS inventory.array_data (\n" +
                  "      name text,\n" +
                  "      pay_by_quarter integer[],\n" +
+                 "      c_array_of_map hstore[],\n" +
                  "      schedule text[][]\n" +
                  "    );\n" +
                  "  INSERT INTO inventory.array_data\n" +
                  "  VALUES " +
                  "('Carol2',\n" +
                  "      ARRAY[20000, 25000, 25000, 25000],\n" +
+                 "      ARRAY['mapkey1=>1, mapkey2=>2'::hstore],\n" +
                  "      ARRAY[['breakfast', 'consulting'], ['meeting', 'lunch']]),\n" +
                  "('Bill',\n" +
                  "      '{10000, 10000, 10000, 10000}',\n" +
+                 "      ARRAY['mapkey1=>1, mapkey2=>2'::hstore],\n" +
                  "      '{{\"meeting\", \"lunch\"}, {\"training\", \"presentation\"}}'),\n" +
                  "  ('Carol1',\n" +
-                 "          '{20000, 25000, 25000, 25000}',\n" +
-                 "          '{{\"breakfast\", \"consulting\"}, {\"meeting\", \"lunch\"}}')" +
+                 "      '{20000, 25000, 25000, 25000}',\n" +
+                 "      ARRAY['mapkey1=>1, mapkey2=>2'::hstore],\n" +
+                 "      '{{\"breakfast\", \"consulting\"}, {\"meeting\", \"lunch\"}}')" +
                  ";";
     SourcePostgresqlDB.runSQL(sql);
 

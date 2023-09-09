@@ -8,31 +8,31 @@
 
 package io.debezium.server.iceberg;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.data.GenericRecord;
+import org.apache.iceberg.types.Types;
+import org.apache.kafka.common.serialization.Serde;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.data.GenericRecord;
-import org.apache.iceberg.types.Types;
-import org.apache.kafka.common.serialization.Serde;
-import org.junit.jupiter.api.Test;
 import static io.debezium.server.iceberg.IcebergChangeConsumer.mapper;
 import static org.junit.jupiter.api.Assertions.*;
 
-class TestIcebergUtil {
+class IcebergChangeEventTest {
   final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
   final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
   final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
   final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
-  TestIcebergUtil() throws IOException {
+  IcebergChangeEventTest() throws IOException {
   }
 
   @Test
@@ -41,8 +41,9 @@ class TestIcebergUtil {
         mapper.readTree(serdeWithSchema).get("payload"), null,
         mapper.readTree(serdeWithSchema).get("schema"), null);
     Schema schema = e.icebergSchema();
+    System.out.println(schema.toString());
     assertTrue(schema.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, " +
-                                          "4:"));
+        "4:"));
   }
 
   @Test
@@ -64,7 +65,9 @@ class TestIcebergUtil {
         mapper.readTree(unwrapWithArraySchema).get("payload"), null,
         mapper.readTree(unwrapWithArraySchema).get("schema"), null);
     Schema schema = e.icebergSchema();
-    assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 4: schedule: optional list<string>, 6:"));
+    System.out.println(schema);
+    System.out.println(schema.asStruct());
+    assertTrue(schema.asStruct().toString().contains("struct<1: name: optional string, 2: pay_by_quarter: optional list<int>, 5: schedule: optional list<string>, 8:"));
     System.out.println(schema.asStruct());
     System.out.println(schema.findField("pay_by_quarter").type().asListType().elementType());
     System.out.println(schema.findField("schedule").type().asListType().elementType());
@@ -77,16 +80,15 @@ class TestIcebergUtil {
 
   @Test
   public void testNestedArray2JsonRecord() throws JsonProcessingException {
-    assertThrows(RuntimeException.class, () -> {
-      IcebergChangeEvent e = new IcebergChangeEvent("test",
-          mapper.readTree(unwrapWithArraySchema2).get("payload"), null,
-          mapper.readTree(unwrapWithArraySchema2).get("schema"), null);
-      Schema schema = e.icebergSchema();
-      System.out.println(schema.asStruct());
-      System.out.println(schema);
-      System.out.println(schema.findField("tableChanges"));
-      System.out.println(schema.findField("tableChanges").type().asListType().elementType());
-    });
+    IcebergChangeEvent e = new IcebergChangeEvent("test",
+        mapper.readTree(unwrapWithArraySchema2).get("payload"), null,
+        mapper.readTree(unwrapWithArraySchema2).get("schema"), null);
+    Schema schema = e.icebergSchema();
+    System.out.println(schema.asStruct());
+    System.out.println(schema);
+    assertTrue(schema.asStruct().toString().contains("20: tableChanges: optional list<struct<22: type: optional string,"));
+    System.out.println(schema.findField("tableChanges"));
+    System.out.println(schema.findField("tableChanges").type().asListType().elementType());
     //GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
     //System.out.println(record);
   }
