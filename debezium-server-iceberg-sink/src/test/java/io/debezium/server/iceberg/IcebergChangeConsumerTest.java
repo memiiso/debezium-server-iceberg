@@ -59,6 +59,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
     assertEquals(sinkType, "iceberg");
+    SourcePostgresqlDB.runSQL("CREATE EXTENSION hstore;");
     String sql = "\n" +
                  "        DROP TABLE IF EXISTS inventory.data_types;\n" +
                  "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
@@ -77,21 +78,25 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                  "            c_uuid UUID,\n" +
                  "            c_bytea BYTEA,\n" +
                  "            c_json JSON,\n" +
-                 "            c_jsonb JSONB\n" +
+                 "            c_jsonb JSONB,\n" +
+                 "            c_hstore_keyval hstore,\n" +
+                 "            c_last_field VARCHAR\n" +
                  "          );";
     SourcePostgresqlDB.runSQL(sql);
     sql = "INSERT INTO inventory.data_types (" +
           "c_id, " +
           "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamptz, " +
           "c_float, c_decimal,c_numeric,c_interval,c_boolean,c_uuid,c_bytea,  " +
-          "c_json, c_jsonb) " +
+          "c_json, c_jsonb, c_hstore_keyval, c_last_field) " +
           "VALUES (1, null, null, null,null,null,null," +
           "null,null,null,null,null,null,null," +
-          "null,null)," +
+          "null,null, null, null)," +
           "(2, 'val_text', 'A', 123, current_date , current_timestamp, current_timestamp," +
           "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
           "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea," +
-          "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb" +
+          "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb, " +
+          "'mapkey1=>1, mapkey2=>2'::hstore, " +
+          "'stringvalue' " +
           ")";
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
@@ -102,6 +107,15 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                         "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
                         "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
                         "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.data_types");
+        df.show(true);
+        return df.count() == 2;
       } catch (Exception e) {
         return false;
       }
@@ -160,7 +174,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.customers");
-        //ds.show();
+        ds.show();
         return
             ds.where("__op == 'r'").count() == 4 // snapshot rows. initial table data
             && ds.where("__op == 'u'").count() == 3 // 3 update
@@ -314,6 +328,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       config.put("debezium.sink.iceberg.write.format.default", "orc");
       config.put("debezium.sink.iceberg.destination-regexp", "\\d");
       //config.put("debezium.sink.iceberg.destination-regexp-replace", "");
+      config.put("debezium.source.hstore.handling.mode", "map");
       return config;
     }
   }
