@@ -295,8 +295,11 @@ public class IcebergChangeEvent {
             }
             break;
           case "map":
-            throw new RuntimeException("'" + fieldName + "' has Map type, Map type not supported!");
-            //break;
+            String keyFieldType = jsonSchemaFieldNode.get("keys").get("type").textValue();
+            String varFieldlType = jsonSchemaFieldNode.get("keys").get("type").textValue();
+            Types.MapType mapField = Types.MapType.ofOptional(columnId, ++columnId, icebergFieldType(fieldName+".keys", keyFieldType), icebergFieldType(fieldName+".values", varFieldlType));
+            schemaColumns.add(Types.NestedField.optional(++columnId,fieldName, mapField));
+            break;
           case "struct":
             // create it as struct, nested type
             List<Types.NestedField> subSchema = icebergSchema(jsonSchemaFieldNode, fieldName, columnId);
