@@ -61,6 +61,11 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
   @Override
   public Map<String, String> start() {
     container.start();
+    try {
+      SourcePostgresqlDB.runSQL("CREATE EXTENSION hstore;");
+    } catch (SQLException | ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
 
     Map<String, String> params = new ConcurrentHashMap<>();
     params.put("debezium.source.database.hostname", POSTGRES_HOST);
