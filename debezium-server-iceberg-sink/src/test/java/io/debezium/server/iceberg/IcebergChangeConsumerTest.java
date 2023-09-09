@@ -95,7 +95,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
           "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
           "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea," +
           "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb, " +
-          "'akey=>1,akey=>2'::hstore, " +
+          "'mapkey1=>1, mapkey2=>2'::hstore, " +
           "'stringvalue' " +
           ")";
     SourcePostgresqlDB.runSQL(sql);
@@ -107,6 +107,15 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                         "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
                         "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
                         "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
+      try {
+        Dataset<Row> df = getTableData("testc.inventory.data_types");
+        df.show(true);
+        return df.count() == 2;
       } catch (Exception e) {
         return false;
       }
