@@ -151,7 +151,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
           Transaction t = historyTable.newTransaction();
           t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
-          Arrays.stream(files.dataFiles()).forEach(t.newAppend()::appendFile);
+          Arrays.stream(files.dataFiles()).forEach(f -> t.newAppend().appendFile(f).commit());
           t.commitTransaction();
           LOG.trace("Successfully saved history data to Iceberg table");
         }
