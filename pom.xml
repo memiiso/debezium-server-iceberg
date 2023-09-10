@@ -37,12 +37,12 @@
         <version.awssdk>2.19.4</version.awssdk>
         <version.testcontainers>1.19.0</version.testcontainers>
         <!-- Debezium -->
-        <version.debezium>2.2.1.Final</version.debezium>
+        <version.debezium>2.4.0.CR1</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>3.3.2</version.quarkus>
         <!-- FOR TESTS Align with SPARK Antlr version -->
-        <version.antlr>4.8</version.antlr>
+        <version.antlr>4.9.3</version.antlr>
     </properties>
     <repositories>
         <repository>
