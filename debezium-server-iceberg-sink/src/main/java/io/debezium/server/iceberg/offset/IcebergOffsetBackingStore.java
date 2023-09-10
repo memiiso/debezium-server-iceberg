@@ -165,9 +165,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
 
         Transaction t = offsetTable.newTransaction();
         t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
-        AppendFiles tableAppender = t.newAppend();
-        Arrays.stream(files.dataFiles()).forEach(tableAppender::appendFile);
-        tableAppender.commit();
+        Arrays.stream(files.dataFiles()).forEach(f -> t.newAppend().appendFile(f).commit());
         t.commitTransaction();
         LOG.debug("Successfully saved offset data to iceberg table");
       }
