@@ -189,9 +189,13 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       if (!eventSchemaEnabled) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat,
-          !upsert, // partition if its append mode
-          partitionField);
+      try {
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat,
+            !upsert, // partition if its append mode
+            partitionField);
+      } catch (Exception e){
+        throw new DebeziumException("Failed to create table from debezium event schema:"+tableId+" Error:" + e.getMessage(), e);
+      }
     });
   }
 

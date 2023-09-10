@@ -310,13 +310,13 @@ public class IcebergChangeEvent {
     public Schema icebergSchema() {
 
       if (this.valueSchema == null) {
-        throw new RuntimeException("Failed to get event schema, event schema is null");
+        throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
       }
 
       final List<Types.NestedField> tableColumns = icebergSchemaFields(valueSchema);
 
       if (tableColumns.isEmpty()) {
-        throw new RuntimeException("Failed to get event schema, event schema has no fields!");
+        throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
       }
 
       final List<Types.NestedField> keyColumns = icebergSchemaFields(keySchema);
@@ -338,7 +338,7 @@ public class IcebergChangeEvent {
         }
 
         if (!found) {
-          throw new ValidationException("Table Row identifier field `" + ic.name() + "` not found in table columns");
+          throw new ValidationException("Debezium key/identifier field `" + ic.name() + "` not found in event columns!");
         }
 
       }
