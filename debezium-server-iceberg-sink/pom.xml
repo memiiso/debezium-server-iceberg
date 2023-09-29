@@ -78,6 +78,11 @@
             <artifactId>iceberg-aliyun</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-azure</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
         <!-- Google -->
         <dependency>
             <groupId>com.google.cloud</groupId>
