@@ -56,8 +56,8 @@ debezium.format.key=json
 # saving debezium state data to destination, iceberg tables
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_custom_table
-debezium.source.database.history=io.debezium.server.iceberg.history.IcebergSchemaHistory
-debezium.source.database.history.iceberg.table-name=debezium_database_history_storage_test
+debezium.source.schema.history.internal=io.debezium.server.iceberg.history.IcebergSchemaHistory
+debezium.source.schema.history.internal.iceberg.table-name=debezium_database_history_storage_test
 
 # postgres source
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
