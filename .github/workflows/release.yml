@@ -33,7 +33,7 @@ jobs:
       - name: Delete previous ${{ env.RELEASE_NAME }} release
         uses: dev-drprasad/delete-tag-and-release@v1.0
         with:
-          delete_release: true # default: false
+          delete_release: "true" # default: false
           tag_name: ${{ env.RELEASE_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -47,8 +47,8 @@ jobs:
           name: Release ${{ env.RELEASE_NAME }}
           tag_name: ${{ env.RELEASE_NAME }}
           body: Release ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
+          draft: "false"
+          prerelease: "false"
 
           files: |
             debezium-server-iceberg-sink/target/debezium-server-iceberg-sink-${{ env.RELEASE_NAME }}.jar
