@@ -241,6 +241,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     return (data != null) ? ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)) : null;
   }
 
+  public Set<Map<String, Object>> connectorPartitions(String connectorName) {
+    return null;
+  }
+
   public static class IcebergOffsetBackingStoreConfig extends WorkerConfig {
     final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
     private final Configuration config;
