@@ -55,7 +55,7 @@ jobs:
             debezium-server-iceberg-dist/target/debezium-server-iceberg-dist-${{ env.RELEASE_NAME }}.zip
 
       - name: Login to Github Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
