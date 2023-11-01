@@ -92,7 +92,7 @@
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-nio</artifactId>
-            <version>0.124.19</version>
+            <version>0.127.6</version>
         </dependency>
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
