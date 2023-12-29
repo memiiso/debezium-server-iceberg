@@ -16,6 +16,11 @@ jobs:
     steps:
       - name: Check Out Repo
         uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
 
       - name: Set env for master(latest) release
         if: github.ref_name == 'master'
