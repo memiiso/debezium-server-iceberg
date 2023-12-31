@@ -143,7 +143,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       throws InterruptedException {
     Instant start = Instant.now();
 
-    //group events by destination
+    //group events by destination (per iceberg table)
     Map<String, List<IcebergChangeEvent>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
@@ -167,7 +167,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
 
-    // workaround! somehow offset is not saved to file unless we call committer.markProcessed
+    // workaround! somehow offset is not saved to file unless we call committer.markProcessed per event
     // even it's should be saved to file periodically
     for (ChangeEvent<Object, Object> record : records) {
       LOGGER.trace("Processed event '{}'", record);
@@ -176,13 +176,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     committer.markBatchFinished();
     this.logConsumerProgress(records.size());
 
+    // waiting to group events as bathes
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
   }
 
   /**
    * @param tableId     iceberg table identifier
    * @param sampleEvent sample debezium event. event schema used to create iceberg table when table not found
-   * @return iceberg table, throws RuntimeException when table not found and it's not possible to create it
+   * @return iceberg table, throws RuntimeException when table not found, and it's not possible to create it
    */
   public Table loadIcebergTable(TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
@@ -200,7 +201,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   /**
-   * @param numUploadedEvents periodically log number of events consumed
+   * periodically log number of events consumed
+   *
+   * @param numUploadedEvents number of events consumed
    */
   protected void logConsumerProgress(long numUploadedEvents) {
     numConsumedEvents += numUploadedEvents;

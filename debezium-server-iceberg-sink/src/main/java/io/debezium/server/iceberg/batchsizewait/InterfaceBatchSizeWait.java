@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 /**
- * Implementation of the consumer that delivers the messages to iceberg tables.
+ * When enabled dds waiting to the consumer to control batch size. I will turn the processing to batch processing.
  *
  * @author Ismail Simsek
  */
