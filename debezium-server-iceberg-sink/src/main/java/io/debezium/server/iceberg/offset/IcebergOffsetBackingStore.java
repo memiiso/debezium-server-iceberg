@@ -55,7 +55,7 @@ import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
 /**
- * Implementation of OffsetBackingStore that saves data to database table.
+ * Implementation of OffsetBackingStore that saves data to Iceberg table.
  */
 @Dependent
 public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implements OffsetBackingStore {
