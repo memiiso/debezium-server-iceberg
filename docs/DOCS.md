@@ -17,22 +17,21 @@ tables created automatically with the first start.
 
 | Config                                             | Default           | Description                                                                                                      |
 |----------------------------------------------------|-------------------|------------------------------------------------------------------------------------------------------------------|
-| `debezium.sink.iceberg.warehouse`                  |                   | The root path of the Iceberg data warehouse                                                                      |
-| `debezium.sink.iceberg.catalog-name`               | `default`         | User-specified catalog name.                                                                                     |
+| `debezium.sink.iceberg.warehouse`                  |                   | Root path of the Iceberg data warehouse                                                                          |
+| `debezium.sink.iceberg.catalog-name`               | `default`         | User-specified Iceberg catalog name.                                                                             |
 | `debezium.sink.iceberg.table-namespace`            | `default`         | A namespace in the catalog. ex: `SELECT * FROM prod.db.table -- catalog: prod, namespace: db, table: table`      |
-| `debezium.sink.iceberg.table-prefix`               | ``                | Prefix added to destination iceberg table names.                                                                 |
+| `debezium.sink.iceberg.table-prefix`               | ``                | Iceberg table name prefix, Added to destination iceberg table names.                                             |
 | `debezium.sink.iceberg.write.format.default`       | `parquet`         | Default file format for the table; `parquet`, `avro`, or `orc`                                                   |
 | `debezium.sink.iceberg.allow-field-addition`       | `true`            | Allow field addition to target tables                                                                            |
 | `debezium.sink.iceberg.upsert`                     | `true`            | Running upsert mode overwriting updated rows. explained below.                                                   |
-| `debezium.sink.iceberg.upsert-keep-deletes`        | `true`            | With upsert mode, keeps deleted rows in target table.                                                            |
+| `debezium.sink.iceberg.upsert-keep-deletes`        | `true`            | When running with upsert mode, keeps deleted rows in target table.                                               |
 | `debezium.sink.iceberg.upsert-dedup-column`        | `__source_ts_ms`  | With upsert mode used to deduplicate data. row with highest `__source_ts_ms` kept. _                             
  dont change!_                                      |
-| `debezium.sink.iceberg.upsert-op-column`           | `__op`            | Used with upsert mode. _dont                                                                                     
- change!_                                           |
+| `debezium.sink.iceberg.upsert-op-column`           | `__op`            | Used with upsert mode. _dont change!_                                                                            |
 | `debezium.sink.iceberg.destination-regexp`         | ``                | Regexp to modify destination table. With this its possible to map `table_ptt1`,`table_ptt2` to `table_combined`. |
 | `debezium.sink.iceberg.destination-regexp-replace` | ``                | Regexp Replace part to modify destination table                                                                  |
 | `debezium.sink.batch.batch-size-wait`              | `NoBatchSizeWait` | Batch size wait strategy to optimize data files and upload interval. explained below.                            |
-| `debezium.sink.iceberg.{iceberg.prop.name}`        |                   | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) passed to Iceberg, and to hadoopConf     |
+| `debezium.sink.iceberg.{iceberg.prop.name}`        |                   | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) passed to Iceberg                        |
 
 ### Upsert
 
