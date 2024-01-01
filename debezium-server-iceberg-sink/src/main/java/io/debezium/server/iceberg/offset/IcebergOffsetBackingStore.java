@@ -8,26 +8,14 @@
 
 package io.debezium.server.iceberg.offset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
 import io.debezium.config.Field;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
@@ -50,6 +38,20 @@ import org.apache.kafka.connect.util.SafeObjectInputStream;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import static io.debezium.server.iceberg.IcebergChangeConsumer.PROP_PREFIX;
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
@@ -100,6 +102,44 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     LOG.info("Starting IcebergOffsetBackingStore table:{}", tableFullName);
     initializeTable();
     load();
+  }
+
+  @Override
+  public synchronized void stop() {
+    if (executor != null) {
+      shutdownExecutorServiceQuietly(executor, 30, TimeUnit.SECONDS);
+      executor = null;
+    }
+    LOG.info("Stopped IcebergOffsetBackingStore table:{}", tableFullName);
+  }
+
+
+  /**
+   * Shuts down an executor service in two phases, first by calling shutdown to reject incoming tasks,
+   * and then calling shutdownNow, if necessary, to cancel any lingering tasks.
+   * After the timeout/on interrupt, the service is forcefully closed.
+   * @param executorService The service to shut down.
+   * @param timeout The timeout of the shutdown.
+   * @param timeUnit The time unit of the shutdown timeout.
+   */
+  public static void shutdownExecutorServiceQuietly(ExecutorService executorService,
+                                                    long timeout, TimeUnit timeUnit) {
+    executorService.shutdown(); // Disable new tasks from being submitted
+    try {
+      // Wait a while for existing tasks to terminate
+      if (!executorService.awaitTermination(timeout, timeUnit)) {
+        executorService.shutdownNow(); // Cancel currently executing tasks
+        // Wait a while for tasks to respond to being cancelled
+        if (!executorService.awaitTermination(timeout, timeUnit)) {
+          LOG.error("Executor {} did not terminate in time", executorService);
+        }
+      }
+    } catch (InterruptedException e) {
+      // (Re-)Cancel if current thread also interrupted
+      executorService.shutdownNow();
+      // Preserve interrupt status
+      Thread.currentThread().interrupt();
+    }
   }
 
   private void initializeTable() {
