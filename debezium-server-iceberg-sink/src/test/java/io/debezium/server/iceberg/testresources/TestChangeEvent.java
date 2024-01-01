@@ -129,7 +129,9 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
   public String destination() {
     return destination;
   }
-
+  public Integer partition() {
+    return 0;
+  }
   @Override
   public String toString() {
     return "EmbeddedEngineChangeEvent [key=" + key + ", value=" + value + ", sourceRecord=" + destination + "]";
