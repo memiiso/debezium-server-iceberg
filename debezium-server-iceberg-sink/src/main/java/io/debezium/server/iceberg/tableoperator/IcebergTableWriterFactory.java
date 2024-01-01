@@ -17,6 +17,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Iceberg Table Writer Factory to get TaskWriter for the table. upsert modes used to return correct writer.
+ *
+ */
 @Dependent
 public class IcebergTableWriterFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);

@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Wrapper to perform operations in iceberg tables
+ * Wrapper to perform operations on iceberg tables
  *
  * @author Rafael Acevedo
  */

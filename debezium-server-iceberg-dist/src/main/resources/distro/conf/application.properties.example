@@ -54,8 +54,10 @@ debezium.format.value=json
 debezium.format.key=json
 
 # saving debezium state data to destination, iceberg tables
+# see https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_custom_table
+# see https://debezium.io/documentation/reference/stable/development/engine.html#database-history-properties
 debezium.source.schema.history.internal=io.debezium.server.iceberg.history.IcebergSchemaHistory
 debezium.source.schema.history.internal.iceberg.table-name=debezium_database_history_storage_test
 

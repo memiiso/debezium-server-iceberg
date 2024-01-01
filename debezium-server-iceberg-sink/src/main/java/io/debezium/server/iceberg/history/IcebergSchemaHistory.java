@@ -53,7 +53,7 @@ import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
 /**
- * A {@link SchemaHistory} implementation that stores the schema history to database table
+ * A {@link SchemaHistory} implementation that stores the schema history to Iceberg table
  *
  * @author Ismail Simsek
  */
