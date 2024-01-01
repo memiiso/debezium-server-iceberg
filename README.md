@@ -26,7 +26,7 @@ Also, check [caveats](docs/CAVEATS.md) for better understanding the current limi
   - cd into unzipped folder: `cd appdist`
   - Create `application.properties` file and config it: `nano conf/application.properties`, you can check the example
     configuration
-    in [application.properties.example](debezium-server-iceberg-sink/src/main/resources/conf/application.properties.example)
+    in [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
   - Run the server using provided script: `bash run.sh`
 
 # Debezium python runner

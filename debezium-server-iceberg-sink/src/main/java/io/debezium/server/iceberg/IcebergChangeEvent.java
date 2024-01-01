@@ -26,6 +26,9 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
+ * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
+ *
  * @author Ismail Simsek
  */
 public class IcebergChangeEvent {
