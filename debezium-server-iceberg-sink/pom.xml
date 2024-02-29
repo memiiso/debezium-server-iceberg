@@ -242,7 +242,7 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
-            <version>42.6.0</version>
+            <version>42.7.2</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
@@ -252,7 +252,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.5.1</version>
+            <version>8.5.7</version>
             <scope>test</scope>
         </dependency>
         <dependency>
