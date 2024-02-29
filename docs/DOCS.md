@@ -94,8 +94,8 @@ every 5 seconds
 ```properties
 debezium.sink.batch.batch-size-wait=MaxBatchSizeWait
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
-debezium.source.max.batch.size=2048;
-debezium.source.max.queue.size=16000";
+debezium.source.max.batch.size=2048
+debezium.source.max.queue.size=16000
 debezium.sink.batch.batch-size-wait.max-wait-ms=30000
 debezium.sink.batch.batch-size-wait.wait-interval-ms=5000
 ```
