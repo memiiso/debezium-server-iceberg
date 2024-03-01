@@ -145,6 +145,7 @@ public class BaseSparkTest extends BaseTest {
 
   public Dataset<Row> getTableData(String table) {
     table = CATALOG_TABLE_NAMESPACE + ".debeziumcdc_" + table.replace(".", "_");
+    // ! using spark to read table data, some cases its modify on read queries
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 

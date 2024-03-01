@@ -145,6 +145,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
     Assertions.assertEquals(ds.count(), 0);
+    //!!! somehow using where returns rows! even though previous count were 0???
     Assertions.assertEquals(ds.where("first_name= 'user2'").count(), 0);
   }
 
