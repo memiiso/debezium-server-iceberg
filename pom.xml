@@ -41,6 +41,8 @@
         <version.hive>3.1.3</version.hive>
         <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L31-->  
         <version.awssdk>2.24.5</version.awssdk>
+        <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L44-->  
+        <version.googlelibraries>26.28.0</version.googlelibraries>
         <version.testcontainers>1.19.3</version.testcontainers>
         <!-- Debezium -->
         <version.debezium>2.5.2.Final</version.debezium>
@@ -86,7 +88,14 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
+            <!-- gcp -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>${version.googlelibraries}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- MySQL JDBC Driver, Binlog reader, Geometry support -->
             <dependency>
                 <groupId>mysql</groupId>
