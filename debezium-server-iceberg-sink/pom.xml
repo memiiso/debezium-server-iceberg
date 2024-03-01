@@ -95,7 +95,7 @@
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>gcs-connector</artifactId>
-            <version>${version.googlebigdataoss}</version>
+            <version>hadoop3-${version.googlebigdataoss}</version>
         </dependency>
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
