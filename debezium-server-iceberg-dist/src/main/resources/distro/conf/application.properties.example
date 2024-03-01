@@ -30,6 +30,19 @@ debezium.sink.iceberg.jdbc.password=my_password
 debezium.sink.iceberg.table-namespace=debeziumdata
 debezium.sink.iceberg.catalog-name=iceberg
 debezium.sink.iceberg.warehouse=s3a://my_bucket/iceberg_warehouse
+
+# Config with hive meatastore catalogs
+# debezium.sink.iceberg.type=hive
+# debezium.sink.iceberg.uri=thrift://xx.xxx.xx.xxx:9083
+# debezium.sink.iceberg.clients=5
+# debezium.sink.iceberg.warehouse=s3a://datalake/datawarehouse
+# debezium.sink.iceberg.catalog.io-impl=org.apache.iceberg.aws.s3.S3FileIO
+# debezium.sink.iceberg.engine.hive.enabled=true
+# debezium.sink.iceberg.iceberg.engine.hive.enabled=true
+# debezium.sink.hive.metastore.sasl.enabled=false
+# debezium.sink.iceberg.hive.metastore.sasl.enabled=false
+
+
 # Use S3FileIO
 debezium.sink.iceberg.io-impl=org.apache.iceberg.aws.s3.S3FileIO
 debezium.sink.iceberg.s3.endpoint=http://localhost:9000
