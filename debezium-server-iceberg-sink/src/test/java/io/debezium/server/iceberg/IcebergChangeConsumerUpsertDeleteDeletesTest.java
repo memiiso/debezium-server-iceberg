@@ -145,7 +145,9 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
     Assertions.assertEquals(ds.count(), 0);
-    Assertions.assertEquals(ds.where("first_name= 'user2'").count(), 0);
+    // NOTE: using .rdd() before count otherwise its returning wrong count!!
+    // SEE: https://stackoverflow.com/a/69039097/2679740
+    Assertions.assertEquals(ds.where("first_name= 'user2'").rdd().count(), 0);
   }
 
   public static class TestProfile implements QuarkusTestProfile {
