@@ -34,7 +34,7 @@
         <version.iceberg>1.4.2</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
-        <version.spark.major>3.4</version.spark.major>
+        <version.spark.major>3.5</version.spark.major>
         <version.spark.scala>2.13</version.spark.scala>
         <version.spark>${version.spark.major}.2</version.spark>
         <version.hadoop>3.3.6</version.hadoop>
