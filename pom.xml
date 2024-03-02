@@ -27,7 +27,7 @@
         <maven.compiler.release>11</maven.compiler.release>
         <skipITs>true</skipITs>
 
-        <version.groovy>3.0.20</version.groovy>
+        <version.groovy>3.0.21</version.groovy>
         <version.assembly.plugin>3.6.0</version.assembly.plugin>
         <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L53-->
         <version.jackson>2.14.2</version.jackson>
@@ -44,12 +44,12 @@
         <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L44-->  
         <version.googlelibraries>26.28.0</version.googlelibraries>
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
-        <version.testcontainers>1.19.3</version.testcontainers>
+        <version.testcontainers>1.19.6</version.testcontainers>
         <!-- Debezium -->
         <version.debezium>2.5.2.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>3.5.3</version.quarkus>
+        <version.quarkus>3.6.9</version.quarkus>
         <!-- FOR TESTS Align with SPARK Antlr version -->
         <version.antlr>4.9.3</version.antlr>
     </properties>
