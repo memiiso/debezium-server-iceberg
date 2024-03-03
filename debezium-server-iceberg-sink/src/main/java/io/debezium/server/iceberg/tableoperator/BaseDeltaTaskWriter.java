@@ -10,7 +10,7 @@ import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
-import org.apache.iceberg.relocated.com.google.common.collect.Sets;
+import com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {

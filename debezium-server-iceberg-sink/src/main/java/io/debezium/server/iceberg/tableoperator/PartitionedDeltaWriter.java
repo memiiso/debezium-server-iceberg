@@ -13,7 +13,7 @@ import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
-import org.apache.iceberg.relocated.com.google.common.collect.Maps;
+import com.google.common.collect.Maps;
 import org.apache.iceberg.util.Tasks;
 
 class PartitionedDeltaWriter extends BaseDeltaTaskWriter {
