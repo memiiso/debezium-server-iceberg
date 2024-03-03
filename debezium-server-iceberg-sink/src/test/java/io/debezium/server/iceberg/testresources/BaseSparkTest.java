@@ -47,35 +47,18 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.eventLog.enabled", "false")
         // enable iceberg SQL Extensions and Catalog
         .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .set("spark.sql.warehouse.dir", S3_BUCKET)
         // hadoop catalog
         .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
         .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
         .set("spark.sql.catalog.spark_catalog.default-namespaces", CATALOG_TABLE_NAMESPACE)
         .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-        .set("spark.sql.warehouse.dir", S3_BUCKET)
         .set("spark.sql.catalog.spark_catalog.s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString())
         .set("spark.sql.catalog.spark_catalog.s3.path-style-access", "true")
         .set("spark.sql.catalog.spark_catalog.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
         .set("spark.sql.catalog.spark_catalog.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY)
         .set("spark.sql.catalog.spark_catalog.client.region", TestConfigSource.S3_REGION)
-        .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-        .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
-//        // JdbcCatalog catalog, add additional catalog
-//        .set("spark.sql.defaultCatalog", ICEBERG_CATALOG_NAME)
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME, "org.apache.iceberg.spark.SparkCatalog")
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".warehouse", S3_BUCKET)
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".cache-enabled", "false")
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".catalog-impl", JdbcCatalog.class.getName())
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".default-namespaces", CATALOG_TABLE_NAMESPACE)
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".uri", JdbcCatalogDB.container.getJdbcUrl())
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".jdbc.user", JdbcCatalogDB.container.getUsername())
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".jdbc.password", JdbcCatalogDB.container.getPassword())
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString())
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".s3.path-style-access", "true")
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
-//        .set("spark.sql.catalog." + ICEBERG_CATALOG_NAME + ".s3.secret-access-key", S3Minio.MINIO_SECRET_KEY)
     ;
 
     BaseSparkTest.spark = SparkSession
