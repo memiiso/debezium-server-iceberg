@@ -91,27 +91,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-            <dependency>
-                <groupId>io.debezium</groupId>
-                <artifactId>debezium-server-batch</artifactId>
-                <version>${project.version}</version>
-            </dependency>
             <!-- Debezium Scripting -->
             <dependency>
                 <groupId>org.codehaus.groovy</groupId>
-                <artifactId>groovy</artifactId>
+                <artifactId>groovy-bom</artifactId>
                 <version>${version.groovy}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.groovy</groupId>
-                <artifactId>groovy-json</artifactId>
-                <version>${version.groovy}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.groovy</groupId>
-                <artifactId>groovy-jsr223</artifactId>
-                <version>${version.groovy}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- Test dependencies -->
             <dependency>
