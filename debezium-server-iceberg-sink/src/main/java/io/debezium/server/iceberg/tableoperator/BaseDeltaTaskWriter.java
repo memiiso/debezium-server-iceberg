@@ -3,7 +3,6 @@ package io.debezium.server.iceberg.tableoperator;
 import java.io.IOException;
 import java.util.List;
 
-import com.google.common.collect.Sets;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
@@ -11,6 +10,7 @@ import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
+import com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {

@@ -63,6 +63,56 @@
             <artifactId>iceberg-parquet</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-orc</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-arrow</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-metastore</artifactId>
+            <version>${version.hive}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.parquet</groupId>
+                    <artifactId>parquet-hadoop-bundle</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.arrow</groupId>
+                    <artifactId>arrow-*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-gcp</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-aws</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-dell</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-aliyun</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-azure</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
         <!-- Google -->
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -212,7 +262,13 @@
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-runtime-3.2_2.13</artifactId>
+            <artifactId>iceberg-spark-${version.spark.major}_${version.spark.scala}</artifactId>
+            <version>${version.iceberg}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-spark-extensions-${version.spark.major}_${version.spark.scala}</artifactId>
             <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>

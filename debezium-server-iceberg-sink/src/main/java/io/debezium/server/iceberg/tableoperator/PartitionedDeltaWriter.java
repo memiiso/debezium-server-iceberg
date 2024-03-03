@@ -2,7 +2,6 @@ package io.debezium.server.iceberg.tableoperator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,13 +13,14 @@ import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
+import com.google.common.collect.Maps;
 import org.apache.iceberg.util.Tasks;
 
 class PartitionedDeltaWriter extends BaseDeltaTaskWriter {
 
   private final PartitionKey partitionKey;
 
-  private final Map<PartitionKey, RowDataDeltaWriter> writers = new HashMap<>();
+  private final Map<PartitionKey, RowDataDeltaWriter> writers = Maps.newHashMap();
 
   PartitionedDeltaWriter(PartitionSpec spec,
                          FileFormat format,
