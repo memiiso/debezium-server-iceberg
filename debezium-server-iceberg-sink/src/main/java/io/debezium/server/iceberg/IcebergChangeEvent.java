@@ -149,7 +149,7 @@ public class IcebergChangeEvent {
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
         break;
       case TIMESTAMP:
-        if (node.isLong() && TS_MS_FIELDS.contains(field.name())) {
+        if ((node.isLong() || node.isNumber()) && TS_MS_FIELDS.contains(field.name())) {
           val = OffsetDateTime.ofInstant(Instant.ofEpochMilli(node.longValue()), ZoneOffset.UTC);
         } else if (node.isTextual()) {
           val = OffsetDateTime.parse(node.asText());
