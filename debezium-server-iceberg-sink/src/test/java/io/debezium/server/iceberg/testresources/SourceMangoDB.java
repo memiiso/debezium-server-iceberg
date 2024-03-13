@@ -33,7 +33,6 @@ public class SourceMangoDB implements QuarkusTestResourceLifecycleManager {
   @Override
   public Map<String, String> start() {
     container.setPortBindings(List.of(MONGODB_PORT+":"+MONGODB_PORT));
-
     container.withExposedPorts(MONGODB_PORT).start();
 
     Map<String, String> params = new ConcurrentHashMap<>();
