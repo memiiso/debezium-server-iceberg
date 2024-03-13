@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.testresources;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,6 +32,8 @@ public class SourceMangoDB implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
+    container.setPortBindings(List.of(MONGODB_PORT+":"+MONGODB_PORT));
+
     container.withExposedPorts(MONGODB_PORT).start();
 
     Map<String, String> params = new ConcurrentHashMap<>();
