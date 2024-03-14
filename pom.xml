@@ -49,12 +49,6 @@
         <!-- FOR TESTS Align with SPARK Antlr version -->
         <version.antlr>4.9.3</version.antlr>
     </properties>
-    <repositories>
-        <repository>
-            <id>iceberg-stg-repo</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1161/</url>
-        </repository>
-    </repositories>
     <dependencyManagement>
         <dependencies>
             <dependency>
