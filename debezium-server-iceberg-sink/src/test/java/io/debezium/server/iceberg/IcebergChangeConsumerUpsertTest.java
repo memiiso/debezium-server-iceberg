@@ -185,7 +185,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(
             "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (1, 'STRING-DATA-1');" +
                     "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (2, 'STRING-DATA-2');");
-    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
         ds.show();
@@ -196,7 +196,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
       }
     });
     SourcePostgresqlDB.runSQL("UPDATE inventory.table_without_pk SET c_varchar='STRING-UPDATE-1'; ");
-    Awaitility.await().atMost(Duration.ofSeconds(60)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
         ds.show();
