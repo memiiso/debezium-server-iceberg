@@ -8,15 +8,14 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.S3Minio;
-import io.debezium.server.iceberg.testresources.TestChangeEvent;
-import io.debezium.server.iceberg.testresources.TestUtil;
+import io.debezium.server.iceberg.testresources.*;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 
+import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +24,7 @@ import java.util.Map;
 import jakarta.inject.Inject;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
@@ -168,6 +169,42 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     ds.show();
     Assertions.assertEquals(ds.count(), 6);
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'c' AND first_name= 'user2'").count(), 2);
+  }
+
+
+  @Test
+  public void testTableUpsertNokey() throws SQLException, ClassNotFoundException {
+    String sql = "\n" +
+            "        DROP TABLE IF EXISTS inventory.table_without_pk;\n" +
+            "        CREATE TABLE IF NOT EXISTS inventory.table_without_pk (\n" +
+            "            c_id INTEGER ,\n" +
+            "            c_varchar VARCHAR\n" +
+            "          );" +
+            "ALTER TABLE inventory.table_without_pk REPLICA IDENTITY FULL;";
+    SourcePostgresqlDB.runSQL(sql);
+    SourcePostgresqlDB.runSQL(
+            "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (1, 'STRING-DATA-1');" +
+                    "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (2, 'STRING-DATA-2');");
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
+      try {
+        Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
+        ds.show();
+        return ds.count() == 2;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+    SourcePostgresqlDB.runSQL("UPDATE inventory.table_without_pk SET c_varchar='STRING-UPDATE-1'; ");
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
+      try {
+        Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
+        ds.show();
+        return ds.count() == 4
+                && ds.where("__op == 'u'").count() == 2;
+      } catch (Exception e) {
+        return false;
+      }
+    });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
