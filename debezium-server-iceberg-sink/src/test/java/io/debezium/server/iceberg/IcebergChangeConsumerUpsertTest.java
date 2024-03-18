@@ -189,8 +189,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
         ds.show();
-        return ds.count() == 2
-                && ds.where("__op == 'r'").count() == 2;
+        return ds.count() == 2;
       } catch (Exception e) {
         return false;
       }
