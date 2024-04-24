@@ -1,4 +1,4 @@
-version: "3"
+version: "3.7"
 
 services:
   debezium-iceberg:
@@ -17,10 +17,10 @@ services:
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
       - AWS_REGION=us-east-1
-    links:
-      - jdbccatalog
-      - minio
-      - postgresqlsourcedb
+#    links:
+#      - jdbccatalog
+#      - minio
+#      - postgresqlsourcedb
   postgresqlsourcedb:
     image: debezium/example-postgres:2.5
     container_name: postgresql-source-db
@@ -74,8 +74,9 @@ services:
       /bin/sh -c "
       until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
       /usr/bin/mc mb --ignore-existing minio/warehouse;
-      /usr/bin/mc policy set public minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse;
       exit 0;
       "
 networks:
   iceberg_net:
+    name: icebergnet
