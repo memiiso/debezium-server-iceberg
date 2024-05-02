@@ -1,11 +1,11 @@
-FROM eclipse-temurin:11-jdk as builder
+FROM eclipse-temurin:17-jdk as builder
 RUN apt-get -qq update && apt-get -qq install maven unzip
 COPY . /app
 WORKDIR /app
 RUN mvn clean package -Passembly -Dmaven.test.skip --quiet
 RUN unzip /app/debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:17-jre
 COPY --from=builder /app/appdist/debezium-server-iceberg/ /app/
 
 WORKDIR /app
