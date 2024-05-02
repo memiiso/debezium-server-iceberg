@@ -31,7 +31,7 @@
         <version.assembly.plugin>3.7.1</version.assembly.plugin>
         <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L53-->
         <version.jackson>2.14.2</version.jackson>
-        <version.iceberg>1.5.0</version.iceberg>
+        <version.iceberg>1.5.2</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
         <version.spark.major>3.5</version.spark.major>
@@ -49,6 +49,12 @@
         <!-- FOR TESTS Align with SPARK Antlr version -->
         <version.antlr>4.9.3</version.antlr>
     </properties>
+    <repositories>
+        <repository>
+            <id>iceberg-stg-repo</id>
+            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1163/</url>
+        </repository>
+    </repositories>
     <dependencyManagement>
         <dependencies>
             <dependency>
