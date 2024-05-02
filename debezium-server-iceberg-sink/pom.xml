@@ -365,11 +365,13 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <argLine>--add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
                     <systemProperties>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
                         <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
                     </systemProperties>
+
                 </configuration>
             </plugin>
             <plugin>
