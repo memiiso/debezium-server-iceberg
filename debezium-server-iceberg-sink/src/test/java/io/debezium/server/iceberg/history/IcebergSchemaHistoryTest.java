@@ -50,7 +50,7 @@ public class IcebergSchemaHistoryTest extends BaseTest {
     // test nested data(struct) consumed
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        return Lists.newArrayList(getTableDataV2(TableIdentifier.of("mycatalog", "debezium_database_history_storage_test"))).size() >= 5;
+        return Lists.newArrayList(getTableDataV2(TableIdentifier.of("mycatalog", "debezium_database_history_storage_table"))).size() >= 5;
       } catch (Exception e) {
         e.printStackTrace();
         return false;
@@ -66,7 +66,7 @@ public class IcebergSchemaHistoryTest extends BaseTest {
       config.put("quarkus.profile", "mysql");
       config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
       config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
-      config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_test");
+      config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_table");
       config.put("debezium.source.table.whitelist", "inventory.customers");
       return config;
     }
