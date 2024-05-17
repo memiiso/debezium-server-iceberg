@@ -58,9 +58,9 @@ public class TestConfigSource implements ConfigSource {
 
     // DEBEZIUM SOURCE conf
     config.put("debezium.source.offset.storage", "io.debezium.server.iceberg.offset.IcebergOffsetBackingStore");
-    config.put("debezium.source.offset.storage.iceberg.table-name", "debezium_offset_storage_custom_table");
+    config.put("debezium.source.offset.storage.iceberg.table-name", "debezium_offset_storage_table");
     config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
-    config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_test");
+    config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_table");
     config.put("debezium.source.offset.flush.interval.ms", "1000");
     config.put("debezium.source.database.server.name", "testc");
     config.put("debezium.source.database.server.id", "1234");
@@ -76,7 +76,6 @@ public class TestConfigSource implements ConfigSource {
     config.put("quarkus.log.category.\"org.apache.parquet\".level", "WARN");
     config.put("quarkus.log.category.\"org.eclipse.jetty\".level", "WARN");
     config.put("quarkus.log.category.\"org.apache.iceberg\".level", "ERROR");
-
   }
 
   @Override
