@@ -86,9 +86,17 @@ debezium.source.topic.prefix=dbz_
 # do event flattening. unwrap message!
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
+## for mongodb
+# debezium.transforms.unwrap.type=io.debezium.connector.mongodb.transforms.ExtractNewDocumentState
 debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
 debezium.transforms.unwrap.delete.handling.mode=rewrite
 debezium.transforms.unwrap.drop.tombstones=true
+
+## For mongodb and debezium 2.7.X onward only
+## https://debezium.io/documentation/reference/2.7/transformations/mongodb-event-flattening.html#mongodb-extract-new-record-state-delete-tombstone-handling-mode-rewrite-with-id
+# delete.tombstone.handling.mode=rewrite
+## for the delete events this will export key field (`_id`) to payload
+# delete.tombstone.handling.mode.rewrite-with-id=true
 
 # ############ SET LOG LEVELS ############
 quarkus.log.level=INFO
