@@ -90,6 +90,18 @@ debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
 debezium.transforms.unwrap.delete.handling.mode=rewrite
 debezium.transforms.unwrap.drop.tombstones=true
 
+## mongodb event flattening
+# debezium.transforms.unwrap.type=io.debezium.connector.mongodb.transforms.ExtractNewDocumentState
+# debezium.transforms=unwrap,renamekeyfield
+## IMPORTANT FIX: rename key filed name "id"=>"_id" to align it with payload key field name.
+# debezium.transforms.renamekeyfield.type=org.apache.kafka.connect.transforms.ReplaceField$Key
+# debezium.transforms.renamekeyfield.renames=id:_id
+## For mongodb and debezium 2.7.X onward only
+## https://debezium.io/documentation/reference/2.7/transformations/mongodb-event-flattening.html#mongodb-extract-new-record-state-delete-tombstone-handling-mode-rewrite-with-id
+# delete.tombstone.handling.mode=rewrite
+## For the delete events this will export key field (`_id`) to payload
+# delete.tombstone.handling.mode.rewrite-with-id=true
+
 # ############ SET LOG LEVELS ############
 quarkus.log.level=INFO
 quarkus.log.console.json=false
