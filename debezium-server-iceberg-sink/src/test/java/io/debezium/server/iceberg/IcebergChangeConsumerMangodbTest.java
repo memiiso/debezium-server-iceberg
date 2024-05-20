@@ -65,8 +65,6 @@ public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
       config.put("%mongodb.debezium.source.collection.include.list", "inventory.products");
       // IMPORTANT !!! FIX MongoDbConnector KEY FIELD NAME "id"=>"_id" !!!
       config.put("%mongodb.debezium.transforms", "unwrap,renamekeyfield");
-      config.put("%mongodb.delete.tombstone.handling.mode", "rewrite");
-      config.put("%mongodb.delete.tombstone.handling.mode.rewrite-with-id", "true");
       config.put("%mongodb.debezium.transforms.renamekeyfield.type",
           "org.apache.kafka.connect.transforms.ReplaceField$Key");
       config.put("%mongodb.debezium.transforms.renamekeyfield.renames", "id:_id");
