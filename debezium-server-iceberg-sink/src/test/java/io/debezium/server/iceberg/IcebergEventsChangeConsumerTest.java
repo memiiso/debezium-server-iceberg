@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -33,7 +34,7 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
 public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
@@ -61,7 +62,15 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
       config.put("debezium.sink.type", "icebergevents");
+      config.put("quarkus.profile", "mysql");
+      config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
+      config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
       return config;
+    }
+
+    @Override
+    public String getConfigProfile() {
+      return "mysql";
     }
   }
 
