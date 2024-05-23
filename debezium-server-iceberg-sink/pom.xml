@@ -212,7 +212,7 @@
 
         <!-- Testing -->
         <!-- spark for tests -->
-        <!-- jakarta version compatible with spark, testing only -->
+        <!-- jakarta version compatible with spark, for testing only -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
