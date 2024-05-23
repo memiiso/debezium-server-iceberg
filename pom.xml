@@ -34,9 +34,10 @@
         <version.iceberg>1.5.2</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
-        <version.spark.major>3.5</version.spark.major>
+        <version.spark.major>4.0</version.spark.major>
+        <version.spark.major.iceebrgtemp>3.5</version.spark.major.iceebrgtemp>
         <version.spark.scala>2.13</version.spark.scala>
-        <version.spark>${version.spark.major}.1</version.spark>
+        <version.spark>${version.spark.major}.0-preview1</version.spark>
         <version.hadoop>3.3.6</version.hadoop>
         <version.hive>3.1.3</version.hive>
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
@@ -46,13 +47,11 @@
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>3.10.0</version.quarkus>
-        <!-- FOR TESTS Align with SPARK Antlr version -->
-        <version.antlr>4.9.3</version.antlr>
     </properties>
     <repositories>
         <repository>
-            <id>iceberg-stg-repo</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1163/</url>
+            <id>orgapachespark-stg-repo</id>
+            <url>https://repository.apache.org/content/repositories/orgapachespark-1454/</url>
         </repository>
     </repositories>
     <dependencyManagement>
