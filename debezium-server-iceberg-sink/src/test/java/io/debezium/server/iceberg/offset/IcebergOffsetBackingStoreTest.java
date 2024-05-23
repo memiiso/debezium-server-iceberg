@@ -30,6 +30,8 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.fromByteBuffer;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,7 +92,7 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
     assertEquals(("value"), fromByteBuffer(values.get(toByteBuffer("key"))));
     Assertions.assertNull(values.get(toByteBuffer("bad")));
 
-    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("default", "debezium_offset_storage"));
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of(CATALOG_TABLE_NAMESPACE, "debezium_offset_storage"));
     Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 

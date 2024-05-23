@@ -11,9 +11,9 @@ package io.debezium.server.iceberg.offset;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
-import io.debezium.config.Field;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
@@ -47,7 +47,6 @@ import java.nio.file.Files;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -286,40 +285,45 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   }
 
   public static class IcebergOffsetBackingStoreConfig extends WorkerConfig {
-    final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
-    private final Configuration config;
-    Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+    private static final String PROP_SINK_PREFIX =  "debezium.sink.";
+    Properties configCombined = new Properties();
 
     public IcebergOffsetBackingStoreConfig(Configuration config) {
       super(new ConfigDef(), config.asMap());
-      this.config = config;
       Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
-      conf.forEach(hadoopConfig::set);
-      icebergProperties.putAll(conf);
+      Configuration confIcebergSubset = config.subset(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.", true);
+      confIcebergSubset.forEach(configCombined::put);
+
+      // debezium is doing config filtering before passing it down to this class!
+      // so we are taking additional config using ConfigProvider with this we take full iceberg config
+      Map<String, String> icebergConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_SINK_PREFIX + "iceberg.");
+      icebergConf.forEach(configCombined::putIfAbsent);
     }
 
     public String catalogName() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.catalog-name").withDefault("default"));
+      return this.configCombined.getProperty("catalog-name", "default");
     }
 
     public String tableNamespace() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.table-namespace").withDefault("default"));
+      return this.configCombined.getProperty("table-namespace", "default");
     }
 
     public String tableName() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.table-name").withDefault("debezium_offset_storage"));
+      return this.configCombined.getProperty("table-name", "debezium_offset_storage");
     }
 
     public String getMigrateOffsetFile() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.migrate-offset-file").withDefault(""));
+      return this.configCombined.getProperty("migrate-offset-file","");
     }
 
     public org.apache.hadoop.conf.Configuration hadoopConfig() {
+      final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
+      configCombined.forEach((key, value) -> hadoopConfig.set((String)key, (String)value));
       return hadoopConfig;
     }
 
     public Map<String, String> icebergProperties() {
-      return icebergProperties;
+      return Maps.fromProperties(configCombined);
     }
   }
 
