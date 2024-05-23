@@ -8,33 +8,17 @@
 
 package io.debezium.server.iceberg.history;
 
+import com.google.common.collect.Maps;
 import io.debezium.DebeziumException;
 import io.debezium.annotation.ThreadSafe;
 import io.debezium.common.annotation.Incubating;
 import io.debezium.config.Configuration;
-import io.debezium.config.Field;
 import io.debezium.document.DocumentReader;
 import io.debezium.document.DocumentWriter;
 import io.debezium.relational.history.*;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.FunctionalReadWriteLock;
 import io.debezium.util.Strings;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -47,8 +31,24 @@ import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.*;
 import org.apache.iceberg.types.Types;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
@@ -87,8 +87,8 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
     this.historyConfig = new IcebergSchemaHistoryConfig(config);
     icebergCatalog = CatalogUtil.buildIcebergCatalog(this.historyConfig.catalogName(),
         this.historyConfig.icebergProperties(), this.historyConfig.hadoopConfig());
-    tableFullName = String.format("%s.%s", this.historyConfig.catalogName(), this.historyConfig.tableName());
-    tableId = TableIdentifier.of(Namespace.of(this.historyConfig.catalogName()), this.historyConfig.tableName());
+    tableFullName = String.format("%s.%s", this.historyConfig.tableNamespace(), this.historyConfig.tableName());
+    tableId = TableIdentifier.of(Namespace.of(this.historyConfig.tableNamespace()), this.historyConfig.tableName());
 
     if (running.get()) {
       throw new SchemaHistoryException("Iceberg database history process already initialized table: " + tableFullName);
@@ -269,45 +269,43 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   }
 
   public static class IcebergSchemaHistoryConfig {
-
-    final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
-    private final Configuration config;
-    Map<String, String> icebergProperties = new ConcurrentHashMap<>();
+    private static final String PROP_SINK_PREFIX =  "debezium.sink.";
+    Properties configCombined = new Properties();
 
     public IcebergSchemaHistoryConfig(Configuration config) {
-      this.config = config;
+      Configuration confIcebergSubset = config.subset(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.", true);
+      confIcebergSubset.forEach(configCombined::put);
 
-      final Map<String, String> conf = new HashMap<>();
-      this.config.forEach((propName, value) -> {
-        if (propName.startsWith(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.")) {
-          final String newPropName = propName.substring((CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.").length());
-          conf.put(newPropName, value);
-        }
-      });
-
-      conf.forEach(hadoopConfig::set);
-      icebergProperties.putAll(conf);
+      // debezium is doing config filtering before passing it down to this class!
+      // so we are taking additional config using ConfigProvider with this we take full iceberg config
+      Map<String, String> icebergConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_SINK_PREFIX + "iceberg.");
+      icebergConf.forEach(configCombined::putIfAbsent);
     }
 
     public String catalogName() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.catalog-name").withDefault("default"));
+      return this.configCombined.getProperty( "catalog-name", "default");
+    }
+
+    public String tableNamespace() {
+      return this.configCombined.getProperty("table-namespace", "default");
     }
 
     public String tableName() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.table-name").withDefault(
-          "debezium_database_history_storage"));
+      return this.configCombined.getProperty("table-name", "debezium_database_history_storage");
     }
 
     public org.apache.hadoop.conf.Configuration hadoopConfig() {
+      final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
+      configCombined.forEach((key, value) -> hadoopConfig.set((String)key, (String)value));
       return hadoopConfig;
     }
 
     public Map<String, String> icebergProperties() {
-      return icebergProperties;
+      return Maps.fromProperties(configCombined);
     }
 
     public String getMigrateHistoryFile() {
-      return this.config.getString(Field.create(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.migrate-history-file").withDefault(""));
+      return configCombined.getProperty("migrate-history-file","");
     }
   }
 
