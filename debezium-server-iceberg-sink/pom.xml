@@ -212,11 +212,11 @@
 
         <!-- Testing -->
         <!-- spark for tests -->
-        <!-- antlr4 version compatible with spark, testing only -->
+        <!-- jakarta version compatible with spark, testing only -->
         <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-            <version>${version.antlr}</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -251,13 +251,13 @@
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-${version.spark.major}_${version.spark.scala}</artifactId>
+            <artifactId>iceberg-spark-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
             <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-extensions-${version.spark.major}_${version.spark.scala}</artifactId>
+            <artifactId>iceberg-spark-extensions-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
             <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
