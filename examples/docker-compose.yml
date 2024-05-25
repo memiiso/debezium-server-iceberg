@@ -33,14 +33,14 @@ services:
     networks:
       iceberg_net:
     ports:
-      - 5432:5432
+      - "5432:5432"
   jdbccatalog:
     image: postgres:14-alpine
     container_name: iceberg-jdbc-catalog
     networks:
       iceberg_net:
     ports:
-      - 5433:5432
+      - "5433:5432"
     environment:
       - POSTGRES_DB=test
       - POSTGRES_USER=testuser
@@ -56,8 +56,8 @@ services:
     networks:
       iceberg_net:
     ports:
-      - 9001:9001
-      - 9000:9000
+      - "9001:9001"
+      - "9000:9000"
     command: ["server", "/data", "--console-address", ":9001"]
   mc:
     image: minio/mc
