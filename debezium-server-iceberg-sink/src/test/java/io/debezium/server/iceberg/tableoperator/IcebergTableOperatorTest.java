@@ -46,8 +46,6 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   String namespace;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
-  @ConfigProperty(name = "debezium.sink.iceberg.partition-field", defaultValue = "__ts_ms")
-  String partitionField;
   @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
   String writeFormat;
   @Inject
@@ -57,7 +55,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   public Table createTable(IcebergChangeEvent sampleEvent) {
     HadoopCatalog icebergCatalog = getIcebergCatalog();
     final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destination());
-    return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat, !upsert, partitionField);
+    return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat);
   }
 
   @Test
