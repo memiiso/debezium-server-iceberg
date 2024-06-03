@@ -79,22 +79,10 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat, boolean partition, String partitionField) {
+                                         Schema schema, String writeFormat) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
-
-    final PartitionSpec ps;
-    if (partition) {
-      if (schema.findField(partitionField) == null) {
-        LOGGER.warn("Table schema dont contain partition field {}! Creating table without partition", partition);
-        ps = PartitionSpec.builderFor(schema).build();
-      } else {
-        ps = PartitionSpec.builderFor(schema).day(partitionField).build();
-      }
-    } else {
-      ps = PartitionSpec.builderFor(schema).build();
-    }
 
     if (!((SupportsNamespaces) icebergCatalog).namespaceExists(tableIdentifier.namespace())) {
       ((SupportsNamespaces) icebergCatalog).createNamespace(tableIdentifier.namespace());
@@ -105,7 +93,6 @@ public class IcebergUtil {
         .withProperty(FORMAT_VERSION, "2")
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
         .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
-        .withPartitionSpec(ps)
         .create();
   }
 
