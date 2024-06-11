@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
@@ -19,19 +20,6 @@ import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Any;
@@ -51,6 +39,16 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
@@ -64,7 +62,6 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 public class IcebergChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
-  protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
   protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
@@ -145,18 +142,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     Map<String, List<IcebergChangeEvent>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
-                -> {
-              try {
-                return new IcebergChangeEvent(e.destination(),
-                    valDeserializer.deserialize(e.destination(), getBytes(e.value())),
-                    e.key() == null ? null : keyDeserializer.deserialize(e.destination(), getBytes(e.key())),
-                    mapper.readTree(getBytes(e.value())).get("schema"),
-                    e.key() == null ? null : mapper.readTree(getBytes(e.key())).get("schema")
-                );
-              } catch (IOException ex) {
-                throw new DebeziumException(ex);
-              }
-            })
+                    -> new IcebergChangeEvent(e.destination(), getBytes(e.value()), e.key() == null ? null : getBytes(e.key())))
             .collect(Collectors.groupingBy(IcebergChangeEvent::destination));
 
     // consume list of events for each destination table

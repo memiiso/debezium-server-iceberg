@@ -8,9 +8,9 @@
 
 package io.debezium.server.iceberg;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
+import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
@@ -18,11 +18,11 @@ import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 
-import static io.debezium.server.iceberg.IcebergChangeConsumer.mapper;
 import static org.junit.jupiter.api.Assertions.*;
 
 class IcebergChangeEventTest {
@@ -32,14 +32,22 @@ class IcebergChangeEventTest {
   final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
+  @Inject
+  IcebergChangeConsumer consumer;
+
   IcebergChangeEventTest() throws IOException {
+    // configure and set
+    IcebergChangeConsumer.valSerde.configure(Collections.emptyMap(), false);
+    IcebergChangeConsumer.valDeserializer = IcebergChangeConsumer.valSerde.deserializer();
+    // configure and set
+    IcebergChangeConsumer.keySerde.configure(Collections.emptyMap(), true);
+    IcebergChangeConsumer.keyDeserializer = IcebergChangeConsumer.keySerde.deserializer();
   }
 
   @Test
-  public void testNestedJsonRecord() throws JsonProcessingException {
+  public void testNestedJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(serdeWithSchema).get("payload"), null,
-        mapper.readTree(serdeWithSchema).get("schema"), null);
+        serdeWithSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
     System.out.println(schema.toString());
     assertTrue(schema.toString().contains("before: optional struct<2: id: optional int, 3: first_name: optional string, " +
@@ -47,10 +55,9 @@ class IcebergChangeEventTest {
   }
 
   @Test
-  public void testUnwrapJsonRecord() throws IOException {
+  public void testUnwrapJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithSchema).get("payload"), null,
-        mapper.readTree(unwrapWithSchema).get("schema"), null);
+        unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
@@ -60,10 +67,10 @@ class IcebergChangeEventTest {
   }
 
   @Test
-  public void testNestedArrayJsonRecord() throws JsonProcessingException {
+  public void testNestedArrayJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithArraySchema).get("payload"), null,
-        mapper.readTree(unwrapWithArraySchema).get("schema"), null);
+        unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null);
+
     Schema schema = e.icebergSchema();
     System.out.println(schema);
     System.out.println(schema.asStruct());
@@ -79,10 +86,9 @@ class IcebergChangeEventTest {
   }
 
   @Test
-  public void testNestedArray2JsonRecord() throws JsonProcessingException {
+  public void testNestedArray2JsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithArraySchema2).get("payload"), null,
-        mapper.readTree(unwrapWithArraySchema2).get("schema"), null);
+        unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
     System.out.println(schema.asStruct());
     System.out.println(schema);
@@ -94,10 +100,9 @@ class IcebergChangeEventTest {
   }
 
   @Test
-  public void testNestedGeomJsonRecord() throws JsonProcessingException {
+  public void testNestedGeomJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
-        mapper.readTree(unwrapWithGeomSchema).get("payload"), null,
-        mapper.readTree(unwrapWithGeomSchema).get("schema"), null);
+        unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
     //System.out.println(schema);

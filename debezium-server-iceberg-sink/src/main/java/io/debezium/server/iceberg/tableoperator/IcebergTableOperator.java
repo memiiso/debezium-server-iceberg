@@ -8,19 +8,10 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.IcebergChangeEvent;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
+import io.debezium.DebeziumException;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.*;
@@ -30,6 +21,14 @@ import org.apache.iceberg.io.WriteResult;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Wrapper to perform operations on iceberg tables
@@ -152,7 +151,7 @@ public class IcebergTableOperator {
 
       for (Map.Entry<IcebergChangeEvent.JsonSchema, List<IcebergChangeEvent>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
-        applyFieldAddition(icebergTable, schemaEvents.getKey().icebergSchema());
+        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
