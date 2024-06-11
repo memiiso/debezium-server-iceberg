@@ -8,18 +8,18 @@
 
 package io.debezium.server.iceberg.testresources;
 
-import io.debezium.server.iceberg.IcebergChangeConsumerTest;
-import io.debezium.server.iceberg.IcebergChangeEvent;
-
-import java.util.Iterator;
-import java.util.Map;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.debezium.server.iceberg.IcebergChangeConsumerTest;
+import io.debezium.server.iceberg.IcebergChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * helper class used to generate test change events
@@ -106,10 +106,8 @@ public class IcebergChangeEventBuilder {
   public IcebergChangeEvent build() {
     return new IcebergChangeEvent(
         this.destination,
-        payload,
-        keyPayload,
-        this.valueSchema(),
-        this.keySchema()
+            payload.asText().getBytes(StandardCharsets.UTF_8),
+            keyPayload.asText().getBytes(StandardCharsets.UTF_8)
     );
   }
 
@@ -155,11 +153,7 @@ public class IcebergChangeEventBuilder {
       } else if (field.getValue().isFloat()) {
         schemaField.put("type", "float64");
       }
-      if (keyPayload.has(field.getKey())) {
-        schemaField.put("optional", false);
-      } else {
-        schemaField.put("optional", true);
-      }
+      schemaField.put("optional", !keyPayload.has(field.getKey()));
       schemaField.put("field", field.getKey());
       fields.add(schemaField);
     }
