@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
+import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
@@ -31,7 +32,16 @@ class IcebergChangeEventTest {
   final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
+  @Inject
+  IcebergChangeConsumer consumer;
+
   IcebergChangeEventTest() throws IOException {
+    // configure and set
+    IcebergChangeConsumer.valSerde.configure(Collections.emptyMap(), false);
+    IcebergChangeConsumer.valDeserializer = IcebergChangeConsumer.valSerde.deserializer();
+    // configure and set
+    IcebergChangeConsumer.keySerde.configure(Collections.emptyMap(), true);
+    IcebergChangeConsumer.keyDeserializer = IcebergChangeConsumer.keySerde.deserializer();
   }
 
   @Test
@@ -60,6 +70,7 @@ class IcebergChangeEventTest {
   public void testNestedArrayJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null);
+
     Schema schema = e.icebergSchema();
     System.out.println(schema);
     System.out.println(schema.asStruct());
