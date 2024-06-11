@@ -285,7 +285,7 @@ public class IcebergChangeEvent {
   private static List<Types.NestedField> icebergSchemaFields(JsonNode schemaNode) {
     List<Types.NestedField> schemaColumns = new ArrayList<>();
     AtomicReference<Integer> fieldId = new AtomicReference<>(1);
-    if (schemaNode != null && schemaNode.has("fields") && schemaNode.get("fields").isArray()) {
+    if (schemaNode != null && !schemaNode.isNull() && schemaNode.has("fields") && schemaNode.get("fields").isArray()) {
       LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
       schemaNode.get("fields").forEach(field -> {
         Map.Entry<Integer, Types.NestedField> df = debeziumFieldToIcebergField(field, field.get("field").textValue(), fieldId.get());
@@ -329,7 +329,7 @@ public class IcebergChangeEvent {
 
     private Schema icebergSchema() {
 
-      if (this.valueSchema == null) {
+      if (this.valueSchema.isNull()) {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
       }
 

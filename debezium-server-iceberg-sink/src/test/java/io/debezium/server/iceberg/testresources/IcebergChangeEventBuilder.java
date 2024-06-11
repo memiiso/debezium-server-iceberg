@@ -106,8 +106,14 @@ public class IcebergChangeEventBuilder {
   public IcebergChangeEvent build() {
     return new IcebergChangeEvent(
         this.destination,
-            payload.asText().getBytes(StandardCharsets.UTF_8),
-            keyPayload.asText().getBytes(StandardCharsets.UTF_8)
+        ("{" +
+            "\"schema\":" + this.valueSchema() + "," +
+            "\"payload\":" + payload.toString() +
+            "} ").getBytes(StandardCharsets.UTF_8),
+        ("{" +
+            "\"schema\":" + this.keySchema() + "," +
+            "\"payload\":" + keyPayload.toString() +
+            "} ").getBytes(StandardCharsets.UTF_8)
     );
   }
 
