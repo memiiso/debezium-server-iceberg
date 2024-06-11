@@ -112,7 +112,7 @@ public class IcebergChangeEventBuilder {
             "} ").getBytes(StandardCharsets.UTF_8),
         ("{" +
             "\"schema\":" + this.keySchema() + "," +
-            "\"payload\":" + keyPayload.toString() +
+            "\"payload\":" + (keyPayload.isEmpty() ? "null" : keyPayload.toString()) +
             "} ").getBytes(StandardCharsets.UTF_8)
     );
   }
