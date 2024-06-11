@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
+import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergChangeEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
@@ -15,10 +16,6 @@ import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
@@ -27,8 +24,13 @@ import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 /**
@@ -148,5 +150,27 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     List<IcebergChangeEvent> dedups2 = icebergTableOperator.deduplicateBatch(records2);
     Assertions.assertEquals(1, dedups2.size());
     Assertions.assertEquals("u", dedups2.get(0).value().get("__op").asText("x"));
+
+    // deduplicating wth null key should fail!
+    IcebergChangeEvent e31 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addField("id", 3)
+        .addField("__op", "r")
+        .addField("__source_ts_ms", 1L)
+        .build();
+    IcebergChangeEvent e32 = new IcebergChangeEventBuilder()
+        .destination("destination")
+        .addField("id", 3)
+        .addField("__op", "u")
+        .addField("__source_ts_ms", 1L)
+        .build();
+
+    List<IcebergChangeEvent> records3 = List.of(e31, e32);
+    DebeziumException thrown = assertThrows(DebeziumException.class,
+        () -> {
+          icebergTableOperator.deduplicateBatch(records3);
+        });
+
+    Assertions.assertTrue(thrown.getMessage().contains("Cannot deduplicate data with null key!"));
   }
 }

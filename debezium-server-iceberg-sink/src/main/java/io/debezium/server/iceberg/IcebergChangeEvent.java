@@ -53,7 +53,7 @@ public class IcebergChangeEvent {
   }
 
   public JsonNode key() {
-    if (key == null) {
+    if (key == null && keyData != null) {
       key = keyDeserializer.deserialize(destination, keyData);
     }
 
@@ -61,7 +61,7 @@ public class IcebergChangeEvent {
   }
 
   public JsonNode value() {
-    if (value == null) {
+    if (value == null && valueData != null) {
       value = valDeserializer.deserialize(destination, valueData);
     }
 
