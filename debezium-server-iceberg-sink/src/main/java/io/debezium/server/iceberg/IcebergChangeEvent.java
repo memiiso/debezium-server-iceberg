@@ -9,6 +9,8 @@
 package io.debezium.server.iceberg;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.debezium.DebeziumException;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.exceptions.ValidationException;
@@ -25,42 +27,57 @@ import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.debezium.server.iceberg.IcebergChangeConsumer.keyDeserializer;
+import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
+
 /**
- *
  * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
  *
  * @author Ismail Simsek
  */
 public class IcebergChangeEvent {
 
+  protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
   protected final String destination;
-  protected final JsonNode value;
-  protected final JsonNode key;
-  final JsonSchema jsonSchema;
+  protected final byte[] valueData;
+  protected final byte[] keyData;
+  private JsonNode value;
+  private JsonNode key;
 
-  public IcebergChangeEvent(String destination, JsonNode value, JsonNode key, JsonNode valueSchema, JsonNode keySchema) {
+  public IcebergChangeEvent(String destination, byte[] valueData, byte[] keyData) {
     this.destination = destination;
-    this.value = value;
-    this.key = key;
-    this.jsonSchema = new JsonSchema(valueSchema, keySchema);
+    this.valueData = valueData;
+    this.keyData = keyData;
   }
 
   public JsonNode key() {
+    if (key == null) {
+      key = keyDeserializer.deserialize(destination, keyData);
+    }
+
     return key;
   }
 
   public JsonNode value() {
+    if (value == null) {
+      value = valDeserializer.deserialize(destination, valueData);
+    }
+
     return value;
   }
 
   public JsonSchema jsonSchema() {
-    return jsonSchema;
+    try {
+      return new JsonSchema(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));
+    } catch (IOException e) {
+      throw new DebeziumException("Failed to get event schema", e);
+    }
   }
 
   public Schema icebergSchema() {
-    return jsonSchema.icebergSchema();
+    return jsonSchema().icebergSchema();
   }
 
   public String destination() {
@@ -68,7 +85,7 @@ public class IcebergChangeEvent {
   }
 
   public GenericRecord asIcebergRecord(Schema schema) {
-    return asIcebergRecord(schema.asStruct(), value);
+    return asIcebergRecord(schema.asStruct(), value());
   }
 
   private static GenericRecord asIcebergRecord(Types.StructType tableFields, JsonNode data) {
@@ -176,13 +193,13 @@ public class IcebergChangeEvent {
           break;
         }
 
-        val = IcebergChangeConsumer.mapper.convertValue(node, ArrayList.class);
+        val = mapper.convertValue(node, ArrayList.class);
         break;
       case MAP:
         Type keyType = field.type().asMapType().keyType();
         Type valType = field.type().asMapType().valueType();
         if (keyType.isPrimitiveType() && valType.isPrimitiveType()) {
-          val = IcebergChangeConsumer.mapper.convertValue(node, Map.class);
+          val = mapper.convertValue(node, Map.class);
           break;
         }
         // convert complex/nested map value with recursion
