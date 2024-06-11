@@ -306,11 +306,11 @@ public class IcebergChangeEvent {
       this.keySchema = keySchema;
     }
 
-    public JsonNode valueSchema() {
+    protected JsonNode valueSchema() {
       return valueSchema;
     }
 
-    public JsonNode keySchema() {
+    protected JsonNode keySchema() {
       return keySchema;
     }
 
@@ -327,7 +327,7 @@ public class IcebergChangeEvent {
       return Objects.hash(valueSchema, keySchema);
     }
 
-    public Schema icebergSchema() {
+    private Schema icebergSchema() {
 
       if (this.valueSchema == null) {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");

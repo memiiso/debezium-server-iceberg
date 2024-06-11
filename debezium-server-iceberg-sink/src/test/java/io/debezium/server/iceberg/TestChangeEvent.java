@@ -6,11 +6,13 @@
  *
  */
 
-package io.debezium.server.iceberg.testresources;
+package io.debezium.server.iceberg;
+
 
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.RecordChangeEvent;
-import io.debezium.server.iceberg.IcebergChangeEvent;
+import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
+import io.debezium.server.iceberg.testresources.TestUtil;
 
 import java.time.Instant;
 
