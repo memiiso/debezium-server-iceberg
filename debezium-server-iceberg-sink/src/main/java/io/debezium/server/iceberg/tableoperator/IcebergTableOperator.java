@@ -149,12 +149,12 @@ public class IcebergTableOperator {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
-      Map<IcebergChangeEvent.JsonSchema, List<IcebergChangeEvent>> eventsGroupedBySchema =
+      Map<IcebergChangeEvent.ChangeEventSchema, List<IcebergChangeEvent>> eventsGroupedBySchema =
           events.stream()
-              .collect(Collectors.groupingBy(IcebergChangeEvent::jsonSchema));
+              .collect(Collectors.groupingBy(IcebergChangeEvent::changeEventSchema));
       LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
 
-      for (Map.Entry<IcebergChangeEvent.JsonSchema, List<IcebergChangeEvent>> schemaEvents : eventsGroupedBySchema.entrySet()) {
+      for (Map.Entry<IcebergChangeEvent.ChangeEventSchema, List<IcebergChangeEvent>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
         // add set of events to table

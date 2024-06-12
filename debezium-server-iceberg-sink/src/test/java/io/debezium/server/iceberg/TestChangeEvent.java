@@ -49,11 +49,11 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
         .build();
 
     final String key = "{" +
-                       "\"schema\":" + t.jsonSchema().keySchema() + "," +
+        "\"schema\":" + t.changeEventSchema().keySchema() + "," +
                        "\"payload\":" + t.key() +
                        "} ";
     final String val = "{" +
-                       "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+        "\"schema\":" + t.changeEventSchema().valueSchema() + "," +
                        "\"payload\":" + t.value() +
                        "} ";
     return new TestChangeEvent<>(key, val, destination);
@@ -71,11 +71,11 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
         .build();
 
     final String key = "{" +
-                       "\"schema\":" + t.jsonSchema().keySchema() + "," +
+        "\"schema\":" + t.changeEventSchema().keySchema() + "," +
                        "\"payload\":" + t.key() +
                        "} ";
     final String val = "{" +
-                       "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+        "\"schema\":" + t.changeEventSchema().valueSchema() + "," +
                        "\"payload\":" + t.value() +
                        "} ";
 
@@ -106,7 +106,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
         .build();
 
     final String val = "{" +
-                       "\"schema\":" + t.jsonSchema().valueSchema() + "," +
+        "\"schema\":" + t.changeEventSchema().valueSchema() + "," +
                        "\"payload\":" + t.value() +
                        "} ";
     return new TestChangeEvent<>(null, val, destination);
