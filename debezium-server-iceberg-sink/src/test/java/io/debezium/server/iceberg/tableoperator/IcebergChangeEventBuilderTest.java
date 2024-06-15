@@ -14,6 +14,7 @@ import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import java.util.List;
 import java.util.Set;
 
+import io.quarkus.test.junit.QuarkusTest;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.Assertions;
@@ -25,6 +26,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 /**
  * @author Ismail Simsek
  */
+@QuarkusTest
 class IcebergChangeEventBuilderTest {
 
   @Test
