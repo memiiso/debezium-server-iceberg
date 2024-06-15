@@ -30,6 +30,8 @@ import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.io.OutputFileFactory;
 import com.google.common.primitives.Ints;
 import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
+import org.eclipse.microprofile.config.ConfigValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.iceberg.TableProperties.*;
@@ -55,6 +57,33 @@ public class IcebergUtil {
 
     return ret;
   }
+
+
+  public static boolean configIncludesUnwrapSmt() {
+    return configIncludesUnwrapSmt(ConfigProvider.getConfig());
+  }
+
+  //@TestingOnly
+  static boolean configIncludesUnwrapSmt(Config config) {
+    // first lets find the config value for debezium statements
+    ConfigValue stms = config.getConfigValue("debezium.transforms");
+    if (stms == null || stms.getValue() == null || stms.getValue().isEmpty() || stms.getValue().isBlank()){
+      return false;
+    }
+
+    String[] stmsList = stms.getValue().split(",");
+    final String regexVal = "^io\\.debezium\\..*transforms\\.ExtractNew.*State$";
+    // we have debezium statements configured! let's check if we have event flattening config is set.
+    for (String stmName : stmsList) {
+      ConfigValue stmVal = config.getConfigValue("debezium.transforms."+stmName+".type");
+      if (stmVal != null && stmVal.getValue() != null && !stmVal.getValue().isEmpty() && !stmVal.getValue().isBlank() && stmVal.getValue().matches(regexVal)){
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 
   public static <T> T selectInstance(Instance<T> instances, String name) {
 

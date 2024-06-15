@@ -32,6 +32,9 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.upsert-keep-deletes", "true");
     config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
 
+    // iceberg config
+    config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
+
     // ==== configure batch behaviour/size ====
     // Positive integer value that specifies the maximum size of each batch of events that should be processed during
     // each iteration of this connector. Defaults to 2048.

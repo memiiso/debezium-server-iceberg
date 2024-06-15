@@ -39,6 +39,7 @@ public class IcebergChangeEvent {
   protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
+  static final boolean eventsAreUnwrapped = IcebergUtil.configIncludesUnwrapSmt();
   protected final String destination;
   protected final byte[] valueData;
   protected final byte[] keyData;
@@ -76,21 +77,11 @@ public class IcebergChangeEvent {
   }
 
   public Schema icebergSchema() {
-    return changeEventSchema().icebergSchema(this.isUnwrapped());
+    return changeEventSchema().icebergSchema();
   }
 
   public String destination() {
     return destination;
-  }
-
-  public boolean isUnwrapped() {
-    return !(
-        this.value().has("after") &&
-            this.value().has("source") &&
-            this.value().has("before") &&
-            this.value().get("after").isObject() &&
-            this.value().get("source").isObject()
-    );
   }
 
   public GenericRecord asIcebergRecord(Schema schema) {
@@ -321,14 +312,14 @@ public class IcebergChangeEvent {
       return schemaData;
     }
 
-    private Schema icebergSchema(boolean isUnwrapped) {
+    private Schema icebergSchema() {
 
       if (this.valueSchema.isNull()) {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
       }
 
       IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
-      if (!isUnwrapped && keySchema != null) {
+      if (!eventsAreUnwrapped && keySchema != null) {
         // NOTE: events re not unwrapped, align schema with event schema, so then we can scan event and key schemas synchronously
         ObjectNode nestedKeySchema = mapper.createObjectNode();
         nestedKeySchema.put("type", "struct");
