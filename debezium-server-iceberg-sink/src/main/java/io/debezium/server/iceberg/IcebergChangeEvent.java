@@ -77,11 +77,21 @@ public class IcebergChangeEvent {
   }
 
   public Schema icebergSchema() {
-    return changeEventSchema().icebergSchema();
+    return changeEventSchema().icebergSchema(this.isUnwrapped());
   }
 
   public String destination() {
     return destination;
+  }
+
+  public boolean isUnwrapped() {
+    return !(
+        this.value().has("after") &&
+            this.value().has("source") &&
+            this.value().has("before") &&
+            this.value().get("after").isObject() &&
+            this.value().get("source").isObject()
+    );
   }
 
   public GenericRecord asIcebergRecord(Schema schema) {
@@ -266,7 +276,27 @@ public class IcebergChangeEvent {
       return Objects.hash(valueSchema, keySchema);
     }
 
-    private Schema icebergSchema() {
+    private static JsonNode getNodeFieldsArray(JsonNode node) {
+      if (node != null && !node.isNull() && node.has("fields") && node.get("fields").isArray()) {
+        return node.get("fields");
+      }
+
+      return mapper.createObjectNode();
+    }
+
+    private static JsonNode findNodeFieldByName(String fieldName, JsonNode node) {
+
+      for (JsonNode field : getNodeFieldsArray(node)) {
+
+        if (Objects.equals(field.get("field").textValue(), fieldName)) {
+          return field;
+        }
+      }
+
+      return null;
+    }
+
+    private Schema icebergSchema(boolean isUnwrapped) {
 
       if (this.valueSchema.isNull()) {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
@@ -313,14 +343,13 @@ public class IcebergChangeEvent {
     private static List<Types.NestedField> icebergSchemaFields(JsonNode schemaNode) {
       List<Types.NestedField> schemaColumns = new ArrayList<>();
       AtomicReference<Integer> fieldId = new AtomicReference<>(1);
-      if (schemaNode != null && !schemaNode.isNull() && schemaNode.has("fields") && schemaNode.get("fields").isArray()) {
-        LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
-        schemaNode.get("fields").forEach(field -> {
-          Map.Entry<Integer, Types.NestedField> df = debeziumFieldToIcebergField(field, field.get("field").textValue(), fieldId.get());
-          fieldId.set(df.getKey() + 1);
-          schemaColumns.add(df.getValue());
-        });
+      LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
+      for (JsonNode field : getNodeFieldsArray(schemaNode)) {
+        Map.Entry<Integer, Types.NestedField> df = debeziumFieldToIcebergField(field, field.get("field").textValue(), fieldId.get());
+        fieldId.set(df.getKey() + 1);
+        schemaColumns.add(df.getValue());
       }
+
       return schemaColumns;
     }
 
