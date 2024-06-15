@@ -20,6 +20,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructField;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeAll;
 import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
@@ -68,6 +69,18 @@ public class BaseSparkTest extends BaseTest {
 
     BaseSparkTest.spark.sparkContext().getConf().toDebugString();
 
+  }
+
+  public static String dataTypeString(Dataset<Row> dataset, String colName) {
+    StructField[] fields = dataset.schema().fields();
+    String dataType = null;
+    for(StructField field: fields) {
+      if(field.name().equals(colName)) {
+        dataType =  field.dataType().typeName();
+        break;
+      }
+    }
+    return dataType;
   }
 
   public static void PGCreateTestDataTable() throws Exception {
