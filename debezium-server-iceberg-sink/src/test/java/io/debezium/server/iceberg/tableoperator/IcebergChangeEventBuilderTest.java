@@ -50,7 +50,7 @@ class IcebergChangeEventBuilderTest {
         .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", true)
         .build();
-    Assertions.assertTrue(schema1.sameSchema(t.icebergSchema()));
+    Assertions.assertTrue(schema1.sameSchema(t.icebergSchema(true)));
 
     Schema schema2 = new Schema(
         optional(1, "id", Types.IntegerType.get()),
@@ -68,7 +68,7 @@ class IcebergChangeEventBuilderTest {
         .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", true)
         .build();
-    Assertions.assertTrue(schema2.sameSchema(t.icebergSchema()));
+    Assertions.assertTrue(schema2.sameSchema(t.icebergSchema(true)));
   }
 
 

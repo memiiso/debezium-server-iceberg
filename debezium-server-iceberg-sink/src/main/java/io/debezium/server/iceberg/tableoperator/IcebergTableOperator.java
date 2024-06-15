@@ -15,6 +15,7 @@ import io.debezium.server.iceberg.IcebergChangeEvent;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.*;
+import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
@@ -46,6 +47,8 @@ public class IcebergTableOperator {
   String opColumn;
   @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
   boolean allowFieldAddition;
+  @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
+  boolean createIdentifierFields;
   @Inject
   IcebergTableWriterFactory writerFactory;
 
@@ -156,7 +159,7 @@ public class IcebergTableOperator {
 
       for (Map.Entry<IcebergChangeEvent.ChangeEventSchema, List<IcebergChangeEvent>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
-        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
+        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(createIdentifierFields));
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
@@ -172,9 +175,11 @@ public class IcebergTableOperator {
    */
   private void addToTablePerSchema(Table icebergTable, List<IcebergChangeEvent> events) {
     // Initialize a task writer to write both INSERT and equality DELETE.
+    final Schema tableSchema = icebergTable.schema();
     try (BaseTaskWriter<Record> writer = writerFactory.create(icebergTable)) {
       for (IcebergChangeEvent e : events) {
-        writer.write(e.asIcebergRecord(icebergTable.schema()));
+        final GenericRecord record = e.asIcebergRecord(tableSchema);
+        writer.write(record);
       }
 
       writer.close();

@@ -47,11 +47,17 @@ class IcebergChangeEventTestUnwrapped {
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
     TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
-    Schema schema = dbzEvent.toIcebergChangeEvent().icebergSchema();
+
+    Exception exception = assertThrows(RuntimeException.class, () -> {
+      dbzEvent.toIcebergChangeEvent().icebergSchema(true);
+    });
+    assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
+
+    Schema schema = dbzEvent.toIcebergChangeEvent().icebergSchema(false);
     assertEquals("""
         table {
           1: before: optional struct<2: order_number: optional int, 3: order_date: optional int, 4: purchaser: optional int, 5: quantity: optional int, 6: product_id: optional int>
-          7: after: required struct<8: order_number: required int, 9: order_date: optional int, 10: purchaser: optional int, 11: quantity: optional int, 12: product_id: optional int>
+          7: after: optional struct<8: order_number: optional int, 9: order_date: optional int, 10: purchaser: optional int, 11: quantity: optional int, 12: product_id: optional int>
           13: source: optional struct<14: version: optional string, 15: connector: optional string, 16: name: optional string, 17: ts_ms: optional long, 18: snapshot: optional string, 19: db: optional string, 20: sequence: optional string, 21: ts_us: optional long, 22: ts_ns: optional long, 23: table: optional string, 24: server_id: optional long, 25: gtid: optional string, 26: file: optional string, 27: pos: optional long, 28: row: optional int, 29: thread: optional long, 30: query: optional string>
           31: transaction: optional struct<32: id: optional string, 33: total_order: optional long, 34: data_collection_order: optional long>
           35: op: optional string
@@ -59,8 +65,27 @@ class IcebergChangeEventTestUnwrapped {
           37: ts_us: optional long
           38: ts_ns: optional long
         }""", schema.toString());
-    assertEquals(Set.of(8), schema.identifierFieldIds());
+    assertEquals(Set.of(), schema.identifierFieldIds());
   }
+
+  @Test
+  public void testIcebergChangeEventSchemaWithDelete() throws IOException {
+
+    assertFalse(IcebergUtil.configIncludesUnwrapSmt());
+
+    String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
+    String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
+    TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
+    IcebergChangeEvent ie = dbzEvent.toIcebergChangeEvent();
+
+    Exception exception = assertThrows(RuntimeException.class, () -> {
+      ie.icebergSchema(true);
+    });
+    assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
+    // print converted event value!
+    System.out.println(ie.asIcebergRecord(ie.icebergSchema(false)));
+  }
+
   public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {

@@ -52,7 +52,7 @@ class IcebergChangeEventTest {
   public void testNestedJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         serdeWithSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema();
+    Schema schema = e.icebergSchema(true);
     System.out.println(schema.toString());
     assertEquals(schema.toString(), ("""
         table {
@@ -69,7 +69,7 @@ class IcebergChangeEventTest {
   public void testUnwrapJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema();
+    Schema schema = e.icebergSchema(true);
     GenericRecord record = e.asIcebergRecord(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
@@ -95,7 +95,7 @@ class IcebergChangeEventTest {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null);
 
-    Schema schema = e.icebergSchema();
+    Schema schema = e.icebergSchema(true);
     assertEquals(schema.toString(), """
         table {
           1: name: optional string
@@ -119,7 +119,7 @@ class IcebergChangeEventTest {
   public void testNestedArray2JsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema();
+    Schema schema = e.icebergSchema(true);
     System.out.println(schema);
     assertEquals(schema.toString(), """
         table {
@@ -136,7 +136,7 @@ class IcebergChangeEventTest {
   public void testNestedGeomJsonRecord() {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema();
+    Schema schema = e.icebergSchema(true);
     GenericRecord record = e.asIcebergRecord(schema);
     assertEquals(schema.toString(), """
         table {
@@ -180,7 +180,7 @@ class IcebergChangeEventTest {
   @Test
   public void testIcebergChangeEventSchemaWithKey() {
     TestChangeEvent<Object, Object> debeziumEvent = TestChangeEvent.ofCompositeKey("destination", 1, "u", "user1", 2L);
-    Schema schema = debeziumEvent.toIcebergChangeEvent().icebergSchema();
+    Schema schema = debeziumEvent.toIcebergChangeEvent().icebergSchema(true);
     assertEquals(schema.toString(), """
         table {
           1: id: required int (id)
@@ -212,7 +212,7 @@ class IcebergChangeEventTest {
 
     // test when PK is not first two columns!
     TestChangeEvent<String, String> debeziumEvent2 = new TestChangeEvent<>(key, val, "test");
-    Schema schema2 = debeziumEvent2.toIcebergChangeEvent().icebergSchema();
+    Schema schema2 = debeziumEvent2.toIcebergChangeEvent().icebergSchema(true);
     assertEquals(schema2.toString(), """
         table {
           1: first_column: optional string

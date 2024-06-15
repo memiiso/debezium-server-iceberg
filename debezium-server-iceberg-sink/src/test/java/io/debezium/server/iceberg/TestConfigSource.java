@@ -48,6 +48,8 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
     // use hadoop catalog for tests
     config.put("debezium.sink.iceberg.type", "hadoop");
+    // drop tombstones for delete events
+    config.put("debezium.source.tombstones.on.delete", "false");
 
     // enable disable schema
     config.put("debezium.format.value.schemas.enable", "true");
