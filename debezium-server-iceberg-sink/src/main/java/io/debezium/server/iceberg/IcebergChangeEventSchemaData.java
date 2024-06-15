@@ -20,8 +20,8 @@ record IcebergChangeEventSchemaData(List<Types.NestedField> fields, Set<Integer>
     this(new ArrayList<>(), new HashSet<>(), new AtomicInteger(1));
   }
 
-  public IcebergChangeEventSchemaData copyKeepNextFieldId() {
-    return new IcebergChangeEventSchemaData(new ArrayList<>(), new HashSet<>(), this.nextFieldId);
+  public IcebergChangeEventSchemaData copyKeepIdentifierFieldIdsAndNextFieldId() {
+    return new IcebergChangeEventSchemaData(new ArrayList<>(), this.identifierFieldIds, this.nextFieldId);
   }
 
 

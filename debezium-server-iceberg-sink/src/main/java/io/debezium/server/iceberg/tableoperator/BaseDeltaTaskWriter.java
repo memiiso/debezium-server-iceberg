@@ -1,8 +1,6 @@
 package io.debezium.server.iceberg.tableoperator;
 
-import java.io.IOException;
-import java.util.List;
-
+import com.google.common.collect.Sets;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
@@ -10,8 +8,10 @@ import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
-import com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
+
+import java.io.IOException;
+import java.util.List;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
 
@@ -50,11 +50,13 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   @Override
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
+    // @TODO __op field should not be hardcoded! when unwrapped its __op when not ist op
     if (upsert && !row.getField("__op").equals("c")) {// anything which not an insert is upsert
       writer.delete(row);
     }
     // if its deleted row and upsertKeepDeletes = true then add deleted record to target table
     // else deleted records are deleted from target table
+    // @TODO __op field should not be hardcoded! when unwrapped its __op when not ist op
     if (
         upsertKeepDeletes
         || !(row.getField("__op").equals("d")))// anything which not an insert is upsert

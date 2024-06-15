@@ -1,0 +1,17 @@
+{
+  "schema": {
+    "type": "struct",
+    "fields": [
+      {
+        "type": "int32",
+        "optional": false,
+        "field": "order_number"
+      }
+    ],
+    "optional": false,
+    "name": "testc.inventory.orders.Key"
+  },
+  "payload": {
+    "order_number": 10004
+  }
+}
