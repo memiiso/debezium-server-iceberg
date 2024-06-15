@@ -339,14 +339,10 @@ public class IcebergChangeEvent {
      * @return
      */
     private static IcebergChangeEventSchemaData icebergSchemaFields(JsonNode schemaNode) {
-      //List<Types.NestedField> schemaColumns = new ArrayList<>();
-      //AtomicReference<Integer> fieldId = new AtomicReference<>(1);
       IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
       LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
       for (JsonNode field : getNodeFieldsArray(schemaNode)) {
-        schemaData = debeziumFieldToIcebergField(field, field.get("field").textValue(), schemaData);
-        //fieldId.set(df.getKey() + 1);
-        //schemaColumns.add(df.getValue());
+        debeziumFieldToIcebergField(field, field.get("field").textValue(), schemaData);
       }
 
       return schemaData;
