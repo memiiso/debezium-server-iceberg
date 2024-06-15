@@ -14,10 +14,11 @@ import io.debezium.engine.RecordChangeEvent;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.TestUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 /**
- * helper class used to generate test customer change events
+ * helper class used to generate test debezium change events
  *
  * @author Ismail Simsek
  */
@@ -35,6 +36,18 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   public TestChangeEvent(V value) {
     this(null, value, null);
+  }
+
+  public byte[] getKeyBytes() {
+    return this.key.toString().getBytes(StandardCharsets.UTF_8);
+  }
+
+  public byte[] getValueBytes() {
+    return this.value.toString().getBytes(StandardCharsets.UTF_8);
+  }
+
+  public IcebergChangeEvent toIcebergChangeEvent() {
+    return new IcebergChangeEvent(this.destination(), this.getValueBytes(), this.getKeyBytes());
   }
 
   public static TestChangeEvent<Object, Object> of(String destination, Integer id, String operation, String name,
