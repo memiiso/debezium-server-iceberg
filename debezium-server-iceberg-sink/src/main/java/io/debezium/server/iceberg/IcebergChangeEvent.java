@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
@@ -234,14 +235,15 @@ public class IcebergChangeEvent {
       switch (fieldType) {
         case "struct":
           int rootStructId = schemaData.nextFieldId().getAndIncrement();
-          IcebergChangeEventSchemaData subSchemaData = schemaData.copyKeepNextFieldId();
+          final IcebergChangeEventSchemaData subSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           for (JsonNode subFieldSchema : fieldSchema.get("fields")) {
             String subFieldName = subFieldSchema.get("field").textValue();
             JsonNode equivalentNestedKeyField = findNodeFieldByName(subFieldName, keySchemaNode);
             debeziumFieldToIcebergField(subFieldSchema, subFieldName, subSchemaData, equivalentNestedKeyField);
           }
           // create it as struct, nested type
-          schemaData.fields().add(Types.NestedField.optional(rootStructId, fieldName, Types.StructType.of(subSchemaData.fields())));
+          final Types.NestedField structField = Types.NestedField.of(rootStructId, !isPkField, fieldName, Types.StructType.of(subSchemaData.fields()));
+          schemaData.fields().add(structField);
           return schemaData;
         case "map":
           if (isPkField) {
@@ -250,12 +252,12 @@ public class IcebergChangeEvent {
           int rootMapId = schemaData.nextFieldId().getAndIncrement();
           int keyFieldId = schemaData.nextFieldId().getAndIncrement();
           int valFieldId = schemaData.nextFieldId().getAndIncrement();
-          IcebergChangeEventSchemaData keySchemaData = schemaData.copyKeepNextFieldId();
+          final IcebergChangeEventSchemaData keySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("keys"), fieldName + "_key", keySchemaData, null);
           schemaData.nextFieldId().incrementAndGet();
-          IcebergChangeEventSchemaData valSchemaData = schemaData.copyKeepNextFieldId();
+          final IcebergChangeEventSchemaData valSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("values"), fieldName + "_val", valSchemaData, null);
-          Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keySchemaData.fields().get(0).type(), valSchemaData.fields().get(0).type());
+          final Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keySchemaData.fields().get(0).type(), valSchemaData.fields().get(0).type());
           schemaData.fields().add(Types.NestedField.optional(rootMapId, fieldName, mapField));
           return schemaData;
 
@@ -264,14 +266,14 @@ public class IcebergChangeEvent {
             throw new DebeziumException("Cannot set array field '" + fieldName + "' as a identifier field, array types are not supported as an identifier field!");
           }
           int rootArrayId = schemaData.nextFieldId().getAndIncrement();
-          IcebergChangeEventSchemaData arraySchemaData = schemaData.copyKeepNextFieldId();
+          final IcebergChangeEventSchemaData arraySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("items"), fieldName + "_items", arraySchemaData, null);
-          Types.ListType listField = Types.ListType.ofOptional(schemaData.nextFieldId().getAndIncrement(), arraySchemaData.fields().get(0).type());
+          final Types.ListType listField = Types.ListType.ofOptional(schemaData.nextFieldId().getAndIncrement(), arraySchemaData.fields().get(0).type());
           schemaData.fields().add(Types.NestedField.optional(rootArrayId, fieldName, listField));
           return schemaData;
         default:
           // its primitive field
-          Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType));
+          final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType));
           schemaData.fields().add(field);
           if (isPkField) schemaData.identifierFieldIds().add(field.fieldId());
           return schemaData;
@@ -303,30 +305,12 @@ public class IcebergChangeEvent {
       return null;
     }
 
-    private Schema icebergSchema(boolean isUnwrapped) {
-
-      if (this.valueSchema.isNull()) {
-        throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
-      }
-
-      final IcebergChangeEventSchemaData schemaData = icebergSchemaFields(valueSchema, keySchema);
-
-      if (schemaData.fields().isEmpty()) {
-        throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
-      }
-
-      // @TODO validate key fields are correctly set!?
-      return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
-
-    }
-
     /***
      * Converts debezium event fields to iceberg equivalent and returns list of iceberg fields.
      * @param schemaNode
      * @return
      */
-    private static IcebergChangeEventSchemaData icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode) {
-      IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
+    private static IcebergChangeEventSchemaData icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergChangeEventSchemaData schemaData) {
       LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
       for (JsonNode field : getNodeFieldsArray(schemaNode)) {
         String fieldName = field.get("field").textValue();
@@ -335,6 +319,32 @@ public class IcebergChangeEvent {
       }
 
       return schemaData;
+    }
+
+    private Schema icebergSchema(boolean isUnwrapped) {
+
+      if (this.valueSchema.isNull()) {
+        throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
+      }
+
+      IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
+      if (!isUnwrapped && keySchema != null) {
+        // NOTE: events re not unwrapped, align schema with event schema, so then we can scan event and key schemas synchronously
+        ObjectNode nestedKeySchema = mapper.createObjectNode();
+        nestedKeySchema.put("type", "struct");
+        nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
+        icebergSchemaFields(valueSchema, nestedKeySchema, schemaData);
+      } else {
+        icebergSchemaFields(valueSchema, keySchema, schemaData);
+      }
+
+      if (schemaData.fields().isEmpty()) {
+        throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
+      }
+
+      // @TODO validate key fields are correctly set!?
+      return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
+
     }
 
     private static Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType) {

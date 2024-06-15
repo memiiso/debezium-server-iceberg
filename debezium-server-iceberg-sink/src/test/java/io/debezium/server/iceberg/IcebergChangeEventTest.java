@@ -86,8 +86,6 @@ class IcebergChangeEventTest {
         }""");
 
     assertEquals(schema.identifierFieldIds(), Set.of());
-    System.out.println(schema);
-    System.out.println(record);
   }
 
   @Test
@@ -108,10 +106,6 @@ class IcebergChangeEventTest {
           12: __deleted: optional string
         }""");
     assertEquals(schema.identifierFieldIds(), Set.of());
-    System.out.println(schema);
-    System.out.println(schema.asStruct());
-    System.out.println(schema.findField("pay_by_quarter").type().asListType().elementType());
-    System.out.println(schema.findField("schedule").type().asListType().elementType());
     assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
     assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
     GenericRecord record = e.asIcebergRecord(schema);
@@ -124,7 +118,6 @@ class IcebergChangeEventTest {
     IcebergChangeEvent e = new IcebergChangeEvent("test",
         unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
-    System.out.println(schema.asStruct());
     System.out.println(schema);
     assertEquals(schema.toString(), """
         table {
@@ -135,10 +128,6 @@ class IcebergChangeEventTest {
           20: tableChanges: optional list<struct<22: type: optional string, 23: id: optional string, 24: table: optional struct<25: defaultCharsetName: optional string, 26: primaryKeyColumnNames: optional list<string>, 29: columns: optional list<struct<31: name: optional string, 32: jdbcType: optional int, 33: nativeType: optional int, 34: typeName: optional string, 35: typeExpression: optional string, 36: charsetName: optional string, 37: length: optional int, 38: scale: optional int, 39: position: optional int, 40: optional: optional boolean, 41: autoIncremented: optional boolean, 42: generated: optional boolean>>>>>
         }""");
     assertEquals(schema.identifierFieldIds(), Set.of());
-    System.out.println(schema.findField("tableChanges"));
-    System.out.println(schema.findField("tableChanges").type().asListType().elementType());
-    //GenericRecord record = IcebergUtil.getIcebergRecord(schema.asStruct(), jsonPayload);
-    //System.out.println(record);
   }
 
   @Test
@@ -147,8 +136,6 @@ class IcebergChangeEventTest {
         unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema();
     GenericRecord record = e.asIcebergRecord(schema);
-    //System.out.println(schema);
-    //System.out.println(record);
     assertEquals(schema.toString(), """
         table {
           1: id: optional int
@@ -175,18 +162,15 @@ class IcebergChangeEventTest {
     final Serde<JsonNode> valueSerde = DebeziumSerdes.payloadJson(JsonNode.class);
     valueSerde.configure(Collections.emptyMap(), false);
     JsonNode deserializedData = valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
-    System.out.println(deserializedData.getClass().getSimpleName());
-    System.out.println(deserializedData.has("payload"));
     assertEquals(deserializedData.getClass().getSimpleName(), "ObjectNode");
-    System.out.println(deserializedData);
     assertTrue(deserializedData.has("after"));
     assertTrue(deserializedData.has("op"));
     assertTrue(deserializedData.has("before"));
     assertFalse(deserializedData.has("schema"));
+    assertFalse(deserializedData.has("payload"));
 
     valueSerde.configure(Collections.singletonMap("from.field", "schema"), false);
     JsonNode deserializedSchema = valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
-    System.out.println(deserializedSchema);
     assertFalse(deserializedSchema.has("schema"));
 
   }
@@ -239,5 +223,25 @@ class IcebergChangeEventTest {
     assertEquals(schema2.identifierFieldIds(), Set.of(2, 3));
   }
 
+
+  @Test
+  public void testIcebergChangeEventSchemaWithNestedKey() throws IOException {
+    String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
+    String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
+    TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
+    Schema schema = dbzEvent.toIcebergChangeEvent().icebergSchema();
+    assertEquals("""
+        table {
+          1: before: optional struct<2: order_number: optional int, 3: order_date: optional int, 4: purchaser: optional int, 5: quantity: optional int, 6: product_id: optional int>
+          7: after: required struct<8: order_number: required int, 9: order_date: optional int, 10: purchaser: optional int, 11: quantity: optional int, 12: product_id: optional int>
+          13: source: optional struct<14: version: optional string, 15: connector: optional string, 16: name: optional string, 17: ts_ms: optional long, 18: snapshot: optional string, 19: db: optional string, 20: sequence: optional string, 21: ts_us: optional long, 22: ts_ns: optional long, 23: table: optional string, 24: server_id: optional long, 25: gtid: optional string, 26: file: optional string, 27: pos: optional long, 28: row: optional int, 29: thread: optional long, 30: query: optional string>
+          31: transaction: optional struct<32: id: optional string, 33: total_order: optional long, 34: data_collection_order: optional long>
+          35: op: optional string
+          36: ts_ms: optional long
+          37: ts_us: optional long
+          38: ts_ns: optional long
+        }""", schema.toString());
+    assertEquals(Set.of(8), schema.identifierFieldIds());
+  }
 
 }
