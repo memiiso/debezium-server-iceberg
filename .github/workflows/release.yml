@@ -33,7 +33,7 @@ jobs:
           echo "RELEASE_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Build project
-        run: mvn -B package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
+        run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
 
       - name: Delete previous ${{ env.RELEASE_NAME }} release
         uses: dev-drprasad/delete-tag-and-release@v1.1

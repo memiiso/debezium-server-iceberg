@@ -33,4 +33,4 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: Build with Maven
-        run: mvn -B package --file pom.xml -Dsurefire.skipAfterFailureCount=1
+        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1
