@@ -48,12 +48,6 @@
         <!-- Quarkus -->
         <version.quarkus>3.10.0</version.quarkus>
     </properties>
-    <repositories>
-        <repository>
-            <id>orgapachespark-stg-repo</id>
-            <url>https://repository.apache.org/content/repositories/orgapachespark-1454/</url>
-        </repository>
-    </repositories>
     <dependencyManagement>
         <dependencies>
             <dependency>
