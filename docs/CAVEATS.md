@@ -7,7 +7,8 @@ instead of rewrite data files)
 
 ## No automatic schema evolution
 
-Full schema evaluation is not supported. But sema expansion like field addition is supported,
+Full schema evaluation is not supported, like converting incompatible types. But sema expansion like field addition is
+supported,
 see `debezium.sink.iceberg.allow-field-addition` setting.
 
 ## Specific tables replication
