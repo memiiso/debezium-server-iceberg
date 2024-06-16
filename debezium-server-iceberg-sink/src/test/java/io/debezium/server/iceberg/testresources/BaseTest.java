@@ -31,6 +31,14 @@ public class BaseTest {
     return getTableDataV2("debeziumevents", table);
   }
 
+  public void printTableData(CloseableIterable<Record> data) {
+    System.out.println("======================");
+    System.out.println(data.iterator().next().struct());
+    System.out.println("======================");
+    data.forEach(System.out::println);
+    System.out.println("======================");
+  }
+
   public CloseableIterable<Record> getTableDataV2(String catalog, String table) {
     String tableName = "debeziumcdc_" + table.replace(".", "_");
     return getTableDataV2(TableIdentifier.of(catalog, tableName));

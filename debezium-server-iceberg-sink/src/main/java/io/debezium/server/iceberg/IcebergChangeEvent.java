@@ -76,8 +76,8 @@ public class IcebergChangeEvent {
     }
   }
 
-  public Schema icebergSchema() {
-    return changeEventSchema().icebergSchema();
+  public Schema icebergSchema(boolean createIdentifierFields) {
+    return changeEventSchema().icebergSchema(createIdentifierFields);
   }
 
   public String destination() {
@@ -312,19 +312,30 @@ public class IcebergChangeEvent {
       return schemaData;
     }
 
-    private Schema icebergSchema() {
+    private Schema icebergSchema(boolean createIdentifierFields) {
 
       if (this.valueSchema.isNull()) {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
       }
 
       IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
-      if (!eventsAreUnwrapped && keySchema != null) {
-        // NOTE: events re not unwrapped, align schema with event schema, so then we can scan event and key schemas synchronously
+      if (!createIdentifierFields) {
+        LOGGER.warn("Creating identifier fields is disabled, creating table without identifier field!");
+        icebergSchemaFields(valueSchema, null, schemaData);
+      } else if (!eventsAreUnwrapped && keySchema != null) {
         ObjectNode nestedKeySchema = mapper.createObjectNode();
         nestedKeySchema.put("type", "struct");
         nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
         icebergSchemaFields(valueSchema, nestedKeySchema, schemaData);
+
+        if (!schemaData.identifierFieldIds().isEmpty()) {
+          // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
+          // due to inconsistency in the after and before fields.
+          // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
+          // This inconsistency prevents using either field as a reliable key.
+          throw new DebeziumException("Events are unnested, Identifier fields are not supported for unnested events! " +
+              "Pleas make sure you are using event flattening SMT! or disable identifier field creation!");
+        }
       } else {
         icebergSchemaFields(valueSchema, keySchema, schemaData);
       }

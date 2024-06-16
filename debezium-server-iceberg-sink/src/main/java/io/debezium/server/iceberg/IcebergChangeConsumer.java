@@ -92,6 +92,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String catalogName;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
+  @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
+  boolean createIdentifierFields;
   @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
   String batchSizeWaitName;
   @ConfigProperty(name = "debezium.format.value.schemas.enable", defaultValue = "false")
@@ -175,7 +177,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
       try {
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(), writeFormat);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(createIdentifierFields), writeFormat);
       } catch (Exception e){
         throw new DebeziumException("Failed to create table from debezium event schema:"+tableId+" Error:" + e.getMessage(), e);
       }
