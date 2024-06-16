@@ -333,8 +333,9 @@ public class IcebergChangeEvent {
           // due to inconsistency in the after and before fields.
           // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
           // This inconsistency prevents using either field as a reliable key.
-          throw new DebeziumException("Events are unnested, Identifier fields are not supported for unnested events! " +
-              "Pleas make sure you are using event flattening SMT! or disable identifier field creation!");
+          throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
+              "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+              " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
         }
       } else {
         icebergSchemaFields(valueSchema, keySchema, schemaData);
