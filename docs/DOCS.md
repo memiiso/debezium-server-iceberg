@@ -139,8 +139,7 @@ For best experience its recommended to run consumer with event flattening. For f
 on `Message transformations` please
 see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#engine-message-transformations)
 
-Without event flattening iceberg consumer can only run with append mode. Without event flattening upsert mode and
-identifier fields are not supported.
+Example Event flattening setting:
 
 ```properties
 debezium.transforms=unwrap
@@ -148,6 +147,16 @@ debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
 debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
 debezium.transforms.unwrap.add.headers=db
 debezium.transforms.unwrap.delete.handling.mode=rewrite
+```
+
+Without event flattening iceberg consumer can only run with append mode. Without event flattening upsert mode and
+creation of identifier fields are not supported.
+
+Settings for running consumer without event flattening:
+
+```
+debezium.sink.iceberg.upsert=false
+debezium.sink.iceberg.create-identifier-fields=false
 ```
 
 ### Configuring iceberg
