@@ -6,11 +6,14 @@
 
 This project adds iceberg consumer
 to [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html). It could be used to
-replicate database CDC changes to Iceberg table (Cloud Storage, HDFS) in realtime, without requiring Spark, Kafka or
-Streaming platform. It's possible to consume data append or upsert modes.
+replicate any database(CDC changes) to could as an Iceberg table in realtime. Without requiring Spark, Kafka or
+Streaming platform. It's possible to consume data in append or upsert modes.
 
 More detail available in [Documentation Page](docs/DOCS.md)
 Also, check [caveats](docs/CAVEATS.md) for better understanding the current limitation and proper workaround
+
+For more details, refer to the [Documentation Page](docs/DOCS.md).
+Additionally, to fully understand potential challenges please review the [Caveats Section](docs/CAVEATS.md)
 
 ![Debezium Iceberg](docs/images/debezium-iceberg.png)
 
