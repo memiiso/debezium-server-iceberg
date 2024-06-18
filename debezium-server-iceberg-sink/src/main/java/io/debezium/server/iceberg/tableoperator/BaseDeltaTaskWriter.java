@@ -1,6 +1,7 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.Sets;
+import io.debezium.DebeziumException;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
@@ -12,6 +13,8 @@ import org.apache.iceberg.types.TypeUtil;
 
 import java.io.IOException;
 import java.util.List;
+
+import static io.debezium.server.iceberg.tableoperator.IcebergTableOperator.opFieldName;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
 
@@ -50,16 +53,20 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   @Override
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
-    // @TODO __op field should not be hardcoded! when unwrapped its __op when not ist op
-    if (upsert && !row.getField("__op").equals("c")) {// anything which not an insert is upsert
+    final Object opFieldValue = row.getField(opFieldName);
+    if (opFieldValue == null) {
+      throw new DebeziumException("The value for field `" + opFieldName + "` is missing. " +
+          "This field is required when updating or deleting data, when running in upsert mode."
+      );
+    }
+    if (upsert && !opFieldValue.equals("c")) {// anything which not an insert is upsert
       writer.delete(row);
     }
     // if its deleted row and upsertKeepDeletes = true then add deleted record to target table
     // else deleted records are deleted from target table
-    // @TODO __op field should not be hardcoded! when unwrapped its __op when not ist op
     if (
         upsertKeepDeletes
-        || !(row.getField("__op").equals("d")))// anything which not an insert is upsert
+            || !(opFieldValue.equals("d")))// anything which not an insert is upsert
     {
       writer.write(row);
     }
