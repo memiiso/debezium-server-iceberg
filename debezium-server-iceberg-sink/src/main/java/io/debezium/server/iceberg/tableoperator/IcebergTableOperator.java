@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
 /**
  * Wrapper to perform operations on iceberg tables
  *
@@ -41,10 +40,9 @@ public class IcebergTableOperator {
 
   static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
+  protected static final String opFieldName = "__op";
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
   String sourceTsMsColumn;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-column", defaultValue = "__op")
-  String opColumn;
   @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
   boolean allowFieldAddition;
   @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
@@ -97,9 +95,9 @@ public class IcebergTableOperator {
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = cdcOperations.getOrDefault(lhs.get(opColumn).asText("c"), -1)
+      result = cdcOperations.getOrDefault(lhs.get(opFieldName).asText("c"), -1)
           .compareTo(
-              cdcOperations.getOrDefault(rhs.get(opColumn).asText("c"), -1)
+              cdcOperations.getOrDefault(rhs.get(opFieldName).asText("c"), -1)
           );
     }
 
@@ -195,7 +193,7 @@ public class IcebergTableOperator {
         appendFiles.commit();
       }
     } catch (IOException ex) {
-      throw new DebeziumException(ex);
+      throw new DebeziumException("Failed to write data to table:`" + icebergTable.name() + "`", ex);
     }
 
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
