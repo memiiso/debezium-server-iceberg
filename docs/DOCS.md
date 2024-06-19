@@ -5,7 +5,7 @@ in between.
 
 ![Debezium Iceberg](images/debezium-iceberg.png)
 
-## `iceberg` Consumer
+# `iceberg` Consumer
 
 Iceberg consumer replicates database CDC events to destination Iceberg tables. It is possible to replicate source
 data with upsert or append modes.
@@ -66,7 +66,7 @@ Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to appe
 is not done and all received records are appended to destination table.
 Note: For the tables without primary key operation mode falls back to append even upsert mode is used.
 
-### Optimizing batch size (or commit interval)
+## Optimizing batch size (or commit interval)
 
 Debezium extracts database events in real time and this could cause too frequent commits and too many small files. Which
 is not optimal for performance especially when near realtime data feed is sufficient.
@@ -158,7 +158,7 @@ debezium.sink.iceberg.upsert=false
 debezium.sink.iceberg.create-identifier-fields=false
 ```
 
-### Configuring iceberg
+## Configuring iceberg
 
 All the properties starting with `debezium.sink.iceberg.__ICEBERG_CONFIG__` are passed to Iceberg, and to hadoopConf
 
@@ -171,60 +171,61 @@ debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
 Read [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
 
 ## Schema Change Behaviour
+Source systems frequently undergo schema changes. This can include adding new fields, removing existing ones, or modifying the structure of existing fields. Here, we'll document the potential schema changes we anticipate and how the system currently handles them.
 
-It is possible to get out of sync schemas between source and target tables. For Example when the source database change
-its schema, adds or drops field. Below possible schema changes and current behavior documented.
-
-**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition is supported,
+**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition, data type expansion are supported,
 see `debezium.sink.iceberg.allow-field-addition` setting.
 
 #### Adding new column to source (A column missing in destination iceberg table)
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`
 
-Data of the new column is ignored till the column manually added to
-destination iceberg table.
-
-For example: if a column not found in iceberg table its data ignored and not copied to target! After the column added to
-table data for this column recognized and populated for the new events.
+New columns in the source data are not automatically reflected in the destination Iceberg table. 
+This means data for these new columns will be ignored until the corresponding column is manually added to the destination table schema.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`
 
-consumer will add the new columns to destination table and start populating the data for the new columns. This is
-automatically done no action is necessary.
+new columns are automatically added to destination table and they are populated with new data. This is
+automatically done by consumer.
 
 #### Removing column from source (An extra column in iceberg table)
 
-These column values are populated with null value for the new data. No change applied to destination table.
+After removal, these column values are populated with null value. columns are kept in the destination table, no change applied to destination table.
 
 #### Renaming column in source
 
-This is combination of above two cases : old column will be populated with null values and new column will be populated
-when added to iceberg table(added automatically consumer or added manually by user)
+This is combination of above two cases : Old column will be populated with null values and new column will be populated
+when added to iceberg table(it is either added automatically by consumer or added manually by user)
 
 #### Different Data Types
 
-This is the scenario when source field type changes.
+This is the scenario when source field type changes. support for this kind of changes is limited. Only safe data type expansions are supported 
+forexample converting int to long is supported but converting deciman to int is not supported.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`:
 
-In this cae consumer will adapt destination table type automatically.
-For incompatible changes consumer will throw exception.
+In this case consumer will try to change destination data type automatically. For incompatible changes consumer will throw exception.
 For example float to integer conversion is not supported but int to double conversion is supported.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`:
 
-In this case consumer will convert source field value to destination type value. Conversion is done by jackson If
-representation cannot be converted to
-destination type then default value is returned by jackson!
+_In this case consumer will convert source field value to destination type value using jackson. Conversion is done by jackson If representation cannot be converted to destination type then default value is returned by jackson!_
 
 for example this is conversion rule for Long type:
 
-```Method that will try to convert value of this node to a Java long. Numbers are coerced using default Java rules; booleans convert to 0 (false) and 1 (true), and Strings are parsed using default Java language integer parsing rules.
+```
+Method that will try to convert value of this node to a Java long. Numbers are coerced using default Java rules; booleans convert to 0 (false) and 1 (true), and Strings are parsed using default Java language integer parsing rules.
 If representation cannot be converted to a long (including structured types like Objects and Arrays), default value of 0 will be returned; no exceptions are thrown.
 ```
 
-## `icebergevents` Consumer
+for example this is conversion rule for boolean type:
+
+```
+Method that will try to convert value of this node to a Java boolean. JSON booleans map naturally; integer numbers other than 0 map to true, and 0 maps to false and Strings 'true' and 'false' map to corresponding values.
+If representation can not be converted to a boolean value (including structured types like Objects and Arrays), specified defaultValue will be returned; no exceptions are thrown.
+```
+
+# `icebergevents` Consumer
 
 This consumer appends all CDC events to single Iceberg table as json string.
 This table partitioned by `event_destination,event_sink_timestamptz`
