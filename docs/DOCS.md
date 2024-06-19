@@ -173,32 +173,29 @@ Read [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2F
 ## Schema Change Behaviour
 Source systems frequently undergo schema changes. This can include adding new fields, removing existing ones, or modifying the structure of existing fields. Here, we'll document the potential schema changes we anticipate and how the system currently handles them.
 
-**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition, field expansion are supported,
+**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition, data type expansion are supported,
 see `debezium.sink.iceberg.allow-field-addition` setting.
 
 #### Adding new column to source (A column missing in destination iceberg table)
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`
 
-Data of the new column is ignored till the column manually added to
-destination iceberg table.
-
-For example: if a column not found in iceberg table its data ignored and not copied to target! After the column added to
-table data for this column recognized and populated for the new events.
+New columns in the source data are not automatically reflected in the destination Iceberg table. 
+This means data for these new columns will be ignored until the corresponding column is manually added to the destination table schema.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`
 
-consumer will add the new columns to destination table and start populating the data for the new columns. This is
-automatically done no action is necessary.
+new columns are automatically added to destination table and they are populated with new data. This is
+automatically done by consumer.
 
 #### Removing column from source (An extra column in iceberg table)
 
-These column values are populated with null value for the new data. No change applied to destination table.
+After removal, these column values are populated with null value. columns are kept in the destination table, no change applied to destination table.
 
 #### Renaming column in source
 
-This is combination of above two cases : old column will be populated with null values and new column will be populated
-when added to iceberg table(added automatically consumer or added manually by user)
+This is combination of above two cases : Old column will be populated with null values and new column will be populated
+when added to iceberg table(it is either added automatically by consumer or added manually by user)
 
 #### Different Data Types
 
