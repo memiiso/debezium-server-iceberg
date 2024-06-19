@@ -199,24 +199,30 @@ when added to iceberg table(it is either added automatically by consumer or adde
 
 #### Different Data Types
 
-This is the scenario when source field type changes.
+This is the scenario when source field type changes. support for this kind of changes is limited. Only safe data type expansions are supported 
+forexample converting int to long is supported but converting deciman to int is not supported.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`:
 
-In this cae consumer will adapt destination table type automatically.
-For incompatible changes consumer will throw exception.
+In this case consumer will try to change destination data type automatically. For incompatible changes consumer will throw exception.
 For example float to integer conversion is not supported but int to double conversion is supported.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`:
 
-In this case consumer will convert source field value to destination type value. Conversion is done by jackson If
-representation cannot be converted to
-destination type then default value is returned by jackson!
+_In this case consumer will convert source field value to destination type value using jackson. Conversion is done by jackson If representation cannot be converted to destination type then default value is returned by jackson!_
 
 for example this is conversion rule for Long type:
 
-```Method that will try to convert value of this node to a Java long. Numbers are coerced using default Java rules; booleans convert to 0 (false) and 1 (true), and Strings are parsed using default Java language integer parsing rules.
+```
+Method that will try to convert value of this node to a Java long. Numbers are coerced using default Java rules; booleans convert to 0 (false) and 1 (true), and Strings are parsed using default Java language integer parsing rules.
 If representation cannot be converted to a long (including structured types like Objects and Arrays), default value of 0 will be returned; no exceptions are thrown.
+```
+
+for example this is conversion rule for boolean type:
+
+```
+Method that will try to convert value of this node to a Java boolean. JSON booleans map naturally; integer numbers other than 0 map to true, and 0 maps to false and Strings 'true' and 'false' map to corresponding values.
+If representation can not be converted to a boolean value (including structured types like Objects and Arrays), specified defaultValue will be returned; no exceptions are thrown.
 ```
 
 # `icebergevents` Consumer
