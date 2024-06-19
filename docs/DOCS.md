@@ -171,11 +171,9 @@ debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
 Read [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
 
 ## Schema Change Behaviour
+Source systems frequently undergo schema changes. This can include adding new fields, removing existing ones, or modifying the structure of existing fields. Here, we'll document the potential schema changes we anticipate and how the system currently handles them.
 
-It is possible to get out of sync schemas between source and target tables. For Example when the source database change
-its schema, adds or drops field. Below possible schema changes and current behavior documented.
-
-**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition is supported,
+**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition, field expansion are supported,
 see `debezium.sink.iceberg.allow-field-addition` setting.
 
 #### Adding new column to source (A column missing in destination iceberg table)
