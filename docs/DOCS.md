@@ -5,7 +5,7 @@ in between.
 
 ![Debezium Iceberg](images/debezium-iceberg.png)
 
-## `iceberg` Consumer
+# `iceberg` Consumer
 
 Iceberg consumer replicates database CDC events to destination Iceberg tables. It is possible to replicate source
 data with upsert or append modes.
@@ -66,7 +66,7 @@ Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to appe
 is not done and all received records are appended to destination table.
 Note: For the tables without primary key operation mode falls back to append even upsert mode is used.
 
-### Optimizing batch size (or commit interval)
+## Optimizing batch size (or commit interval)
 
 Debezium extracts database events in real time and this could cause too frequent commits and too many small files. Which
 is not optimal for performance especially when near realtime data feed is sufficient.
@@ -158,7 +158,7 @@ debezium.sink.iceberg.upsert=false
 debezium.sink.iceberg.create-identifier-fields=false
 ```
 
-### Configuring iceberg
+## Configuring iceberg
 
 All the properties starting with `debezium.sink.iceberg.__ICEBERG_CONFIG__` are passed to Iceberg, and to hadoopConf
 
@@ -224,7 +224,7 @@ for example this is conversion rule for Long type:
 If representation cannot be converted to a long (including structured types like Objects and Arrays), default value of 0 will be returned; no exceptions are thrown.
 ```
 
-## `icebergevents` Consumer
+# `icebergevents` Consumer
 
 This consumer appends all CDC events to single Iceberg table as json string.
 This table partitioned by `event_destination,event_sink_timestamptz`
