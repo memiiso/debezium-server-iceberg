@@ -43,7 +43,7 @@
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
         <version.testcontainers>1.19.8</version.testcontainers>
         <!-- Debezium -->
-        <version.debezium>2.7.0.Alpha1</version.debezium>
+        <version.debezium>2.7.0.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
         <version.quarkus>3.10.0</version.quarkus>
