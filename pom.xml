@@ -50,7 +50,7 @@
     </properties>
     <repositories>
         <repository>
-            <id>orgapachespark-stg-repo</id>
+            <id>iceberg-stg-repo</id>
             <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1164</url>
         </repository>
     </repositories>
