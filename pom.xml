@@ -48,12 +48,6 @@
         <!-- Quarkus -->
         <version.quarkus>3.10.2</version.quarkus>
     </properties>
-    <repositories>
-        <repository>
-            <id>iceberg-stg-repo</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1164</url>
-        </repository>
-    </repositories>
     <dependencyManagement>
         <dependencies>
             <dependency>
