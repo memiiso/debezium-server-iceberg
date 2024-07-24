@@ -336,10 +336,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
     icebergConsumer.destinationUppercaseTableNames = true;
     icebergConsumer.destinationLowercaseTableNames = false;
-    assertEquals(TableIdentifier.of(Namespace.of(namespace.toUpperCase()), "DEBEZIUMCDC_TABLE_LOWERCASE"), icebergConsumer.mapDestination("table_lowercase"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_LOWERCASE"), icebergConsumer.mapDestination("table_lowercase"));
     icebergConsumer.destinationUppercaseTableNames = false;
     icebergConsumer.destinationLowercaseTableNames = true;
-    assertEquals(TableIdentifier.of(Namespace.of(namespace.toLowerCase()), "debeziumcdc_table_camelcase"), icebergConsumer.mapDestination("table_CamelCase"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_camelcase"), icebergConsumer.mapDestination("table_CamelCase"));
   }
 
   public static class TestProfile implements QuarkusTestProfile {
