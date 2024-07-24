@@ -84,10 +84,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   protected Optional<String> destinationRegexp;
   @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp-replace", defaultValue = "")
   protected Optional<String> destinationRegexpReplace;
-  @ConfigProperty(name = "debezium.sink.iceberg.destination-uppercase-names", defaultValue = "false")
-  protected boolean destinationUppercaseNames;
-  @ConfigProperty(name = "debezium.sink.iceberg.destination-lowercase-names", defaultValue = "false")
-  protected boolean destinationLowercaseNames;
+  @ConfigProperty(name = "debezium.sink.iceberg.destination-uppercase-table-names", defaultValue = "false")
+  protected boolean destinationUppercaseTableNames;
+  @ConfigProperty(name = "debezium.sink.iceberg.destination-lowercase-table-names", defaultValue = "false")
+  protected boolean destinationLowercaseTableNames;
   @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
   Optional<String> tablePrefix;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
@@ -208,10 +208,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         .replaceAll(destinationRegexp.orElse(""), destinationRegexpReplace.orElse(""))
         .replace(".", "_");
 
-    if (destinationUppercaseNames) {
-      return TableIdentifier.of(Namespace.of(namespace.toUpperCase()), (tablePrefix.orElse("") + tableName).toUpperCase());
-    } else if (destinationLowercaseNames) {
-      return TableIdentifier.of(Namespace.of(namespace.toLowerCase()), (tablePrefix.orElse("") + tableName).toLowerCase());
+    if (destinationUppercaseTableNames) {
+      return TableIdentifier.of(Namespace.of(namespace), (tablePrefix.orElse("") + tableName).toUpperCase());
+    } else if (destinationLowercaseTableNames) {
+      return TableIdentifier.of(Namespace.of(namespace), (tablePrefix.orElse("") + tableName).toLowerCase());
     } else {
       return TableIdentifier.of(Namespace.of(namespace), tablePrefix.orElse("") + tableName);
     }

@@ -334,11 +334,11 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   public void testMapDestination() {
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
-    icebergConsumer.destinationUppercaseNames = true;
-    icebergConsumer.destinationLowercaseNames = false;
+    icebergConsumer.destinationUppercaseTableNames = true;
+    icebergConsumer.destinationLowercaseTableNames = false;
     assertEquals(TableIdentifier.of(Namespace.of(namespace.toUpperCase()), "DEBEZIUMCDC_TABLE_LOWERCASE"), icebergConsumer.mapDestination("table_lowercase"));
-    icebergConsumer.destinationUppercaseNames = false;
-    icebergConsumer.destinationLowercaseNames = true;
+    icebergConsumer.destinationUppercaseTableNames = false;
+    icebergConsumer.destinationLowercaseTableNames = true;
     assertEquals(TableIdentifier.of(Namespace.of(namespace.toLowerCase()), "debeziumcdc_table_camelcase"), icebergConsumer.mapDestination("table_CamelCase"));
   }
 
