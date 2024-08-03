@@ -46,7 +46,7 @@
         <version.debezium>2.7.0.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <!-- Quarkus -->
-        <version.quarkus>3.12.3</version.quarkus>
+        <version.quarkus>3.13.0</version.quarkus>
     </properties>
     <dependencyManagement>
         <dependencies>
