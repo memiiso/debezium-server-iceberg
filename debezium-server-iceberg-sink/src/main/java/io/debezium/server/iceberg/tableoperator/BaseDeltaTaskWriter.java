@@ -24,6 +24,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final InternalRecordWrapper keyWrapper;
   private final boolean upsert;
   private final boolean upsertKeepDeletes;
+  private final RecordProjection keyProjection;
 
   BaseDeltaTaskWriter(PartitionSpec spec,
                       FileFormat format,
@@ -40,6 +41,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(equalityFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
     this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
+    this.keyProjection = RecordProjection.create(schema, deleteSchema);
     this.upsert = upsert;
     this.upsertKeepDeletes = upsertKeepDeletes;
   }
@@ -65,7 +67,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     } else {
       // UPSERT MODE
       if (!opFieldValue.equals("c")) {// anything which not created is deleted first
-        writer.delete(row);
+        writer.deleteKey(keyProjection.wrap(row));
       }
       // when upsertKeepDeletes = FALSE we dont keep deleted record
       if (upsertKeepDeletes || !opFieldValue.equals("d")) {

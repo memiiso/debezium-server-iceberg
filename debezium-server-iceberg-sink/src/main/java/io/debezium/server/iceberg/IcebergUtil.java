@@ -23,6 +23,8 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.io.OutputFileFactory;
+import org.apache.iceberg.relocated.com.google.common.collect.Sets;
+import org.apache.iceberg.types.TypeUtil;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.ConfigValue;
@@ -172,7 +174,7 @@ public class IcebergUtil {
           icebergTable.schema(),
           icebergTable.spec(),
           Ints.toArray(identifierFieldIds),
-          icebergTable.schema(),
+          TypeUtil.select(icebergTable.schema(), Sets.newHashSet(identifierFieldIds)),
           null)
           .setAll(icebergTable.properties());
     }
