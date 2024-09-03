@@ -2,8 +2,7 @@ package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.IcebergUtil;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.FileFormat;
@@ -37,7 +36,7 @@ public class IcebergTableWriterFactory {
     GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(icebergTable);
     OutputFileFactory fileFactory = IcebergUtil.getTableOutputFileFactory(icebergTable, format);
     // equality Field Ids
-    List<Integer> equalityFieldIds = new ArrayList<>(icebergTable.schema().identifierFieldIds());
+    Set<Integer> equalityFieldIds = icebergTable.schema().identifierFieldIds();
 
     BaseTaskWriter<Record> writer;
 
