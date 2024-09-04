@@ -12,7 +12,7 @@ import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.types.TypeUtil;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import static io.debezium.server.iceberg.tableoperator.IcebergTableOperator.opFieldName;
 
@@ -32,7 +32,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
                       FileIO io,
                       long targetFileSize,
                       Schema schema,
-                      List<Integer> equalityFieldIds,
+                      Set<Integer> equalityFieldIds,
                       boolean upsert,
                       boolean upsertKeepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
@@ -59,16 +59,18 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
-    if (upsert && !opFieldValue.equals("c")) {// anything which not an insert is upsert
-      writer.delete(row);
-    }
-    // if its deleted row and upsertKeepDeletes = true then add deleted record to target table
-    // else deleted records are deleted from target table
-    if (
-        upsertKeepDeletes
-            || !(opFieldValue.equals("d")))// anything which not an insert is upsert
-    {
+    if (!upsert) {
+      // APPEND ONLY MODE!!
       writer.write(row);
+    } else {
+      // UPSERT MODE
+      if (!opFieldValue.equals("c")) {// anything which not created is deleted first
+        writer.delete(row);
+      }
+      // when upsertKeepDeletes = FALSE we dont keep deleted record
+      if (upsertKeepDeletes || !opFieldValue.equals("d")) {
+        writer.write(row);
+      }
     }
   }
 

@@ -75,6 +75,7 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.source.table.whitelist", "inventory.*");
     config.put("%postgresql.debezium.source.replica.identity.autoset.values", "inventory.*:FULL");
 
+    config.put("quarkus.devservices.enabled", "false");
     config.put("quarkus.log.level", "WARN");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
     config.put("quarkus.log.category.\"org.apache.hadoop\".level", "ERROR");

@@ -133,6 +133,11 @@
             <artifactId>iceberg-azure-bundle</artifactId>
             <version>${version.iceberg}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.iceberg</groupId>
+            <artifactId>iceberg-bundled-guava</artifactId>
+            <version>${version.iceberg}</version>
+        </dependency>
         <!-- Google -->
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>

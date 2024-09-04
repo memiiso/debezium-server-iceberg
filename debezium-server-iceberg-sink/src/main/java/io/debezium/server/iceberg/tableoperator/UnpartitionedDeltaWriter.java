@@ -1,7 +1,7 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.PartitionSpec;
@@ -21,7 +21,7 @@ class UnpartitionedDeltaWriter extends BaseDeltaTaskWriter {
                            FileIO io,
                            long targetFileSize,
                            Schema schema,
-                           List<Integer> equalityFieldIds,
+                           Set<Integer> equalityFieldIds,
                            boolean upsert,
                            boolean upsertKeepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize, schema, equalityFieldIds, upsert, upsertKeepDeletes);
