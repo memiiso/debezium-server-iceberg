@@ -37,7 +37,6 @@ public class IcebergTableWriterFactory {
     OutputFileFactory fileFactory = IcebergUtil.getTableOutputFileFactory(icebergTable, format);
     // equality Field Ids
     Set<Integer> equalityFieldIds = icebergTable.schema().identifierFieldIds();
-
     BaseTaskWriter<Record> writer;
 
     // 1. TABLE DONT HAVE identifierFieldIds
