@@ -68,9 +68,9 @@ public class RecordConverter {
     return value;
   }
 
-  public ChangeEventSchema changeEventSchema() {
+  public SchemaConverter changeEventSchema() {
     try {
-      return new ChangeEventSchema(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));
+      return new SchemaConverter(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));
     } catch (IOException e) {
       throw new DebeziumException("Failed to get event schema", e);
     }
@@ -195,11 +195,11 @@ public class RecordConverter {
   }
 
 
-  public static class ChangeEventSchema {
+  public static class SchemaConverter {
     private final JsonNode valueSchema;
     private final JsonNode keySchema;
 
-    ChangeEventSchema(JsonNode valueSchema, JsonNode keySchema) {
+    SchemaConverter(JsonNode valueSchema, JsonNode keySchema) {
       this.valueSchema = valueSchema;
       this.keySchema = keySchema;
     }
@@ -388,7 +388,7 @@ public class RecordConverter {
     public boolean equals(Object o) {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
-      ChangeEventSchema that = (ChangeEventSchema) o;
+      SchemaConverter that = (SchemaConverter) o;
       return Objects.equals(valueSchema, that.valueSchema) && Objects.equals(keySchema, that.keySchema);
     }
 
