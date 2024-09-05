@@ -68,6 +68,14 @@ public class RecordConverter {
     return value;
   }
 
+  public Long cdcSourceTsMsValue(String cdcSourceTsMsField) {
+    return value().get(cdcSourceTsMsField).asLong(0);
+  }
+
+  public String cdcOpValue(String cdcOpField) {
+    return value().get(cdcOpField).asText("c");
+  }
+
   public SchemaConverter schemaConverter() {
     try {
       return new SchemaConverter(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));

@@ -64,7 +64,7 @@ public class IcebergTableOperator {
 
       // deduplicate using key(PK)
         deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-          if (this.compareByTsThenOp(oldValue.value(), newValue.value()) <= 0) {
+          if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
             return newValue;
           } else {
             return oldValue;
@@ -89,15 +89,15 @@ public class IcebergTableOperator {
    * @param rhs
    * @return
    */
-  private int compareByTsThenOp(JsonNode lhs, JsonNode rhs) {
+  private int compareByTsThenOp(RecordConverter lhs, RecordConverter rhs) {
 
-    int result = Long.compare(lhs.get(cdcSourceTsMsField).asLong(0), rhs.get(cdcSourceTsMsField).asLong(0));
+    int result = Long.compare(lhs.cdcSourceTsMsValue(cdcSourceTsMsField), rhs.cdcSourceTsMsValue(cdcSourceTsMsField));
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.get(cdcOpField).asText("c"), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(cdcOpField), -1)
           .compareTo(
-              CDC_OPERATION_PRIORITY.getOrDefault(rhs.get(cdcOpField).asText("c"), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(cdcOpField), -1)
           );
     }
 
