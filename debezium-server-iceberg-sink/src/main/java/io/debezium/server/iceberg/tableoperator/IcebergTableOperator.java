@@ -40,9 +40,9 @@ public class IcebergTableOperator {
 
   static final ImmutableMap<String, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
-  protected static final String opFieldName = "__op";
+  protected static final String cdcOpField = "__op";
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
-  String sourceTsMsColumn;
+  String cdcSourceTsMsField;
   @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
   boolean allowFieldAddition;
   @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
@@ -91,13 +91,13 @@ public class IcebergTableOperator {
    */
   private int compareByTsThenOp(JsonNode lhs, JsonNode rhs) {
 
-    int result = Long.compare(lhs.get(sourceTsMsColumn).asLong(0), rhs.get(sourceTsMsColumn).asLong(0));
+    int result = Long.compare(lhs.get(cdcSourceTsMsField).asLong(0), rhs.get(cdcSourceTsMsField).asLong(0));
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.get(opFieldName).asText("c"), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.get(cdcOpField).asText("c"), -1)
           .compareTo(
-              CDC_OPERATION_PRIORITY.getOrDefault(rhs.get(opFieldName).asText("c"), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.get(cdcOpField).asText("c"), -1)
           );
     }
 

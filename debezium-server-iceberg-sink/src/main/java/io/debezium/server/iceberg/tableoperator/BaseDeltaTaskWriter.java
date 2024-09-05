@@ -14,7 +14,7 @@ import org.apache.iceberg.types.TypeUtil;
 import java.io.IOException;
 import java.util.Set;
 
-import static io.debezium.server.iceberg.tableoperator.IcebergTableOperator.opFieldName;
+import static io.debezium.server.iceberg.tableoperator.IcebergTableOperator.cdcOpField;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
 
@@ -53,9 +53,9 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   @Override
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
-    final Object opFieldValue = row.getField(opFieldName);
+    final Object opFieldValue = row.getField(cdcOpField);
     if (opFieldValue == null) {
-      throw new DebeziumException("The value for field `" + opFieldName + "` is missing. " +
+      throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
