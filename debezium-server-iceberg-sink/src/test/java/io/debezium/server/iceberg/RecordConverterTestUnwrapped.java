@@ -71,7 +71,7 @@ class RecordConverterTestUnwrapped {
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
     // print converted event value!
-    System.out.println(ie.asIcebergRecord(ie.icebergSchema(false)));
+    System.out.println(ie.convert(ie.icebergSchema(false)));
   }
 
   public static class TestProfile implements QuarkusTestProfile {

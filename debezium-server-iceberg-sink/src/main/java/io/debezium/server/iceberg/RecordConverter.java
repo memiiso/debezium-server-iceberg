@@ -84,11 +84,11 @@ public class RecordConverter {
     return destination;
   }
 
-  public GenericRecord asIcebergRecord(Schema schema) {
-    return asIcebergRecord(schema.asStruct(), value());
+  public GenericRecord convert(Schema schema) {
+    return convert(schema.asStruct(), value());
   }
 
-  private static GenericRecord asIcebergRecord(Types.StructType tableFields, JsonNode data) {
+  private static GenericRecord convert(Types.StructType tableFields, JsonNode data) {
     LOGGER.debug("Processing nested field:{}", tableFields);
     GenericRecord record = GenericRecord.create(tableFields);
 
@@ -172,7 +172,7 @@ public class RecordConverter {
         HashMap<Object, Object> mapVal = new HashMap<>();
         node.fields().forEachRemaining(f -> {
           if (valType.isStructType()) {
-            mapVal.put(f.getKey(), asIcebergRecord(valType.asStructType(), f.getValue()));
+            mapVal.put(f.getKey(), convert(valType.asStructType(), f.getValue()));
           } else {
             mapVal.put(f.getKey(), f.getValue());
           }
@@ -182,7 +182,7 @@ public class RecordConverter {
       case STRUCT:
         // create it as struct, nested type
         // recursive call to get nested data/record
-        val = asIcebergRecord(field.type().asStructType(), node);
+        val = convert(field.type().asStructType(), node);
         break;
       default:
         // default to String type

@@ -176,7 +176,7 @@ public class IcebergTableOperator {
     final Schema tableSchema = icebergTable.schema();
     try (BaseTaskWriter<Record> writer = writerFactory.create(icebergTable)) {
       for (RecordConverter e : events) {
-        final GenericRecord record = e.asIcebergRecord(tableSchema);
+        final GenericRecord record = e.convert(tableSchema);
         writer.write(record);
       }
 
