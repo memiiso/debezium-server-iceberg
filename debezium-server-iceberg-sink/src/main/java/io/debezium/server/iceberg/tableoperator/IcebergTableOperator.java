@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 @Dependent
 public class IcebergTableOperator {
 
-  static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  static final ImmutableMap<String, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
   protected static final String opFieldName = "__op";
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
@@ -95,9 +95,9 @@ public class IcebergTableOperator {
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = cdcOperations.getOrDefault(lhs.get(opFieldName).asText("c"), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.get(opFieldName).asText("c"), -1)
           .compareTo(
-              cdcOperations.getOrDefault(rhs.get(opFieldName).asText("c"), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.get(opFieldName).asText("c"), -1)
           );
     }
 
