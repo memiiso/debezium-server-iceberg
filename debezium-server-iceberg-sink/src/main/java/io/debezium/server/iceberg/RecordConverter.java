@@ -220,13 +220,13 @@ public class RecordConverter {
      * @param schemaData keeps information of iceberg schema like fields, nextFieldId and identifier fields
      * @return map entry Key being the last id assigned to the iceberg field, Value being the converted iceberg NestedField.
      */
-    private static IcebergChangeEventSchemaData debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergChangeEventSchemaData schemaData, JsonNode keySchemaNode) {
+    private static RecordSchemaData debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, RecordSchemaData schemaData, JsonNode keySchemaNode) {
       String fieldType = fieldSchema.get("type").textValue();
       boolean isPkField = !(keySchemaNode == null || keySchemaNode.isNull());
       switch (fieldType) {
         case "struct":
           int rootStructId = schemaData.nextFieldId().getAndIncrement();
-          final IcebergChangeEventSchemaData subSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
+          final RecordSchemaData subSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           for (JsonNode subFieldSchema : fieldSchema.get("fields")) {
             String subFieldName = subFieldSchema.get("field").textValue();
             JsonNode equivalentNestedKeyField = findNodeFieldByName(subFieldName, keySchemaNode);
@@ -243,10 +243,10 @@ public class RecordConverter {
           int rootMapId = schemaData.nextFieldId().getAndIncrement();
           int keyFieldId = schemaData.nextFieldId().getAndIncrement();
           int valFieldId = schemaData.nextFieldId().getAndIncrement();
-          final IcebergChangeEventSchemaData keySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
+          final RecordSchemaData keySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("keys"), fieldName + "_key", keySchemaData, null);
           schemaData.nextFieldId().incrementAndGet();
-          final IcebergChangeEventSchemaData valSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
+          final RecordSchemaData valSchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("values"), fieldName + "_val", valSchemaData, null);
           final Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keySchemaData.fields().get(0).type(), valSchemaData.fields().get(0).type());
           schemaData.fields().add(Types.NestedField.optional(rootMapId, fieldName, mapField));
@@ -257,7 +257,7 @@ public class RecordConverter {
             throw new DebeziumException("Cannot set array field '" + fieldName + "' as a identifier field, array types are not supported as an identifier field!");
           }
           int rootArrayId = schemaData.nextFieldId().getAndIncrement();
-          final IcebergChangeEventSchemaData arraySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
+          final RecordSchemaData arraySchemaData = schemaData.copyKeepIdentifierFieldIdsAndNextFieldId();
           debeziumFieldToIcebergField(fieldSchema.get("items"), fieldName + "_items", arraySchemaData, null);
           final Types.ListType listField = Types.ListType.ofOptional(schemaData.nextFieldId().getAndIncrement(), arraySchemaData.fields().get(0).type());
           schemaData.fields().add(Types.NestedField.optional(rootArrayId, fieldName, listField));
@@ -301,7 +301,7 @@ public class RecordConverter {
      * @param schemaNode
      * @return
      */
-    private static IcebergChangeEventSchemaData icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergChangeEventSchemaData schemaData) {
+    private static RecordSchemaData icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, RecordSchemaData schemaData) {
       LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
       for (JsonNode field : getNodeFieldsArray(schemaNode)) {
         String fieldName = field.get("field").textValue();
@@ -318,7 +318,7 @@ public class RecordConverter {
         throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
       }
 
-      IcebergChangeEventSchemaData schemaData = new IcebergChangeEventSchemaData();
+      RecordSchemaData schemaData = new RecordSchemaData();
       if (!createIdentifierFields) {
         LOGGER.warn("Creating identifier fields is disabled, creating table without identifier field!");
         icebergSchemaFields(valueSchema, null, schemaData);
