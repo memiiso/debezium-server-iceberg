@@ -8,27 +8,15 @@
 
 package io.debezium.server.iceberg;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.debezium.serde.DebeziumSerdes;
-import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
-import io.debezium.server.iceberg.testresources.S3Minio;
-import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
-import org.apache.iceberg.data.GenericRecord;
-import org.apache.iceberg.types.Types;
-import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -36,11 +24,11 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-@TestProfile(IcebergChangeEventTestUnwrapped.TestProfile.class)
-class IcebergChangeEventTestUnwrapped {
+@TestProfile(RecordConverterTestUnwrapped.TestProfile.class)
+class RecordConverterTestUnwrapped {
 
   @Test
-  public void testIcebergChangeEventSchemaWithNestedKey() throws IOException {
+  public void testIcebergSchemaConverterWithNestedKey() throws IOException {
 
     assertFalse(IcebergUtil.configIncludesUnwrapSmt());
 
@@ -69,21 +57,21 @@ class IcebergChangeEventTestUnwrapped {
   }
 
   @Test
-  public void testIcebergChangeEventSchemaWithDelete() throws IOException {
+  public void testIcebergSchemaConverterWithDelete() throws IOException {
 
     assertFalse(IcebergUtil.configIncludesUnwrapSmt());
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
     TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
-    IcebergChangeEvent ie = dbzEvent.toIcebergChangeEvent();
+    RecordConverter ie = dbzEvent.toIcebergChangeEvent();
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema(true);
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
     // print converted event value!
-    System.out.println(ie.asIcebergRecord(ie.icebergSchema(false)));
+    System.out.println(ie.convert(ie.icebergSchema(false)));
   }
 
   public static class TestProfile implements QuarkusTestProfile {

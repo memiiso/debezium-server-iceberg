@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.server.iceberg.IcebergChangeConsumerTest;
-import io.debezium.server.iceberg.IcebergChangeEvent;
+import io.debezium.server.iceberg.RecordConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,8 +103,8 @@ public class IcebergChangeEventBuilder {
     return this;
   }
 
-  public IcebergChangeEvent build() {
-    return new IcebergChangeEvent(
+  public RecordConverter build() {
+    return new RecordConverter(
         this.destination,
         ("{" +
             "\"schema\":" + this.valueSchema() + "," +

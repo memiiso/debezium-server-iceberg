@@ -6,18 +6,18 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class IcebergChangeEventSchemaDataTest {
+class RecordConverterSchemaDataTest {
 
   @Test
-  void testIcebergChangeEventSchemaDataBehaviourAndCloning() {
+  void testIcebergSchemaConverterDataBehaviourAndCloning() {
 
-    IcebergChangeEventSchemaData test = new IcebergChangeEventSchemaData(5);
+    RecordSchemaData test = new RecordSchemaData(5);
     test.identifierFieldIds().add(3);
     assertEquals(6, test.nextFieldId().incrementAndGet());
     assertEquals(Set.of(3), test.identifierFieldIds());
 
     // test cloning and then changing nextFieldId is persisting
-    IcebergChangeEventSchemaData copy = test.copyKeepIdentifierFieldIdsAndNextFieldId();
+    RecordSchemaData copy = test.copyKeepIdentifierFieldIdsAndNextFieldId();
     assertEquals(6, test.nextFieldId().get());
     copy.nextFieldId().incrementAndGet();
     assertEquals(7, test.nextFieldId().get());

@@ -29,7 +29,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-class IcebergChangeEventTest {
+class RecordConverterTest {
   final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
   final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
   final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
@@ -39,7 +39,7 @@ class IcebergChangeEventTest {
   @Inject
   IcebergChangeConsumer consumer;
 
-  IcebergChangeEventTest() throws IOException {
+  RecordConverterTest() throws IOException {
     // configure and set
     IcebergChangeConsumer.valSerde.configure(Collections.emptyMap(), false);
     IcebergChangeConsumer.valDeserializer = IcebergChangeConsumer.valSerde.deserializer();
@@ -50,7 +50,7 @@ class IcebergChangeEventTest {
 
   @Test
   public void testNestedJsonRecord() {
-    IcebergChangeEvent e = new IcebergChangeEvent("test",
+    RecordConverter e = new RecordConverter("test",
         serdeWithSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
     System.out.println(schema.toString());
@@ -67,10 +67,10 @@ class IcebergChangeEventTest {
 
   @Test
   public void testUnwrapJsonRecord() {
-    IcebergChangeEvent e = new IcebergChangeEvent("test",
+    RecordConverter e = new RecordConverter("test",
         unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
-    GenericRecord record = e.asIcebergRecord(schema);
+    GenericRecord record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
     assertEquals(schema.toString(), """
@@ -92,7 +92,7 @@ class IcebergChangeEventTest {
 
   @Test
   public void testNestedArrayJsonRecord() {
-    IcebergChangeEvent e = new IcebergChangeEvent("test",
+    RecordConverter e = new RecordConverter("test",
         unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null);
 
     Schema schema = e.icebergSchema(true);
@@ -110,14 +110,14 @@ class IcebergChangeEventTest {
     assertEquals(schema.identifierFieldIds(), Set.of());
     assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
     assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
-    GenericRecord record = e.asIcebergRecord(schema);
+    GenericRecord record = e.convert(schema);
     //System.out.println(record);
     assertTrue(record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
 
   @Test
   public void testNestedArray2JsonRecord() {
-    IcebergChangeEvent e = new IcebergChangeEvent("test",
+    RecordConverter e = new RecordConverter("test",
         unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
     System.out.println(schema);
@@ -134,10 +134,10 @@ class IcebergChangeEventTest {
 
   @Test
   public void testNestedGeomJsonRecord() {
-    IcebergChangeEvent e = new IcebergChangeEvent("test",
+    RecordConverter e = new RecordConverter("test",
         unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
-    GenericRecord record = e.asIcebergRecord(schema);
+    GenericRecord record = e.convert(schema);
     assertEquals(schema.toString(), """
         table {
           1: id: optional int
@@ -178,7 +178,7 @@ class IcebergChangeEventTest {
   }
 
   @Test
-  public void testIcebergChangeEventSchemaWithKey() {
+  public void testIcebergSchemaConverterWithKey() {
     TestChangeEvent<Object, Object> debeziumEvent = TestChangeEvent.ofCompositeKey("destination", 1, "u", "user1", 2L);
     Schema schema = debeziumEvent.toIcebergChangeEvent().icebergSchema(true);
     assertEquals(schema.toString(), """
@@ -192,7 +192,7 @@ class IcebergChangeEventTest {
     assertEquals(schema.identifierFieldIds(), Set.of(1, 2));
 
 
-    final IcebergChangeEvent t = new IcebergChangeEventBuilder()
+    final RecordConverter t = new IcebergChangeEventBuilder()
         .destination("test")
         .addField("first_column", "dummy-value")
         .addKeyField("id", 1)
@@ -202,11 +202,11 @@ class IcebergChangeEventTest {
         .addField("__deleted", false)
         .build();
     final String key = "{" +
-        "\"schema\":" + t.changeEventSchema().keySchema() + "," +
+        "\"schema\":" + t.schemaConverter().keySchema() + "," +
         "\"payload\":" + t.key() +
         "} ";
     final String val = "{" +
-        "\"schema\":" + t.changeEventSchema().valueSchema() + "," +
+        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
 

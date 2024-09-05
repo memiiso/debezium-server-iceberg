@@ -11,7 +11,7 @@ package io.debezium.server.iceberg.tableoperator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.IcebergChangeEvent;
+import io.debezium.server.iceberg.RecordConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.*;
@@ -38,11 +38,11 @@ import java.util.stream.Collectors;
 @Dependent
 public class IcebergTableOperator {
 
-  static final ImmutableMap<String, Integer> cdcOperations = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  static final ImmutableMap<String, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
-  protected static final String opFieldName = "__op";
+  protected static final String cdcOpField = "__op";
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
-  String sourceTsMsColumn;
+  String cdcSourceTsMsField;
   @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
   boolean allowFieldAddition;
   @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
@@ -53,9 +53,9 @@ public class IcebergTableOperator {
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
 
-  protected List<IcebergChangeEvent> deduplicateBatch(List<IcebergChangeEvent> events) {
+  protected List<RecordConverter> deduplicateBatch(List<RecordConverter> events) {
 
-    ConcurrentHashMap<JsonNode, IcebergChangeEvent> deduplicatedEvents = new ConcurrentHashMap<>();
+    ConcurrentHashMap<JsonNode, RecordConverter> deduplicatedEvents = new ConcurrentHashMap<>();
 
     events.forEach(e -> {
       if (e.key() == null || e.key().isNull()) {
@@ -91,13 +91,13 @@ public class IcebergTableOperator {
    */
   private int compareByTsThenOp(JsonNode lhs, JsonNode rhs) {
 
-    int result = Long.compare(lhs.get(sourceTsMsColumn).asLong(0), rhs.get(sourceTsMsColumn).asLong(0));
+    int result = Long.compare(lhs.get(cdcSourceTsMsField).asLong(0), rhs.get(cdcSourceTsMsField).asLong(0));
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = cdcOperations.getOrDefault(lhs.get(opFieldName).asText("c"), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.get(cdcOpField).asText("c"), -1)
           .compareTo(
-              cdcOperations.getOrDefault(rhs.get(opFieldName).asText("c"), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.get(cdcOpField).asText("c"), -1)
           );
     }
 
@@ -139,7 +139,7 @@ public class IcebergTableOperator {
    * @param icebergTable
    * @param events
    */
-  public void addToTable(Table icebergTable, List<IcebergChangeEvent> events) {
+  public void addToTable(Table icebergTable, List<RecordConverter> events) {
 
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
     if (upsert && !icebergTable.schema().identifierFieldIds().isEmpty()) {
@@ -150,12 +150,12 @@ public class IcebergTableOperator {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
-      Map<IcebergChangeEvent.ChangeEventSchema, List<IcebergChangeEvent>> eventsGroupedBySchema =
+      Map<RecordConverter.SchemaConverter, List<RecordConverter>> eventsGroupedBySchema =
           events.stream()
-              .collect(Collectors.groupingBy(IcebergChangeEvent::changeEventSchema));
+              .collect(Collectors.groupingBy(RecordConverter::schemaConverter));
       LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
 
-      for (Map.Entry<IcebergChangeEvent.ChangeEventSchema, List<IcebergChangeEvent>> schemaEvents : eventsGroupedBySchema.entrySet()) {
+      for (Map.Entry<RecordConverter.SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(createIdentifierFields));
         // add set of events to table
@@ -171,12 +171,12 @@ public class IcebergTableOperator {
    * @param icebergTable
    * @param events
    */
-  private void addToTablePerSchema(Table icebergTable, List<IcebergChangeEvent> events) {
+  private void addToTablePerSchema(Table icebergTable, List<RecordConverter> events) {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     try (BaseTaskWriter<Record> writer = writerFactory.create(icebergTable)) {
-      for (IcebergChangeEvent e : events) {
-        final GenericRecord record = e.asIcebergRecord(tableSchema);
+      for (RecordConverter e : events) {
+        final GenericRecord record = e.convert(tableSchema);
         writer.write(record);
       }
 

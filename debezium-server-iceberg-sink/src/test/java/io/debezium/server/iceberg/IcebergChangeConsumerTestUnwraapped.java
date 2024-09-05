@@ -16,19 +16,13 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
-import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -52,7 +46,7 @@ public class IcebergChangeConsumerTestUnwraapped extends BaseSparkTest {
 
     // make sure its not unwrapped
     assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(IcebergChangeEvent.eventsAreUnwrapped, false);
+    assertEquals(RecordConverter.eventsAreUnwrapped, false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
