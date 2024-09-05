@@ -68,7 +68,7 @@ public class RecordConverter {
     return value;
   }
 
-  public SchemaConverter changeEventSchema() {
+  public SchemaConverter schemaConverter() {
     try {
       return new SchemaConverter(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));
     } catch (IOException e) {
@@ -77,7 +77,7 @@ public class RecordConverter {
   }
 
   public Schema icebergSchema(boolean createIdentifierFields) {
-    return changeEventSchema().icebergSchema(createIdentifierFields);
+    return schemaConverter().icebergSchema(createIdentifierFields);
   }
 
   public String destination() {

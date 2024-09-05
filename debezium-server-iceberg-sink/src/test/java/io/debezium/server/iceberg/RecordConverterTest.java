@@ -178,7 +178,7 @@ class RecordConverterTest {
   }
 
   @Test
-  public void testIcebergChangeEventSchemaWithKey() {
+  public void testIcebergSchemaConverterWithKey() {
     TestChangeEvent<Object, Object> debeziumEvent = TestChangeEvent.ofCompositeKey("destination", 1, "u", "user1", 2L);
     Schema schema = debeziumEvent.toIcebergChangeEvent().icebergSchema(true);
     assertEquals(schema.toString(), """
@@ -202,11 +202,11 @@ class RecordConverterTest {
         .addField("__deleted", false)
         .build();
     final String key = "{" +
-        "\"schema\":" + t.changeEventSchema().keySchema() + "," +
+        "\"schema\":" + t.schemaConverter().keySchema() + "," +
         "\"payload\":" + t.key() +
         "} ";
     final String val = "{" +
-        "\"schema\":" + t.changeEventSchema().valueSchema() + "," +
+        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
 

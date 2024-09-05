@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class RecordConverterTestUnwrapped {
 
   @Test
-  public void testIcebergChangeEventSchemaWithNestedKey() throws IOException {
+  public void testIcebergSchemaConverterWithNestedKey() throws IOException {
 
     assertFalse(IcebergUtil.configIncludesUnwrapSmt());
 
@@ -57,7 +57,7 @@ class RecordConverterTestUnwrapped {
   }
 
   @Test
-  public void testIcebergChangeEventSchemaWithDelete() throws IOException {
+  public void testIcebergSchemaConverterWithDelete() throws IOException {
 
     assertFalse(IcebergUtil.configIncludesUnwrapSmt());
 

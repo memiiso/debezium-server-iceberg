@@ -152,7 +152,7 @@ public class IcebergTableOperator {
     } else {
       Map<RecordConverter.SchemaConverter, List<RecordConverter>> eventsGroupedBySchema =
           events.stream()
-              .collect(Collectors.groupingBy(RecordConverter::changeEventSchema));
+              .collect(Collectors.groupingBy(RecordConverter::schemaConverter));
       LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
 
       for (Map.Entry<RecordConverter.SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
