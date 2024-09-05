@@ -46,13 +46,13 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
     return this.value.toString().getBytes(StandardCharsets.UTF_8);
   }
 
-  public IcebergChangeEvent toIcebergChangeEvent() {
-    return new IcebergChangeEvent(this.destination(), this.getValueBytes(), this.getKeyBytes());
+  public RecordConverter toIcebergChangeEvent() {
+    return new RecordConverter(this.destination(), this.getValueBytes(), this.getKeyBytes());
   }
 
   public static TestChangeEvent<Object, Object> of(String destination, Integer id, String operation, String name,
                                                    Long epoch) {
-    final IcebergChangeEvent t = new IcebergChangeEventBuilder()
+    final RecordConverter t = new IcebergChangeEventBuilder()
         .destination(destination)
         .addKeyField("id", id)
         .addField("first_name", name)
@@ -74,7 +74,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   public static TestChangeEvent<Object, Object> ofCompositeKey(String destination, Integer id, String operation, String name,
                                                                Long epoch) {
-    final IcebergChangeEvent t = new IcebergChangeEventBuilder()
+    final RecordConverter t = new IcebergChangeEventBuilder()
         .destination(destination)
         .addKeyField("id", id)
         .addKeyField("first_name", name)
@@ -109,7 +109,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
 
   public static TestChangeEvent<Object, Object> ofNoKey(String destination, Integer id, String operation, String name,
                                                         Long epoch) {
-    final IcebergChangeEvent t = new IcebergChangeEventBuilder()
+    final RecordConverter t = new IcebergChangeEventBuilder()
         .destination(destination)
         .addField("id", id)
         .addField("first_name", name)

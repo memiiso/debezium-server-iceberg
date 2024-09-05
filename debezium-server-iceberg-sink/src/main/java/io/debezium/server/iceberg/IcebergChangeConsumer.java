@@ -145,14 +145,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     Instant start = Instant.now();
 
     //group events by destination (per iceberg table)
-    Map<String, List<IcebergChangeEvent>> result =
+    Map<String, List<RecordConverter>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
-                -> new IcebergChangeEvent(e.destination(), getBytes(e.value()), e.key() == null ? null : getBytes(e.key())))
-            .collect(Collectors.groupingBy(IcebergChangeEvent::destination));
+                -> new RecordConverter(e.destination(), getBytes(e.value()), e.key() == null ? null : getBytes(e.key())))
+            .collect(Collectors.groupingBy(RecordConverter::destination));
 
     // consume list of events for each destination table
-    for (Map.Entry<String, List<IcebergChangeEvent>> tableEvents : result.entrySet()) {
+    for (Map.Entry<String, List<RecordConverter>> tableEvents : result.entrySet()) {
       Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
@@ -175,7 +175,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
    * @param sampleEvent sample debezium event. event schema used to create iceberg table when table not found
    * @return iceberg table, throws RuntimeException when table not found, and it's not possible to create it
    */
-  public Table loadIcebergTable(TableIdentifier tableId, IcebergChangeEvent sampleEvent) {
+  public Table loadIcebergTable(TableIdentifier tableId, RecordConverter sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
       if (!eventSchemaEnabled) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");

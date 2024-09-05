@@ -34,10 +34,10 @@ import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
  *
  * @author Ismail Simsek
  */
-public class IcebergChangeEvent {
+public class RecordConverter {
 
   protected static final ObjectMapper mapper = new ObjectMapper();
-  protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeEvent.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(RecordConverter.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
   static final boolean eventsAreUnwrapped = IcebergUtil.configIncludesUnwrapSmt();
   protected final String destination;
@@ -46,7 +46,7 @@ public class IcebergChangeEvent {
   private JsonNode value;
   private JsonNode key;
 
-  public IcebergChangeEvent(String destination, byte[] valueData, byte[] keyData) {
+  public RecordConverter(String destination, byte[] valueData, byte[] keyData) {
     this.destination = destination;
     this.valueData = valueData;
     this.keyData = keyData;

@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.server.iceberg.IcebergChangeEvent;
+import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 
 import java.util.List;
@@ -27,7 +27,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  * @author Ismail Simsek
  */
 @QuarkusTest
-class IcebergChangeEventBuilderTest {
+class RecordConverterBuilderTest {
 
   @Test
   public void testIcebergChangeEventBuilder() {
@@ -44,7 +44,7 @@ class IcebergChangeEventBuilderTest {
     );
 
     IcebergChangeEventBuilder b = new IcebergChangeEventBuilder();
-    IcebergChangeEvent t = b.
+    RecordConverter t = b.
         addKeyField("id", 1)
         .addField("data", "testdatavalue")
         .addField("preferences", "feature1", true)

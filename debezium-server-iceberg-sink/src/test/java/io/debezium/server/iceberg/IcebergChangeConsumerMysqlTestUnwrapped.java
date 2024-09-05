@@ -19,8 +19,6 @@ import io.quarkus.test.junit.TestProfile;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +42,7 @@ public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
 
     // make sure its not unwrapped
     assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(IcebergChangeEvent.eventsAreUnwrapped, false);
+    assertEquals(RecordConverter.eventsAreUnwrapped, false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
@@ -83,7 +81,7 @@ public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
 
     // make sure its not unwrapped
     assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(IcebergChangeEvent.eventsAreUnwrapped, false);
+    assertEquals(RecordConverter.eventsAreUnwrapped, false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {

@@ -6,7 +6,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class IcebergChangeEventSchemaDataTest {
+class RecordConverterSchemaDataTest {
 
   @Test
   void testIcebergChangeEventSchemaDataBehaviourAndCloning() {
