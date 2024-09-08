@@ -58,23 +58,4 @@ public class BaseWriterTest {
     equalityFieldIds = table.schema().identifierFieldIds();
   }
 
-//  protected WriteResult writeTest(
-//      List<Record> rows, IcebergSinkConfig config, Class<?> expectedWriterClass) {
-//    try (TaskWriter<Record> writer = Utilities.createTableWriter(table, "name", config)) {
-//      assertThat(writer.getClass()).isEqualTo(expectedWriterClass);
-//
-//      rows.forEach(
-//          row -> {
-//            try {
-//              writer.write(row);
-//            } catch (IOException e) {
-//              throw new UncheckedIOException(e);
-//            }
-//          });
-//
-//      return writer.complete();
-//    } catch (IOException e) {
-//      throw new UncheckedIOException(e);
-//    }
-//  }
 }
