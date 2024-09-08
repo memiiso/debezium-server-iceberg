@@ -40,7 +40,7 @@ public class IcebergTableWriterFactory {
     GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(icebergTable);
     OutputFileFactory fileFactory = IcebergUtil.getTableOutputFileFactory(icebergTable, format);
     // equality Field Ids
-    Set<Integer> equalityFieldIds = icebergTable.schema().identifierFieldIds();
+    Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
     long targetFileSize =
         PropertyUtil.propertyAsLong(
             icebergTable.properties(), WRITE_TARGET_FILE_SIZE_BYTES, WRITE_TARGET_FILE_SIZE_BYTES_DEFAULT);
@@ -76,12 +76,12 @@ public class IcebergTableWriterFactory {
       // running with upsert mode + un partitioned table
       writer = new UnpartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), equalityFieldIds, true, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, true, upsertKeepDeletes);
     } else {
       // running with upsert mode + partitioned table
       writer = new PartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), equalityFieldIds, true, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, true, upsertKeepDeletes);
     }
 
     return writer;

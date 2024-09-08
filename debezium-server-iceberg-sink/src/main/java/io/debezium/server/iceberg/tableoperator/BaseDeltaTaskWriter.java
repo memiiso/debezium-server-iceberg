@@ -33,12 +33,12 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
                       FileIO io,
                       long targetFileSize,
                       Schema schema,
-                      Set<Integer> equalityFieldIds,
+                      Set<Integer> identifierFieldIds,
                       boolean upsert,
                       boolean upsertKeepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
     this.schema = schema;
-    this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(equalityFieldIds));
+    this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(identifierFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
     this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
     this.keyProjection = RecordProjection.create(schema, deleteSchema);

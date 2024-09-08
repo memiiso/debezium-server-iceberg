@@ -24,7 +24,7 @@ public class BaseWriterTest {
   FileFormat format;
   GenericAppenderFactory appenderFactory;
   OutputFileFactory fileFactory;
-  Set<Integer> equalityFieldIds;
+  Set<Integer> identifierFieldIds;
 
   protected static final Schema SCHEMA =
       new Schema(
@@ -55,7 +55,7 @@ public class BaseWriterTest {
     format = IcebergUtil.getTableFileFormat(table);
     appenderFactory = IcebergUtil.getTableAppender(table);
     fileFactory = IcebergUtil.getTableOutputFileFactory(table, format);
-    equalityFieldIds = table.schema().identifierFieldIds();
+    identifierFieldIds = table.schema().identifierFieldIds();
   }
 
 }
