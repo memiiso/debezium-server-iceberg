@@ -14,7 +14,7 @@ class UnpartitionedDeltaWriterTest extends BaseWriterTest {
   public void testUnpartitionedDeltaWriter() throws IOException {
     UnpartitionedDeltaWriter writer = new UnpartitionedDeltaWriter(table.spec(), format, appenderFactory, fileFactory,
         table.io(),
-        Long.MAX_VALUE, table.schema(), equalityFieldIds, true, true);
+        Long.MAX_VALUE, table.schema(), identifierFieldIds, true, true);
 
     Record row = GenericRecord.create(SCHEMA);
     row.setField("id", "123");
