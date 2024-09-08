@@ -23,9 +23,6 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.io.OutputFileFactory;
-import org.apache.iceberg.relocated.com.google.common.collect.Maps;
-import org.apache.iceberg.relocated.com.google.common.collect.Sets;
-import org.apache.iceberg.types.TypeUtil;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.ConfigValue;
@@ -35,9 +32,17 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
-import static org.apache.iceberg.TableProperties.*;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
+import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
+
 
 /**
  * @author Ismail Simsek
@@ -176,7 +181,10 @@ public class IcebergUtil {
   public static OutputFileFactory getTableOutputFileFactory(Table icebergTable, FileFormat format) {
     return OutputFileFactory.builderFor(icebergTable,
             IcebergUtil.partitionId(), 1L)
-        .defaultSpec(icebergTable.spec()).format(format).build();
+        .defaultSpec(icebergTable.spec())
+        .operationId(UUID.randomUUID().toString())
+        .format(format)
+        .build();
   }
 
   public static int partitionId() {
