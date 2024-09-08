@@ -11,28 +11,26 @@ package io.debezium.server.iceberg;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMangoDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourceMangoDB.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourceMangoDB.class)
 @TestProfile(IcebergChangeConsumerMangodbTest.TestProfile.class)
 public class IcebergChangeConsumerMangodbTest extends BaseSparkTest {
 

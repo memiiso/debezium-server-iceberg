@@ -8,23 +8,22 @@
 
 package io.debezium.server.iceberg.history;
 
+import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.google.common.collect.Lists;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -33,8 +32,8 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 @Disabled // @TODO remove spark with antlr4 version
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourceMysqlDB.class)
 @TestProfile(IcebergSchemaHistoryTest.TestProfile.class)
 public class IcebergSchemaHistoryTest extends BaseTest {
   @Test

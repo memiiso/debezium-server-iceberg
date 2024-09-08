@@ -11,15 +11,10 @@ package io.debezium.server.iceberg.batchsizewait;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
 import jakarta.inject.Inject;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -27,10 +22,14 @@ import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 @QuarkusTest
 @TestProfile(MaxBatchSizeWaitTest.TestProfile.class)
-@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = SourcePostgresqlDB.class)
+@WithTestResource(value = S3Minio.class)
 class MaxBatchSizeWaitTest extends BaseSparkTest {
   @Inject
   MaxBatchSizeWait waitBatchSize;

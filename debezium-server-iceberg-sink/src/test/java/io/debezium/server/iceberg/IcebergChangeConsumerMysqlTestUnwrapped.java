@@ -12,7 +12,7 @@ import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourceMysqlDB.class)
 @TestProfile(IcebergChangeConsumerMysqlTestUnwrapped.TestProfile.class)
 public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
 

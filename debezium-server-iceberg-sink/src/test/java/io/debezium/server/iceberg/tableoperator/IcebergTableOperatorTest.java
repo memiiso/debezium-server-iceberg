@@ -9,12 +9,12 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   static String testTable = "inventory.test_table_operator";

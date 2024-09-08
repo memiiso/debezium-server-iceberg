@@ -8,18 +8,11 @@
 
 package io.debezium.server.iceberg.offset;
 
+import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.google.common.collect.Lists;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
@@ -31,13 +24,19 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.fromByteBuffer;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
 public class IcebergOffsetBackingStoreTest extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();

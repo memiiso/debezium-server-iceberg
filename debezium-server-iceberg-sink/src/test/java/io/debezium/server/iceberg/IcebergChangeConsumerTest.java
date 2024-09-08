@@ -12,7 +12,7 @@ import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -25,7 +25,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourcePostgresqlDB.class)
 @TestProfile(IcebergChangeConsumerTest.TestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
 

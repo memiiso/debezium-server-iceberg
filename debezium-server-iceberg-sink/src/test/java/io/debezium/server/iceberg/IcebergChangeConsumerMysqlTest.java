@@ -8,31 +8,29 @@
 
 package io.debezium.server.iceberg;
 
+import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.collect.Lists;
-import org.apache.iceberg.data.Record;
-import org.apache.iceberg.io.CloseableIterable;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
 /**
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
+@WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourceMysqlDB.class)
 @TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
