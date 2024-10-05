@@ -48,7 +48,7 @@ public class IcebergTableWriterFactory {
     } else if (icebergTable.schema().identifierFieldIds().isEmpty()) {
       // ITS UPSERT MODE BUT!!!!! TABLE DON'T HAVE identifierFieldIds(Primary Key)
       if (upsert) {
-        LOGGER.warn("Table don't have Pk defined upsert is not possible falling back to append!");
+        LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
       }
       return appendWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
     } else {
