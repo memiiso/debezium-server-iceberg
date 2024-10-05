@@ -22,7 +22,7 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final Schema deleteSchema;
   private final InternalRecordWrapper wrapper;
   private final InternalRecordWrapper keyWrapper;
-  private final boolean upsertKeepDeletes;
+  private final boolean keepDeletes;
   private final RecordProjection keyProjection;
 
   BaseDeltaTaskWriter(PartitionSpec spec,
@@ -33,14 +33,14 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
                       long targetFileSize,
                       Schema schema,
                       Set<Integer> identifierFieldIds,
-                      boolean upsertKeepDeletes) {
+                      boolean keepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(identifierFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
     this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
     this.keyProjection = RecordProjection.create(schema, deleteSchema);
-    this.upsertKeepDeletes = upsertKeepDeletes;
+    this.keepDeletes = keepDeletes;
   }
 
   abstract RowDataDeltaWriter route(Record row);
@@ -62,8 +62,8 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     if (opFieldValue.equals("c")) {
       // new row
       writer.write(row);
-    } else if (opFieldValue.equals("d") && !upsertKeepDeletes) {
-      // deletes. doing hard delete. when upsertKeepDeletes = FALSE we dont keep deleted record
+    } else if (opFieldValue.equals("d") && !keepDeletes) {
+      // deletes. doing hard delete. when keepDeletes = FALSE we dont keep deleted record
       writer.deleteKey(keyProjection.wrap(row));
     } else {
       writer.deleteKey(keyProjection.wrap(row));

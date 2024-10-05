@@ -28,7 +28,7 @@ public class IcebergTableWriterFactory {
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
-  boolean upsertKeepDeletes;
+  boolean keepDeletes;
 
   public BaseTaskWriter<Record> create(Table icebergTable) {
 
@@ -79,12 +79,12 @@ public class IcebergTableWriterFactory {
       // running with upsert mode + un partitioned table
       return new UnpartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, keepDeletes);
     } else {
       // running with upsert mode + partitioned table
       return new PartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, keepDeletes);
     }
   }
 }
