@@ -14,6 +14,7 @@ import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 @QuarkusTest
 @WithTestResource(value = S3Minio.class)
+@WithTestResource(value = SourcePostgresqlDB.class)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   static String testTable = "inventory.test_table_operator";
@@ -69,6 +71,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
             .destination(testTable)
             .addKeyField("id", 1)
             .addField("data", "record1")
+            .addField("__op", "c")
             .addField("preferences", "feature1", true)
             .build()
     );
@@ -77,17 +80,20 @@ class IcebergTableOperatorTest extends BaseSparkTest {
         .destination(testTable)
         .addKeyField("id", 1)
         .addField("data", "record1")
+        .addField("__op", "c")
         .build()
     );
     events.add(new IcebergChangeEventBuilder()
         .destination(testTable)
         .addKeyField("id", 2)
         .addField("data", "record2")
+        .addField("__op", "c")
         .build()
     );
     events.add(new IcebergChangeEventBuilder()
         .destination(testTable)
         .addKeyField("id", 3)
+        .addField("__op", "c")
         .addField("user_name", "Alice")
         .addField("data", "record3_adding_field")
         .build()

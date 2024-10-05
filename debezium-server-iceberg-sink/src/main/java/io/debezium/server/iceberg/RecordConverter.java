@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
+import io.debezium.server.iceberg.tableoperator.Operation;
+import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
@@ -72,8 +74,36 @@ public class RecordConverter {
     return value().get(cdcSourceTsMsField).asLong(0);
   }
 
-  public String cdcOpValue(String cdcOpField) {
-    return value().get(cdcOpField).asText("c");
+  public Operation cdcOpValue(String cdcOpField) {
+    final String opFieldValue;
+    if (value().has(cdcOpField)) {
+      opFieldValue = value().get(cdcOpField).asText("c");
+    } else if (value().has("ddl") && value().has("databaseName")
+        && value().has("tableChanges")) {
+      // its "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+      opFieldValue = "c";
+    } else {
+      opFieldValue = null;
+    }
+
+    if (opFieldValue == null) {
+      throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
+          "This field is required when updating or deleting data, when running in upsert mode."
+      );
+    }
+
+    if (opFieldValue.equals("u")) {
+      return Operation.UPDATE;
+    } else if (opFieldValue.equals("d")) {
+      return Operation.DELETE;
+    } else if (opFieldValue.equals("r")) {
+      return Operation.READ;
+    } else if (opFieldValue.equals("c")) {
+      return Operation.INSERT;
+    }else if (opFieldValue.equals("i")) {
+      return Operation.INSERT;
+    }
+    throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
   }
 
   public SchemaConverter schemaConverter() {
@@ -92,8 +122,15 @@ public class RecordConverter {
     return destination;
   }
 
-  public GenericRecord convert(Schema schema) {
-    return convert(schema.asStruct(), value());
+  public RecordWrapper convertAsAppend(Schema schema) {
+    GenericRecord row = convert(schema.asStruct(), value());
+    return new RecordWrapper(row, Operation.INSERT);
+  }
+
+  public RecordWrapper convert(Schema schema, String cdcOpField) {
+    GenericRecord row = convert(schema.asStruct(), value());
+    Operation op = cdcOpValue(cdcOpField);
+    return new RecordWrapper(row, op);
   }
 
   private static GenericRecord convert(Types.StructType tableFields, JsonNode data) {
