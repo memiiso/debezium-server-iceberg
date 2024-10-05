@@ -1,9 +1,6 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.IcebergUtil;
-
-import java.util.Set;
-
 import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Table;
@@ -17,16 +14,17 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
+
 import static org.apache.iceberg.TableProperties.WRITE_TARGET_FILE_SIZE_BYTES;
 import static org.apache.iceberg.TableProperties.WRITE_TARGET_FILE_SIZE_BYTES_DEFAULT;
 
 /**
  * Iceberg Table Writer Factory to get TaskWriter for the table. upsert modes used to return correct writer.
- *
  */
 @Dependent
 public class IcebergTableWriterFactory {
-  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableWriterFactory.class);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
   boolean upsert;
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-keep-deletes", defaultValue = "true")
@@ -40,50 +38,53 @@ public class IcebergTableWriterFactory {
     GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(icebergTable);
     OutputFileFactory fileFactory = IcebergUtil.getTableOutputFileFactory(icebergTable, format);
     // equality Field Ids
-    Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
     long targetFileSize =
         PropertyUtil.propertyAsLong(
             icebergTable.properties(), WRITE_TARGET_FILE_SIZE_BYTES, WRITE_TARGET_FILE_SIZE_BYTES_DEFAULT);
-    BaseTaskWriter<Record> writer;
 
-    // 1. TABLE DONT HAVE identifierFieldIds
-    // 2. OR RUNNING APPEND MODE
-    // THEN USE APPEND WRITERS
-    if (icebergTable.schema().identifierFieldIds().isEmpty() || !upsert) {
-
+    if (!upsert) {
+      // RUNNING APPEND MODE
+      return appendWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
+    } else if (icebergTable.schema().identifierFieldIds().isEmpty()) {
+      // ITS UPSERT MODE BUT!!!!! TABLE DON'T HAVE identifierFieldIds(Primary Key)
       if (upsert) {
-        // running in upsert mode but table dont have identifierFieldIds to do delete!
         LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
       }
-
-      if (icebergTable.spec().isUnpartitioned()) {
-        // table is un partitioned use un partitioned append writer
-        writer = new UnpartitionedWriter<>(
-            icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), targetFileSize);
-
-      } else {
-        // table is partitioned use partitioned append writer
-        writer = new PartitionedAppendWriter(
-            icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), targetFileSize, icebergTable.schema());
-      }
-
+      return appendWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
+    } else {
+      // ITS UPSERT MODE AND TABLE HAS identifierFieldIds(Primary Key)
+      // USE DELTA WRITERS
+      return deltaWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
     }
+  }
 
-    // ITS UPSERT MODE
-    // AND TABLE HAS identifierFieldIds
-    // USE DELTA WRITERS
-    else if (icebergTable.spec().isUnpartitioned()) {
+  private BaseTaskWriter<Record> appendWriter(Table icebergTable, FileFormat format, GenericAppenderFactory appenderFactory, OutputFileFactory fileFactory, long targetFileSize) {
+
+    if (icebergTable.spec().isUnpartitioned()) {
+      // table is un partitioned use un partitioned append writer
+      return new UnpartitionedWriter<>(
+          icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), targetFileSize);
+
+    } else {
+      // table is partitioned use partitioned append writer
+      return new PartitionedAppendWriter(
+          icebergTable.spec(), format, appenderFactory, fileFactory, icebergTable.io(), targetFileSize, icebergTable.schema());
+    }
+  }
+
+  private BaseTaskWriter<Record> deltaWriter(Table icebergTable, FileFormat format, GenericAppenderFactory appenderFactory, OutputFileFactory fileFactory, long targetFileSize) {
+
+    Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
+    if (icebergTable.spec().isUnpartitioned()) {
       // running with upsert mode + un partitioned table
-      writer = new UnpartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
+      return new UnpartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, true, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, upsertKeepDeletes);
     } else {
       // running with upsert mode + partitioned table
-      writer = new PartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
+      return new PartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, true, upsertKeepDeletes);
+          targetFileSize, icebergTable.schema(), identifierFieldIds, upsertKeepDeletes);
     }
-
-    return writer;
   }
 }

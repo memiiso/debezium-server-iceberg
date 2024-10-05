@@ -22,7 +22,6 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final Schema deleteSchema;
   private final InternalRecordWrapper wrapper;
   private final InternalRecordWrapper keyWrapper;
-  private final boolean upsert;
   private final boolean upsertKeepDeletes;
   private final RecordProjection keyProjection;
 
@@ -34,7 +33,6 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
                       long targetFileSize,
                       Schema schema,
                       Set<Integer> identifierFieldIds,
-                      boolean upsert,
                       boolean upsertKeepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
     this.schema = schema;
@@ -42,7 +40,6 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
     this.keyWrapper = new InternalRecordWrapper(deleteSchema.asStruct());
     this.keyProjection = RecordProjection.create(schema, deleteSchema);
-    this.upsert = upsert;
     this.upsertKeepDeletes = upsertKeepDeletes;
   }
 
@@ -61,18 +58,16 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
-    if (!upsert) {
-      // APPEND ONLY MODE!!
+
+    if (opFieldValue.equals("c")) {
+      // new row
       writer.write(row);
+    } else if (opFieldValue.equals("d") && !upsertKeepDeletes) {
+      // deletes. doing hard delete. when upsertKeepDeletes = FALSE we dont keep deleted record
+      writer.deleteKey(keyProjection.wrap(row));
     } else {
-      // UPSERT MODE
-      if (!opFieldValue.equals("c")) {// anything which not created is deleted first
-        writer.deleteKey(keyProjection.wrap(row));
-      }
-      // when upsertKeepDeletes = FALSE we dont keep deleted record
-      if (upsertKeepDeletes || !opFieldValue.equals("d")) {
-        writer.write(row);
-      }
+      writer.deleteKey(keyProjection.wrap(row));
+      writer.write(row);
     }
   }
 
