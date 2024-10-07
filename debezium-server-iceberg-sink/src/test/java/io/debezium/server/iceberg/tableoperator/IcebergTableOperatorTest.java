@@ -71,7 +71,6 @@ class IcebergTableOperatorTest extends BaseSparkTest {
             .destination(testTable)
             .addKeyField("id", 1)
             .addField("data", "record1")
-            .addField("__op", "c")
             .addField("preferences", "feature1", true)
             .build()
     );
@@ -80,20 +79,17 @@ class IcebergTableOperatorTest extends BaseSparkTest {
         .destination(testTable)
         .addKeyField("id", 1)
         .addField("data", "record1")
-        .addField("__op", "c")
         .build()
     );
     events.add(new IcebergChangeEventBuilder()
         .destination(testTable)
         .addKeyField("id", 2)
         .addField("data", "record2")
-        .addField("__op", "c")
         .build()
     );
     events.add(new IcebergChangeEventBuilder()
         .destination(testTable)
         .addKeyField("id", 3)
-        .addField("__op", "c")
         .addField("user_name", "Alice")
         .addField("data", "record3_adding_field")
         .build()
