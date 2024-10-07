@@ -1,7 +1,6 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.Sets;
-import io.debezium.DebeziumException;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
@@ -13,8 +12,6 @@ import org.apache.iceberg.types.TypeUtil;
 
 import java.io.IOException;
 import java.util.Set;
-
-import static io.debezium.server.iceberg.tableoperator.IcebergTableOperator.cdcOpField;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
 
@@ -49,20 +46,14 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     return wrapper;
   }
 
-  @Override
+  @Override/**/
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
-    final Object opFieldValue = row.getField(cdcOpField);
-    if (opFieldValue == null) {
-      throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
-          "This field is required when updating or deleting data, when running in upsert mode."
-      );
-    }
-
-    if (opFieldValue.equals("c")) {
+    Operation rowOperation = ((RecordWrapper) row).op();
+    if (rowOperation == Operation.INSERT) {
       // new row
       writer.write(row);
-    } else if (opFieldValue.equals("d") && !keepDeletes) {
+    } else if (rowOperation == Operation.DELETE && !keepDeletes) {
       // deletes. doing hard delete. when keepDeletes = FALSE we dont keep deleted record
       writer.deleteKey(keyProjection.wrap(row));
     } else {

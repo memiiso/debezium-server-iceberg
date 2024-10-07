@@ -15,7 +15,6 @@ import io.debezium.server.iceberg.RecordConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.*;
-import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
@@ -39,11 +38,12 @@ import java.util.stream.Collectors;
 @Dependent
 public class IcebergTableOperator {
 
-  static final ImmutableMap<String, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of("c", 1, "r", 2, "u", 3, "d", 4);
+  static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of(Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
-  protected static final String cdcOpField = "__op";
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
   String cdcSourceTsMsField;
+  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-field", defaultValue = "__op")
+  String cdcOpField;
   @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
   boolean allowFieldAddition;
   @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
@@ -178,7 +178,7 @@ public class IcebergTableOperator {
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
       for (RecordConverter e : events) {
-        final GenericRecord record = e.convert(tableSchema);
+        final RecordWrapper record = (upsert && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema, cdcOpField) : e.convertAsAppend(tableSchema);
         writer.write(record);
       }
 

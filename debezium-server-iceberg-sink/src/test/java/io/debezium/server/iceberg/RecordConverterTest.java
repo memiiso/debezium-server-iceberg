@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
+import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -70,7 +71,7 @@ class RecordConverterTest {
     RecordConverter e = new RecordConverter("test",
         unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
-    GenericRecord record = e.convert(schema);
+    RecordWrapper record = e.convert(schema, "__op");
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(16850, record.getField("order_date"));
     assertEquals(schema.toString(), """
@@ -110,7 +111,7 @@ class RecordConverterTest {
     assertEquals(schema.identifierFieldIds(), Set.of());
     assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
     assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
-    GenericRecord record = e.convert(schema);
+    RecordWrapper record = e.convert(schema,"__op");
     //System.out.println(record);
     assertTrue(record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
@@ -137,7 +138,7 @@ class RecordConverterTest {
     RecordConverter e = new RecordConverter("test",
         unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
     Schema schema = e.icebergSchema(true);
-    GenericRecord record = e.convert(schema);
+    RecordWrapper record = e.convert(schema,"__op");
     assertEquals(schema.toString(), """
         table {
           1: id: optional int
