@@ -84,7 +84,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   @Override
   public void configure(Configuration config, HistoryRecordComparator comparator, SchemaHistoryListener listener, boolean useCatalogBeforeSchema) {
     super.configure(config, comparator, listener, useCatalogBeforeSchema);
-    this.historyConfig = new IcebergSchemaHistoryConfig(config);
+    this.historyConfig = new IcebergSchemaHistoryConfig(config, CONFIGURATION_FIELD_PREFIX_STRING);
     icebergCatalog = CatalogUtil.buildIcebergCatalog(this.historyConfig.catalogName(),
         this.historyConfig.icebergProperties(), this.historyConfig.hadoopConfig());
     tableFullName = String.format("%s.%s", this.historyConfig.tableNamespace(), this.historyConfig.tableName());
@@ -268,45 +268,5 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
              "Migrating file database history to Iceberg database history storage successfully completed", numRecords.get());
   }
 
-  public static class IcebergSchemaHistoryConfig {
-    private static final String PROP_SINK_PREFIX =  "debezium.sink.";
-    Properties configCombined = new Properties();
-
-    public IcebergSchemaHistoryConfig(Configuration config) {
-      Configuration confIcebergSubset = config.subset(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.", true);
-      confIcebergSubset.forEach(configCombined::put);
-
-      // debezium is doing config filtering before passing it down to this class!
-      // so we are taking additional config using ConfigProvider with this we take full iceberg config
-      Map<String, String> icebergConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_SINK_PREFIX + "iceberg.");
-      icebergConf.forEach(configCombined::putIfAbsent);
-    }
-
-    public String catalogName() {
-      return this.configCombined.getProperty( "catalog-name", "default");
-    }
-
-    public String tableNamespace() {
-      return this.configCombined.getProperty("table-namespace", "default");
-    }
-
-    public String tableName() {
-      return this.configCombined.getProperty("table-name", "debezium_database_history_storage");
-    }
-
-    public org.apache.hadoop.conf.Configuration hadoopConfig() {
-      final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
-      configCombined.forEach((key, value) -> hadoopConfig.set((String)key, (String)value));
-      return hadoopConfig;
-    }
-
-    public Map<String, String> icebergProperties() {
-      return Maps.fromProperties(configCombined);
-    }
-
-    public String getMigrateHistoryFile() {
-      return configCombined.getProperty("migrate-history-file","");
-    }
-  }
 
 }

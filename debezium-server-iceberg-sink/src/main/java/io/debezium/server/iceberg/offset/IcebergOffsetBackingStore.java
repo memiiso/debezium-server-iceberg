@@ -87,7 +87,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   public void configure(WorkerConfig config) {
     super.configure(config);
 
-    offsetConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()));
+    offsetConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()), CONFIGURATION_FIELD_PREFIX_STRING);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(offsetConfig.catalogName(),
         offsetConfig.icebergProperties(), offsetConfig.hadoopConfig());
@@ -284,47 +284,5 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     return null;
   }
 
-  public static class IcebergOffsetBackingStoreConfig extends WorkerConfig {
-    private static final String PROP_SINK_PREFIX =  "debezium.sink.";
-    Properties configCombined = new Properties();
-
-    public IcebergOffsetBackingStoreConfig(Configuration config) {
-      super(new ConfigDef(), config.asMap());
-      Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
-      Configuration confIcebergSubset = config.subset(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.", true);
-      confIcebergSubset.forEach(configCombined::put);
-
-      // debezium is doing config filtering before passing it down to this class!
-      // so we are taking additional config using ConfigProvider with this we take full iceberg config
-      Map<String, String> icebergConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_SINK_PREFIX + "iceberg.");
-      icebergConf.forEach(configCombined::putIfAbsent);
-    }
-
-    public String catalogName() {
-      return this.configCombined.getProperty("catalog-name", "default");
-    }
-
-    public String tableNamespace() {
-      return this.configCombined.getProperty("table-namespace", "default");
-    }
-
-    public String tableName() {
-      return this.configCombined.getProperty("table-name", "debezium_offset_storage");
-    }
-
-    public String getMigrateOffsetFile() {
-      return this.configCombined.getProperty("migrate-offset-file","");
-    }
-
-    public org.apache.hadoop.conf.Configuration hadoopConfig() {
-      final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
-      configCombined.forEach((key, value) -> hadoopConfig.set((String)key, (String)value));
-      return hadoopConfig;
-    }
-
-    public Map<String, String> icebergProperties() {
-      return Maps.fromProperties(configCombined);
-    }
-  }
 
 }
