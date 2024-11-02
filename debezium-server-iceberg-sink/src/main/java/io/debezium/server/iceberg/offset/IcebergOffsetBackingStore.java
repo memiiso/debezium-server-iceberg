@@ -11,7 +11,6 @@ package io.debezium.server.iceberg.offset;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
 import io.debezium.server.iceberg.IcebergUtil;
@@ -19,7 +18,6 @@ import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.*;
 import org.apache.iceberg.catalog.Catalog;
-import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
@@ -28,14 +26,12 @@ import org.apache.iceberg.data.Record;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.*;
 import org.apache.iceberg.types.Types;
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.util.Callback;
 import org.apache.kafka.connect.util.SafeObjectInputStream;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +47,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static io.debezium.server.iceberg.IcebergChangeConsumer.PROP_PREFIX;
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
@@ -75,7 +70,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   private String tableFullName;
   private TableIdentifier tableId;
   private Table offsetTable;
-  IcebergOffsetBackingStoreConfig offsetConfig;
+  IcebergOffsetBackingStoreConfig storageConfig;
   FileFormat format;
   GenericAppenderFactory appenderFactory;
   OutputFileFactory fileFactory;
@@ -87,12 +82,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   public void configure(WorkerConfig config) {
     super.configure(config);
 
-    offsetConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()));
-
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(offsetConfig.catalogName(),
-        offsetConfig.icebergProperties(), offsetConfig.hadoopConfig());
-    tableFullName = String.format("%s.%s", offsetConfig.tableNamespace(), offsetConfig.tableName());
-    tableId = TableIdentifier.of(Namespace.of(offsetConfig.tableNamespace()), offsetConfig.tableName());
+    storageConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()), CONFIGURATION_FIELD_PREFIX_STRING);
+    icebergCatalog = storageConfig.icebergCatalog();
+    tableFullName = storageConfig.tableFullName();
+    tableId = storageConfig.tableIdentifier();
   }
 
   @Override
@@ -151,9 +144,9 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
         throw new DebeziumException("Failed to create table " + tableId + " to store offset");
       }
 
-      if (!Strings.isNullOrEmpty(offsetConfig.getMigrateOffsetFile().strip())) {
-        LOG.warn("Migrating offset from file {}", offsetConfig.getMigrateOffsetFile());
-        this.loadFileOffset(new File(offsetConfig.getMigrateOffsetFile()));
+      if (!Strings.isNullOrEmpty(storageConfig.getMigrateOffsetFile().strip())) {
+        LOG.warn("Migrating offset from file {}", storageConfig.getMigrateOffsetFile());
+        this.loadFileOffset(new File(storageConfig.getMigrateOffsetFile()));
       }
     }
 
@@ -284,47 +277,5 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     return null;
   }
 
-  public static class IcebergOffsetBackingStoreConfig extends WorkerConfig {
-    private static final String PROP_SINK_PREFIX =  "debezium.sink.";
-    Properties configCombined = new Properties();
-
-    public IcebergOffsetBackingStoreConfig(Configuration config) {
-      super(new ConfigDef(), config.asMap());
-      Map<String, String> conf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
-      Configuration confIcebergSubset = config.subset(CONFIGURATION_FIELD_PREFIX_STRING + "iceberg.", true);
-      confIcebergSubset.forEach(configCombined::put);
-
-      // debezium is doing config filtering before passing it down to this class!
-      // so we are taking additional config using ConfigProvider with this we take full iceberg config
-      Map<String, String> icebergConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_SINK_PREFIX + "iceberg.");
-      icebergConf.forEach(configCombined::putIfAbsent);
-    }
-
-    public String catalogName() {
-      return this.configCombined.getProperty("catalog-name", "default");
-    }
-
-    public String tableNamespace() {
-      return this.configCombined.getProperty("table-namespace", "default");
-    }
-
-    public String tableName() {
-      return this.configCombined.getProperty("table-name", "debezium_offset_storage");
-    }
-
-    public String getMigrateOffsetFile() {
-      return this.configCombined.getProperty("migrate-offset-file","");
-    }
-
-    public org.apache.hadoop.conf.Configuration hadoopConfig() {
-      final org.apache.hadoop.conf.Configuration hadoopConfig = new org.apache.hadoop.conf.Configuration();
-      configCombined.forEach((key, value) -> hadoopConfig.set((String)key, (String)value));
-      return hadoopConfig;
-    }
-
-    public Map<String, String> icebergProperties() {
-      return Maps.fromProperties(configCombined);
-    }
-  }
 
 }
