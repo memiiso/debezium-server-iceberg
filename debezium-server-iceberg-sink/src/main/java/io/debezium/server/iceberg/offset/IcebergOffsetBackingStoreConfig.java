@@ -1,7 +1,7 @@
 package io.debezium.server.iceberg.offset;
 
 import io.debezium.config.Configuration;
-import io.debezium.server.iceberg.BaseIcebergStorageConfig;
+import io.debezium.server.iceberg.storage.BaseIcebergStorageConfig;
 
 
 public  class IcebergOffsetBackingStoreConfig extends BaseIcebergStorageConfig {
@@ -11,11 +11,11 @@ public  class IcebergOffsetBackingStoreConfig extends BaseIcebergStorageConfig {
 
     @Override
     public String tableName() {
-      return this.configCombined.getProperty("table-name", "debezium_offset_storage");
+      return this.config.getProperty("table-name", "debezium_offset_storage");
     }
 
     public String getMigrateOffsetFile() {
-      return this.configCombined.getProperty("migrate-offset-file","");
+      return this.config.getProperty("migrate-offset-file","");
     }
 
   }

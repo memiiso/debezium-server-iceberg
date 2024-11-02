@@ -85,10 +85,9 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   public void configure(Configuration config, HistoryRecordComparator comparator, SchemaHistoryListener listener, boolean useCatalogBeforeSchema) {
     super.configure(config, comparator, listener, useCatalogBeforeSchema);
     this.historyConfig = new IcebergSchemaHistoryConfig(config, CONFIGURATION_FIELD_PREFIX_STRING);
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(this.historyConfig.catalogName(),
-        this.historyConfig.icebergProperties(), this.historyConfig.hadoopConfig());
-    tableFullName = String.format("%s.%s", this.historyConfig.tableNamespace(), this.historyConfig.tableName());
-    tableId = TableIdentifier.of(Namespace.of(this.historyConfig.tableNamespace()), this.historyConfig.tableName());
+    icebergCatalog = historyConfig.icebergCatalog();
+    tableFullName = historyConfig.tableFullName();
+    tableId = historyConfig.tableIdentifier();
 
     if (running.get()) {
       throw new SchemaHistoryException("Iceberg database history process already initialized table: " + tableFullName);

@@ -1,9 +1,7 @@
 package io.debezium.server.iceberg.history;
 
 import io.debezium.config.Configuration;
-import io.debezium.server.iceberg.BaseIcebergStorageConfig;
-
-import java.util.Properties;
+import io.debezium.server.iceberg.storage.BaseIcebergStorageConfig;
 
 
 public class IcebergSchemaHistoryConfig extends BaseIcebergStorageConfig {
@@ -13,9 +11,9 @@ public class IcebergSchemaHistoryConfig extends BaseIcebergStorageConfig {
 
   @Override
   public String tableName() {
-    return this.configCombined.getProperty("table-name", "debezium_database_history_storage");
+    return this.config.getProperty("table-name", "debezium_database_history_storage");
   }
   public String getMigrateHistoryFile() {
-    return configCombined.getProperty("migrate-history-file", "");
+    return config.getProperty("migrate-history-file", "");
   }
 }
