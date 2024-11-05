@@ -14,32 +14,31 @@ This project introduces an Iceberg consumer for [Debezium Server](https://debezi
 See the [Documentation Page](docs/DOCS.md) for more details
 For a full understanding of current limitations and recommended solutions, please review the [caveats](docs/CAVEATS.md).
 
-![Debezium Iceberg](docs/images/debezium-iceberg.png)
+![Debezium Iceberg](docs/images/rdbms-debezium-iceberg_white.png)
 
 # Installation
 - Requirements:
   - JDK 11
   - Maven
 ### Building from source code
-  - Clone the repository
-  - Navigate to the project root directory and create distribution package.
+1. Clone the repository
+2. Navigate to the project root directory 
+3. Create distribution package.
+4. Extract the contents of the server distribution package
+5. Enter into unzipped folder
+6. Create `application.properties` file. An example configuration file named [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example) is provided for your reference.
+7. Run the provided script: `bash run.sh` This script will launch the server using the configuration you defined in the application.properties file.
+
 ```bash
 git clone https://github.com/memiiso/debezium-server-iceberg.git
 cd debezium-server-iceberg
 mvn -Passembly -Dmaven.test.skip package
-```
-  - Extract the contents of the server distribution package
-  - cd into unzipped folder
-  - Create `application.properties` file. An example configuration file named [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example) is provided for your reference.
-```bash
 unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 cd appdist
 nano conf/application.properties
-```
-  - Run the provided script: `bash run.sh` This script will launch the server using the configuration you defined in the application.properties file.
-```bash
 bash run.sh
 ```
+
 # Python Runner for Debezium Server
 
 It's possible to use python to run,operate debezium server
