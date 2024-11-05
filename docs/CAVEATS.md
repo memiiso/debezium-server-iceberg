@@ -8,13 +8,7 @@ Full schema evolution, such as converting incompatible data types, is not curren
 `debezium.sink.iceberg.allow-field-addition` configuration property to `true`.
 
 ## Specific tables replication
-
-By default, debezium connector will publish all snapshot of the tables in the database, that leads to unnecessary
-iceberg table snapshot of all tables. Unless you want to replicate all table from the database into iceberg table,
-set `debezium.source.table.include.list` to specific tables that you want to replicate. By this way, you avoid replicate
-too many tables that you don't really want to. More on this setting
-in [Debezium server source](https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-table-include-list)
-.
+By default, the Debezium connector will replicate all the tables in the database, resulting in unnecessary load. To avoid replicating tables you don't need, configure the `debezium.source.table.include.list` property to specify the exact tables to replicate. This will streamline your data pipeline and reduce the overhead. For more details on this configuration, refer to the [Debezium server source](https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-table-include-list) documentation.
 
 ## AWS S3 credentials
 
