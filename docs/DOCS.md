@@ -1,7 +1,6 @@
 # Debezium Iceberg Consumers
 
-Replicates database CDC events to Iceberg tables(Cloud storage, hdfs) without using Spark, Kafka or Streaming platform
-in between.
+Directly replicates database Change Data Capture (CDC) events to Iceberg tables on cloud storage or HDFS, eliminating the need for intermediate systems like Spark, Kafka, or streaming platforms.
 
 ![Debezium Iceberg](images/debezium-iceberg.png)
 
