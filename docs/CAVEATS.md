@@ -1,15 +1,11 @@
 # Caveats
 
 ## Only iceberg V2 table supported
-
-This connector only writes using iceberg table V2 spec (delete events will be written to delete files(merge on read)
-instead of rewrite data files)
+This connector writes data to Iceberg tables using the V2 specification. To optimize write performance, delete events are recorded in delete files, avoiding costly data file rewrites. While this approach significantly improves write performance, it can impact read performance, especially in `upsert` mode. However, in `append` mode, this performance trade-off is not applicable.
 
 ## No automatic schema evolution
-
-Full schema evaluation is not supported, like converting incompatible types. But sema expansion like field addition is
-supported,
-see `debezium.sink.iceberg.allow-field-addition` setting.
+Full schema evolution, such as converting incompatible data types, is not currently supported. However, schema expansion, including adding new fields or expanding existing field data types, is supported. To enable this behavior, set the
+`debezium.sink.iceberg.allow-field-addition` configuration property to `true`.
 
 ## Specific tables replication
 
