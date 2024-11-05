@@ -5,12 +5,9 @@ Directly replicates database Change Data Capture (CDC) events to Iceberg tables 
 ![Debezium Iceberg](images/debezium-iceberg.png)
 
 # `iceberg` Consumer
+The Iceberg consumer replicates database Change Data Capture (CDC) events to target Iceberg tables. It supports both upsert and append modes for data replication.
 
-Iceberg consumer replicates database CDC events to destination Iceberg tables. It is possible to replicate source
-data with upsert or append modes.
-When event and key schema enabled (`debezium.format.value.schemas.enable=true`
-, `debezium.format.key.schemas.enable=true`) destination Iceberg
-tables created automatically with the first start.
+When event and key schema information is enabled (`debezium.format.value.schemas.enable=true` and `debezium.format.key.schemas.enable=true`), the destination Iceberg tables are automatically created upon the initial startup.
 
 #### Configuration properties
 
