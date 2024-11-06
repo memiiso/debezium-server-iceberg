@@ -4,38 +4,46 @@
 
 # Debezium Iceberg Consumer
 
-This project adds iceberg consumer
+This project adds Iceberg consumer
 to [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html). It could be used to
 replicate any database(CDC changes) to could as an Iceberg table in realtime. Without requiring Spark, Kafka or
-Streaming platform. It's possible to consume data in append or upsert modes.
+Streaming platform. It's possible to consume data in append or update modes.
 
-More detail available in [Documentation Page](docs/DOCS.md)
-Also, check [caveats](docs/CAVEATS.md) for better understanding the current limitation and proper workaround
+This project introduces an Iceberg consumer for [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html), enabling real-time replication of Change Data Capture (CDC) events from any database to an Iceberg table. This eliminates the need for additional tools like Spark, Kafka, or dedicated streaming platforms.  The consumer supports data ingestion in both append and upsert modes.
 
-For more details, refer to the [Documentation Page](docs/DOCS.md).
-Additionally, to fully understand potential challenges please review the [Caveats Section](docs/CAVEATS.md)
+See the [Documentation Page](docs/DOCS.md) for more details
+For a full understanding of current limitations and recommended solutions, please review the [caveats](docs/CAVEATS.md).
 
-![Debezium Iceberg](docs/images/debezium-iceberg.png)
+![Debezium Iceberg](docs/images/rdbms-debezium-iceberg_white.png)
 
-# Install from source
+# Installation
 - Requirements:
   - JDK 11
   - Maven
-- Clone from repo: `git clone https://github.com/memiiso/debezium-server-iceberg.git`
-- From the root of the project:
-  - Build and package debezium server: `mvn -Passembly -Dmaven.test.skip package`
-  - After building, unzip your server
-    distribution: `unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist`
-  - cd into unzipped folder: `cd appdist`
-  - Create `application.properties` file and config it: `nano conf/application.properties`, you can check the example
-    configuration
-    in [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
-  - Run the server using provided script: `bash run.sh`
+### Building from source code
+1. Clone the repository
+2. Navigate to the project root directory 
+3. Create distribution package.
+4. Extract the contents of the server distribution package
+5. Enter into unzipped folder
+6. Create `application.properties` file. An example configuration file named [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example) is provided for your reference.
+7. Run the provided script: `bash run.sh` This script will launch the server using the configuration you defined in the application.properties file.
 
-# Debezium python runner
+```bash
+git clone https://github.com/memiiso/debezium-server-iceberg.git
+cd debezium-server-iceberg
+mvn -Passembly -Dmaven.test.skip package
+unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
+cd appdist
+nano conf/application.properties
+bash run.sh
+```
+
+# Python Runner for Debezium Server
 
 It's possible to use python to run,operate debezium server
 
+This project provides Python scripts to automate the startup, shutdown, and configuration of Debezium Server. By leveraging Python, you can manage Debezium Server.
 example:
 
 ```commandline
