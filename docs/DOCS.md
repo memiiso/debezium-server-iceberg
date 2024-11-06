@@ -11,83 +11,89 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 
 #### Configuration properties
 
-| Config                                                       | Default                                                       | Description                                                                                                                                                                                                               |
-|--------------------------------------------------------------|---------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `debezium.sink.iceberg.warehouse`                            |                                                               | Root path of the Iceberg data warehouse                                                                                                                                                                                   |
-| `debezium.sink.iceberg.catalog-name`                         | `default`                                                     | User-specified Iceberg catalog name.                                                                                                                                                                                      |
-| `debezium.sink.iceberg.table-namespace`                      | `default`                                                     | A namespace in the catalog. ex: `SELECT * FROM prod.db.table -- catalog: prod, namespace: db, table: table`                                                                                                               |
-| `debezium.sink.iceberg.table-prefix`                         | ``                                                            | Iceberg table name prefix, prefix added to iceberg table names.                                                                                                                                                           |
-| `debezium.sink.iceberg.write.format.default`                 | `parquet`                                                     | Default file format for the table; `parquet`, `avro`, or `orc`                                                                                                                                                            |
-| `debezium.sink.iceberg.allow-field-addition`                 | `true`                                                        | Allow field addition to target tables. Enables automatic schema expansion.                                                                                                                                                |
-| `debezium.sink.iceberg.upsert`                               | `true`                                                        | Running consumer in upsert mode, overwriting updated rows. explained below.                                                                                                                                               |
-| `debezium.sink.iceberg.upsert-keep-deletes`                  | `true`                                                        | When running with upsert mode, keeps deleted rows in target table (soft delete).                                                                                                                                          |
-| `debezium.sink.iceberg.upsert-dedup-column`                  | `__source_ts_ms`                                              | With upsert mode used to deduplicate data. row with highest `__source_ts_ms` kept(last change event). _dont change!_                                                                                                      |
-| `debezium.sink.iceberg.create-identifier-fields`             | `true`                                                        | When set to false the consumer will create tables without identifier fields. useful when user wants to consume nested events with append only mode.                                                                       |
-| `debezium.sink.iceberg.destination-regexp`                   | ``                                                            | Regexp to modify destination iceberg table name. For example with this setting, its possible to combine some tables `table_ptt1`,`table_ptt2` to one `table_combined`.                                                    |
-| `debezium.sink.iceberg.destination-regexp-replace`           | ``                                                            | Regexp replace part to modify destination iceberg table name                                                                                                                                                              |
-| `debezium.sink.iceberg.destination-uppercase-table-names`    | `false`                                                       | Maps debezium destination to uppercase iceberg table names                                                                                                                                                                |
-| `debezium.sink.iceberg.destination-lowercase-table-names`    | `false`                                                       | Maps debezium destination to lowercase iceberg table names                                                                                                                                                                |
-| `debezium.sink.batch.batch-size-wait`                        | `NoBatchSizeWait`                                             | Batch size wait strategy, Used to optimize data file size and upload interval. explained below.                                                                                                                           |
-| `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                                               | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) this settings are passed to Iceberg (without the prefix)                                                                                          |
-| `debezium.source.offset.storage`                             | `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming)                    |
-| `debezium.source.offset.storage.iceberg.table-name`          | `debezium_offset_storage`                                     | Destination table name to store connector offsets.                                                                                                                                                                        |
-| `debezium.source.schema.history.internal`                    | `io.debezium.server.iceberg.history.IcebergSchemaHistory`     | The name of the Java class that is responsible for persistence of the database schema history. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#database-history-properties) |
-| `debezium.source.schema.history.internal.iceberg.table-name` | `debezium_schema_history_storage`                             | Destination table name to store  database schema history.                                                                                                                                                                 |
+| Config                                                       | Default                           | Description                                                                                                                                                                                                                                                                                                       |
+|--------------------------------------------------------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `debezium.sink.iceberg.warehouse`                            |                                   | Root path of the Iceberg data warehouse                                                                                                                                                                                                                                                                           |
+| `debezium.sink.iceberg.catalog-name`                         | `default`                         | User-specified Iceberg catalog name.                                                                                                                                                                                                                                                                              |
+| `debezium.sink.iceberg.table-namespace`                      | `default`                         | A namespace in the catalog. ex: `SELECT * FROM prod.db.table -- catalog: prod, namespace: db, table: table`                                                                                                                                                                                                       |
+| `debezium.sink.iceberg.table-prefix`                         | ``                                | Prefix for Iceberg tables. A prefix added to the names of Iceberg tables.                                                                                                                                                                                                                                         |
+| `debezium.sink.iceberg.write.format.default`                 | `parquet`                         | Default file format for Iceberg tables: `parquet`, `avro`, or `orc`                                                                                                                                                                                                                                               |
+| `debezium.sink.iceberg.allow-field-addition`                 | `true`                            | Allow field addition to target tables. Enables automatic schema evolution, expansion.                                                                                                                                                                                                                             |
+| `debezium.sink.iceberg.upsert`                               | `true`                            | Upsert mode overwrites updated rows. Any existing rows that are updated will be overwritten with the new values. Explained further below.                                                                                                                                                                         |
+| `debezium.sink.iceberg.upsert-keep-deletes`                  | `true`                            | When running in upsert mode, deleted rows are marked as deleted but retained in the target table (soft delete)                                                                                                                                                                                                    |
+| `debezium.sink.iceberg.upsert-dedup-column`                  | `__source_ts_ms`                  | With upsert mode this field is used to deduplicate data. The row with the highest `__source_ts_ms` timestamp (the latest change event) is retained. _dont change!_                                                                                                                                                |
+| `debezium.sink.iceberg.create-identifier-fields`             | `true`                            | When set to `false`, the consumer will create tables without identifier fields. This is useful for scenarios where users want to consume nested events in append-only mode.                                                                                                                                       |
+| `debezium.sink.iceberg.destination-regexp`                   | ``                                | A regular expression used to modify the destination Iceberg table name. This setting allows for combining multiple tables, such as `table_ptt1` and `table_ptt2`, into a single table, `table_combined`.                                                                                                          |
+| `debezium.sink.iceberg.destination-regexp-replace`           | ``                                | Replace part of the regexp for modifying destination Iceberg table names                                                                                                                                                                                                                                          |
+| `debezium.sink.iceberg.destination-uppercase-table-names`    | `false`                           | Creates uppercase Iceberg table names                                                                                                                                                                                                                                                                             |
+| `debezium.sink.iceberg.destination-lowercase-table-names`    | `false`                           | Creates lowercase Iceberg table names                                                                                                                                                                                                                                                                             |
+| `debezium.sink.batch.batch-size-wait`                        | `NoBatchSizeWait`                 | Batch size wait strategy: Controls the size of data files and the frequency of uploads. Explained below.                                                                                                                                                                                                          |
+| `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                   | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) These settings are passed to Iceberg without the `debezium.sink.iceberg.` prefix.                                                                                                                                                         |
+| `debezium.source.offset.storage`                             | `<…>.KafkaSchemaHistory`          | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming). Set to `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` to use Iceberg table                 |
+| `debezium.source.offset.storage.iceberg.table-name`          | `debezium_offset_storage`         | Destination Iceberg table name to store connector offset information.                                                                                                                                                                                                                                             |
+| `debezium.source.schema.history.internal`                    | `<…>.KafkaSchemaHistory`          | The name of the Java class that is responsible for persistence of the database schema history. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#database-history-properties). Set to `io.debezium.server.iceberg.history.IcebergSchemaHistory` to use Iceberg table. |
+| `debezium.source.schema.history.internal.iceberg.table-name` | `debezium_schema_history_storage` | Destination Iceberg table name to store database schema history information.                                                                                                                                                                                                                                      |
 
 ### Upsert Mode
 
-By default, Iceberg consumer is running with upsert mode `debezium.sink.iceberg.upsert=true`.
-Upsert mode uses source Primary Key and does upsert on target table(delete followed by insert). For the tables without
-Primary Key consumer falls back to append mode.
+By default, the Iceberg consumer operates in upsert mode (`debezium.sink.iceberg.upsert=true`). In this mode, the
+consumer utilizes the source table's primary key to perform upsert operations on the target Iceberg table, effectively
+deleting existing rows and inserting updated ones. For tables lacking a primary key, the consumer reverts to append-only
+mode.
 
 #### Upsert Mode Data Deduplication
 
-With upsert mode data deduplication is done. Deduplication is done based on `__source_ts_ms` value and event type `__op`
-.
-its is possible to change this field using `debezium.sink.iceberg.upsert-dedup-column=__source_ts_ms` (Currently only
-Long field type supported.)
+Upsert mode enables data deduplication, prioritizing records based on their `__source_ts_ms` timestamp and operation
+type (`__op`). The `debezium.sink.iceberg.upsert-dedup-column` property can be used to specify a different column for
+deduplication (currently limited to Long type).
 
-Operation type priorities are `{"c":1, "r":2, "u":3, "d":4}`. When two records with same key and same `__source_ts_ms`
-values received then the record with higher `__op` priority is kept and added to destination table and duplicate record
-is dropped from the batch.
+Operation type priorities are as follows: `c` (create) > `r` (read) > `u` (update) > `d` (delete). When two records with
+the same key and timestamp are received, the record with the higher priority operation type is retained and added to the
+destination table, while the duplicate record is discarded.
 
 #### Upsert Mode, Keeping Deleted Records
 
-By default `debezium.sink.iceberg.upsert-keep-deletes=true` keeps deletes in the Iceberg table, setting it to false
-will remove deleted records from the destination Iceberg table too. With this config it's possible to keep last version
-of a
-deleted record in the destination Iceberg table(doing soft delete for this records `__deleted` is set to `true`).
+By default, `debezium.sink.iceberg.upsert-keep-deletes=true` retains deleted records in the Iceberg table. Setting this
+property to false will remove deleted records from the destination table.
+
+By keeping deleted records, the consumer can effectively implement soft deletes, marking records as deleted (`__deleted`
+set to `true`) while preserving their last known state in the Iceberg table.
 
 ### Append Mode
 
-Setting `debezium.sink.iceberg.upsert=false` will set the operation mode to append. With append mode data deduplication
-is not done and all received records are appended to destination table.
-Note: For the tables without primary key operation mode falls back to append even upsert mode is used.
+Setting `debezium.sink.iceberg.upsert=false` switches the operation mode to append-only. In append-only mode, data
+deduplication is not performed, and all incoming records are appended to the destination table.
 
-## Optimizing batch size (or commit interval)
+It's important to note that even when upsert mode is enabled, tables without a primary key will default to append-only
+behavior.
 
-Debezium extracts database events in real time and this could cause too frequent commits and too many small files. Which
-is not optimal for performance especially when near realtime data feed is sufficient.
-To avoid this problem following batch-size-wait classes are available to adjust batch size and interval.
+## Optimizing batch size (or commit frequency)
 
-Batch size wait adds delay between consumer calls to increase total number of events consumed per call. Meanwhile,
-events are collected in memory.
-This setting should be configured together with `debezium.source.max.queue.size` and `debezium.source.max.batch.size`
-debezium properties
+Debezium's real-time extraction of database events can lead to frequent commits and the creation of numerous small
+files, which can negatively impact performance, especially when near-real-time data feeds are sufficient.
+
+To address this, the connector offers various batch size wait strategies to optimize batch size and interval. These
+strategies introduce a delay between consumer calls, allowing for the accumulation of more events per call. This
+approach can significantly improve performance by reducing the number of commits and file operations.
+
+To fine-tune this behavior, the `debezium.source.max.queue.size` and `debezium.source.max.batch.size` properties should
+be configured in conjunction with the batch size wait strategy`. See the examples below.
 
 #### NoBatchSizeWait
 
 This is default configuration by default consumer will not use any wait. All the events are consumed immediately.
+`debezium.sink.batch.batch-size-wait=NoBatchSizeWait`
 
 #### MaxBatchSizeWait
 
-MaxBatchSizeWait uses debezium metrics to optimize batch size.
-MaxBatchSizeWait periodically checks streaming queue size and waits until it reaches to `max.batch.size`.
-Maximum wait and check intervals are controlled
-by `debezium.sink.batch.batch-size-wait.max-wait-ms`, `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties.
+The MaxBatchSizeWait strategy leverages Debezium metrics to optimize batch size. It periodically checks the streaming
+queue size and waits until it reaches the specified `debezium.source.max.batch.size` or
+`debezium.sink.batch.batch-size-wait.max-wait-ms`. The maximum wait time and check interval are controlled by the
+`debezium.sink.batch.batch-size-wait.max-wait-ms` and `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties,
+respectively.
 
-example setup to receive 2048 events per commit. maximum wait is set to 30 seconds, streaming queue current size checked
-every 5 seconds
+For instance, to process 2048 events per commit with a maximum wait time of 30 seconds and a check interval of 5
+seconds, you would configure the settings as follows:
 
 ```properties
 debezium.sink.batch.batch-size-wait=MaxBatchSizeWait
@@ -98,9 +104,10 @@ debezium.sink.batch.batch-size-wait.max-wait-ms=30000
 debezium.sink.batch.batch-size-wait.wait-interval-ms=5000
 ```
 
-### Table Name Mapping
+### Iceberg Table Naming Rule
 
-Iceberg tables are named by following rule : `table-namespace`.`table-prefix``database.server.name`_`database`_`table`
+Iceberg tables follow a specific naming format: `table-namespace`.`table-prefix``database.server.name`
+_`source_database_name`_`source_table_name`
 
 For example:
 
@@ -110,11 +117,13 @@ database.server.name=testc
 debezium.sink.iceberg.table-prefix=cdc_
 ```
 
-With above config database table = `inventory.customers` is replicated to `default.testc_cdc_inventory_customers`
+With the configuration described above, the database table  `inventory.customers` will be replicated to the Iceberg
+table `default.testc_cdc_inventory_customers`.
 
 ## Debezium Offset Storage
 
-This implementation saves CDC offset to an iceberg table. Debezium keeps source offset to track binlog position.
+This implementation persists CDC offset to an Iceberg table. Debezium concurrently tracks source offset to monitor
+binlog position.
 
 ```
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
@@ -123,7 +132,7 @@ debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_table
 
 ## Debezium Database History Storage
 
-This implementation saves database history to an iceberg table.
+Stores database change history in Iceberg table.
 
 ```properties
 debezium.source.database.history=io.debezium.server.iceberg.history.IcebergSchemaHistory
@@ -132,12 +141,11 @@ debezium.source.database.history.iceberg.table-name=debezium_database_history_st
 
 ## Debezium Event Flattening
 
-For best experience its recommended to run consumer with event flattening. For further details
-on `Message transformations` please
-see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#engine-message-transformations)
+For an optimal experience, it is recommended to enable event flattening in the consumer configuration. For detailed
+information on message transformations, please refer to
+the [Debezium documentation](https://debezium.io/documentation/reference/stable/development/engine.html#engine-message-transformations).
 
-Example Event flattening setting:
-
+**Example Event Flattening Setting:**
 ```properties
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
@@ -146,11 +154,10 @@ debezium.transforms.unwrap.add.headers=db
 debezium.transforms.unwrap.delete.handling.mode=rewrite
 ```
 
-Without event flattening iceberg consumer can only run with append mode. Without event flattening upsert mode and
-creation of identifier fields are not supported.
+When event flattening is disabled, the Iceberg consumer can only operate in append-only mode. Upsert mode and the
+creation of identifier fields are not supported in this configuration.
 
-Settings for running consumer without event flattening:
-
+**Settings for Running the Consumer Without Event Flattening:**
 ```
 debezium.sink.iceberg.upsert=false
 debezium.sink.iceberg.create-identifier-fields=false
@@ -158,7 +165,7 @@ debezium.sink.iceberg.create-identifier-fields=false
 
 ## Configuring iceberg
 
-All the properties starting with `debezium.sink.iceberg.__ICEBERG_CONFIG__` are passed to Iceberg, and to hadoopConf
+All properties prefixed with `debezium.sink.iceberg.__ICEBERG_CONFIG__` are directly passed to Iceberg and hadoopConf.
 
 ```properties
 debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
@@ -166,57 +173,69 @@ debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
 
 ### Example Configuration
 
-Read [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
+See [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
 
-## Schema Change Behaviour
-Source systems frequently undergo schema changes. This can include adding new fields, removing existing ones, or modifying the structure of existing fields. Here, we'll document the potential schema changes we anticipate and how the system currently handles them.
+## Automatic Schema Change Handling
 
-**NOTE**: Full schema evaluation is not supported. But sema expansion like field addition, data type expansion are supported,
-see `debezium.sink.iceberg.allow-field-addition` setting.
+Source systems often undergo schema changes, which can involve adding new fields, removing existing ones, or modifying
+the structure of existing fields. This document outlines the anticipated schema changes and how the system currently
+handles them.
 
-#### Adding new column to source (A column missing in destination iceberg table)
+**Important Note:** While full schema evaluation is not currently supported, the system can accommodate schema
+expansions, such as adding new fields or expanding existing field data type. To enable this behavior, set the
+`debezium.sink.iceberg.allow-field-addition` configuration property to `true`.
+
+#### Adding new column to source table (A column missing in destination iceberg table)
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`
 
-New columns in the source data are not automatically reflected in the destination Iceberg table. 
-This means data for these new columns will be ignored until the corresponding column is manually added to the destination table schema.
+New columns added to the source table are not automatically reflected in the destination Iceberg table. Data associated
+with these new columns will be ignored until the corresponding columns are manually added to the destination table
+schema.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`
 
-new columns are automatically added to destination table and they are populated with new data. This is
-automatically done by consumer.
+New columns are automatically added to the destination Iceberg table and populated with corresponding data. This
+behavior is handled automatically by the consumer.
 
-#### Removing column from source (An extra column in iceberg table)
+#### Removing a column from the source table (An extra column in iceberg table)
 
-After removal, these column values are populated with null value. columns are kept in the destination table, no change applied to destination table.
+After a column is removed from the source table, the corresponding column in the destination Iceberg table will continue
+to exist. However, new records will have null values for that column.
 
-#### Renaming column in source
+#### Renaming a column in the source table
 
-This is combination of above two cases : Old column will be populated with null values and new column will be populated
-when added to iceberg table(it is either added automatically by consumer or added manually by user)
+Renaming a column in the source table is a combination of the two scenarios described above:
 
-#### Different Data Types
+1. **Old Column:** The old column will continue to exist in the destination table, but new records will have null values
+   for that column.
+2. **New Column:** The new column will need to be added to the destination table schema, either automatically by the
+   consumer or manually. Once added, it will be populated with the appropriate data from the source.
 
-This is the scenario when source field type changes. support for this kind of changes is limited. Only safe data type expansions are supported 
-forexample converting int to long is supported but converting deciman to int is not supported.
+#### Handling Mismatching Data Types
+
+The system has limited support for schema changes that involve mismatching data types. While safe data type expansions,
+such as converting
+int to long, are supported, conversions that could lead to data loss, such as converting decimal to int, are not.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `true`:
 
-In this case consumer will try to change destination data type automatically. For incompatible changes consumer will throw exception.
-For example float to integer conversion is not supported but int to double conversion is supported.
+In this scenario, consumer attempts to automatically adjust the data types of destination fields to accommodate changes
+in the source schema. However, incompatible conversions, such as converting a float to an integer, are not supported,
+Consumer will throw exception. Safe conversions, such as converting an int to a double, are allowed.
 
 ###### When `debezium.sink.iceberg.allow-field-addition` is `false`:
 
-_In this case consumer will convert source field value to destination type value using jackson. Conversion is done by jackson If representation cannot be converted to destination type then default value is returned by jackson!_
+_In this scenario, the consumer attempts to convert source field values to the target data type using Jackson. If
+Jackson cannot successfully perform the conversion, a default value is returned by jackson._
 
-for example this is conversion rule for Long type:
-
+Jackson conversion rule for Long type:
 ```
 Method that will try to convert value of this node to a Java long. Numbers are coerced using default Java rules; booleans convert to 0 (false) and 1 (true), and Strings are parsed using default Java language integer parsing rules.
 If representation cannot be converted to a long (including structured types like Objects and Arrays), default value of 0 will be returned; no exceptions are thrown.
 ```
 
-for example this is conversion rule for boolean type:
+Jackson conversion rule for boolean type:
 
 ```
 Method that will try to convert value of this node to a Java boolean. JSON booleans map naturally; integer numbers other than 0 map to true, and 0 maps to false and Strings 'true' and 'false' map to corresponding values.
@@ -225,8 +244,8 @@ If representation can not be converted to a boolean value (including structured 
 
 # `icebergevents` Consumer
 
-This consumer appends all CDC events to single Iceberg table as json string.
-This table partitioned by `event_destination,event_sink_timestamptz`
+This consumer appends all Change Data Capture (CDC) events as JSON strings to a single Iceberg table. The table is
+partitioned by `event_destination` and `event_sink_timestamptz` for efficient data organization and query performance.
 
 ````properties
 debezium.sink.type=icebergevents
