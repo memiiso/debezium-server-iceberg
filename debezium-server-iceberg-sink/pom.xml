@@ -286,7 +286,7 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
-            <version>8.5.13</version>
+            <version>8.5.14</version>
             <scope>test</scope>
         </dependency>
         <dependency>
