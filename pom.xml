@@ -45,6 +45,7 @@
         <!-- Debezium -->
         <version.debezium>2.7.4.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
+        <version.mongo.driver>4.11.5</version.mongo.driver>
         <!-- Quarkus -->
         <version.quarkus>3.15.1</version.quarkus>
     </properties>
@@ -56,6 +57,28 @@
                 <version>${version.jackson}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- MySQL JDBC Driver, Binlog reader, Geometry support -->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${version.mysql.driver}</version>
+            </dependency>
+            <!-- Mongo JDBC Driver -->
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${version.mongo.driver}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-core</artifactId>
+                <version>${version.mongo.driver}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>bson</artifactId>
+                <version>${version.mongo.driver}</version>
             </dependency>
             <!-- log -->
             <dependency>
@@ -69,12 +92,6 @@
                 <version>${version.quarkus}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <!-- MySQL JDBC Driver, Binlog reader, Geometry support -->
-            <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
-                <version>${version.mysql.driver}</version>
             </dependency>
             <!-- debezium server -->
             <dependency>
