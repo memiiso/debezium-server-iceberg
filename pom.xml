@@ -41,67 +41,35 @@
         <version.testcontainers>1.20.4</version.testcontainers>
         <!-- Debezium -->
         <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/pom.xml -->
-        <version.debezium>2.7.4.Final</version.debezium>
-        <version.jackson>2.16.2</version.jackson>
-        <version.mysql.driver>8.0.32</version.mysql.driver>
-        <version.mongo.driver>4.11.5</version.mongo.driver>
+        <version.debezium>3.0.4.Final</version.debezium>
+        <!-- NOTE:Use same version as debezium ${quarkus.version.runtime} https://github.com/debezium/debezium/blob/main/pom.xml -->
+        <!-- NOTE:This is only needed for quarkus-maven-plugin Quarkus dependency is defined by Debezium -->
+        <version.quarkus>3.8.5</version.quarkus>
         <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/debezium-bom/pom.xml -->
         <version.groovy>4.0.17</version.groovy>
-        <!-- Quarkus -->
-        <version.quarkus>3.15.1</version.quarkus>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <!-- debezium server -->
             <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>${version.jackson}</version>
+                <groupId>io.debezium</groupId>
+                <artifactId>debezium-server-bom</artifactId>
+                <version>${version.debezium}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- MySQL JDBC Driver, Binlog reader, Geometry support -->
             <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
-                <version>${version.mysql.driver}</version>
-            </dependency>
-            <!-- Mongo JDBC Driver -->
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>mongodb-driver-sync</artifactId>
-                <version>${version.mongo.driver}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>mongodb-driver-core</artifactId>
-                <version>${version.mongo.driver}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>bson</artifactId>
-                <version>${version.mongo.driver}</version>
+                <groupId>io.debezium</groupId>
+                <artifactId>debezium-bom</artifactId>
+                <version>${version.debezium}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <!-- log -->
             <dependency>
                 <groupId>org.jboss.slf4j</groupId>
                 <artifactId>slf4j-jboss-logmanager</artifactId>
                 <version>[1.2.0.Final,)</version>
-            </dependency>
-            <!-- Quarkus -->
-            <dependency>
-                <groupId>io.quarkus</groupId>
-                <artifactId>quarkus-bom</artifactId>
-                <version>${version.quarkus}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <!-- debezium server -->
-            <dependency>
-                <groupId>io.debezium</groupId>
-                <artifactId>debezium-server</artifactId>
-                <version>${version.debezium}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
             <!-- Debezium Scripting -->
             <dependency>

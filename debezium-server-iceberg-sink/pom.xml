@@ -269,7 +269,6 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
-            <version>${version.quarkus}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -277,11 +276,6 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
             <version>42.7.4</version>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.minio</groupId>
