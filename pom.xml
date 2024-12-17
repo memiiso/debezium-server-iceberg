@@ -27,9 +27,8 @@
         <maven.compiler.release>17</maven.compiler.release>
         <skipITs>true</skipITs>
 
-        <version.groovy>3.0.23</version.groovy>
         <version.assembly.plugin>3.7.1</version.assembly.plugin>
-        <!-- Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L53-->
+        <!-- NOTE:Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L53-->
         <version.jackson>2.14.2</version.jackson>
         <version.iceberg>1.7.0</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
@@ -43,9 +42,12 @@
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
         <version.testcontainers>1.20.4</version.testcontainers>
         <!-- Debezium -->
+        <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/pom.xml -->
         <version.debezium>2.7.4.Final</version.debezium>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <version.mongo.driver>4.11.5</version.mongo.driver>
+        <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/debezium-bom/pom.xml -->
+        <version.groovy>4.0.17</version.groovy>
         <!-- Quarkus -->
         <version.quarkus>3.15.1</version.quarkus>
     </properties>
@@ -86,6 +88,7 @@
                 <artifactId>slf4j-jboss-logmanager</artifactId>
                 <version>[1.2.0.Final,)</version>
             </dependency>
+            <!-- Quarkus -->
             <dependency>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-bom</artifactId>
@@ -103,7 +106,7 @@
             </dependency>
             <!-- Debezium Scripting -->
             <dependency>
-                <groupId>org.codehaus.groovy</groupId>
+                <groupId>org.apache.groovy</groupId>
                 <artifactId>groovy-bom</artifactId>
                 <version>${version.groovy}</version>
                 <type>pom</type>
