@@ -27,8 +27,8 @@
         <maven.compiler.release>17</maven.compiler.release>
         <skipITs>true</skipITs>
 
-        <version.assembly.plugin>3.7.1</version.assembly.plugin>
-        <version.iceberg>1.7.0</version.iceberg>
+        <!-- Iceberg -->
+        <version.iceberg>1.7.1</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
         <version.spark.major>4.0</version.spark.major>
