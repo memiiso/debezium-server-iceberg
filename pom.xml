@@ -28,8 +28,6 @@
         <skipITs>true</skipITs>
 
         <version.assembly.plugin>3.7.1</version.assembly.plugin>
-        <!-- NOTE:Use same version as iceberg https://github.com/apache/iceberg/blob/main/gradle/libs.versions.toml#L53-->
-        <version.jackson>2.14.2</version.jackson>
         <version.iceberg>1.7.0</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
@@ -44,6 +42,7 @@
         <!-- Debezium -->
         <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/pom.xml -->
         <version.debezium>2.7.4.Final</version.debezium>
+        <version.jackson>2.16.2</version.jackson>
         <version.mysql.driver>8.0.32</version.mysql.driver>
         <version.mongo.driver>4.11.5</version.mongo.driver>
         <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/debezium-bom/pom.xml -->
