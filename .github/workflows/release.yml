@@ -21,6 +21,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 21
+          cache: 'maven'
 
       - name: Set env for master(latest) release
         if: github.ref_name == 'master'
@@ -31,13 +32,6 @@ jobs:
         if: github.ref_name != 'master'
         run: |
           echo "RELEASE_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
-
-      - name: Cache Maven Packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2-
 
       - name: Build project
         run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
