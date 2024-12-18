@@ -269,7 +269,6 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5</artifactId>
-            <version>${version.quarkus}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -277,11 +276,6 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
             <version>42.7.4</version>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.minio</groupId>
@@ -354,7 +348,7 @@
             <plugin>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
-                <version>${version.quarkus}</version>
+                <version>${quarkus.version.runtime}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -401,7 +395,11 @@
                         <maven.home>${maven.home}</maven.home>
                         <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
                     </systemProperties>
-
+                    <systemPropertyVariables>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>

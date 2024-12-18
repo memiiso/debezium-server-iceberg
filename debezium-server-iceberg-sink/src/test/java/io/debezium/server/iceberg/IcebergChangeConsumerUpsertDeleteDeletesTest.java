@@ -11,7 +11,7 @@ package io.debezium.server.iceberg;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.TestUtil;
-import io.quarkus.test.common.WithTestResource;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -31,7 +31,7 @@ import java.util.Map;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@WithTestResource(value = S3Minio.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 

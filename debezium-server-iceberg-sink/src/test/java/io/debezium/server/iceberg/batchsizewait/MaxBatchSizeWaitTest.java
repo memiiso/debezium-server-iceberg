@@ -11,7 +11,7 @@ package io.debezium.server.iceberg.batchsizewait;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
-import io.quarkus.test.common.WithTestResource;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -28,8 +28,8 @@ import java.util.Map;
 
 @QuarkusTest
 @TestProfile(MaxBatchSizeWaitTest.TestProfile.class)
-@WithTestResource(value = SourcePostgresqlDB.class)
-@WithTestResource(value = S3Minio.class)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 class MaxBatchSizeWaitTest extends BaseSparkTest {
   @Inject
   MaxBatchSizeWait waitBatchSize;
