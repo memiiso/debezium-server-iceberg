@@ -11,7 +11,7 @@ package io.debezium.server.iceberg.offset;
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
-import io.quarkus.test.common.WithTestResource;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
@@ -36,7 +36,7 @@ import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByte
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @QuarkusTest
-@WithTestResource(value = S3Minio.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 public class IcebergOffsetBackingStoreTest extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();

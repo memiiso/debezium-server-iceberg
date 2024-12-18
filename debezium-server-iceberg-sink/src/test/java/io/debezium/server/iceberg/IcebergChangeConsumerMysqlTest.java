@@ -12,7 +12,7 @@ import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
-import io.quarkus.test.common.WithTestResource;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -29,8 +29,8 @@ import java.util.Map;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@WithTestResource(value = S3Minio.class)
-@WithTestResource(value = SourceMysqlDB.class)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
