@@ -37,7 +37,7 @@ jobs:
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          restore-keys: ${{ runner.os }}-m2-
 
       - name: Build project
         run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
