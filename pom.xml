@@ -10,15 +10,22 @@
 
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>io.debezium</groupId>
+        <artifactId>debezium-build-parent</artifactId>
+        <version>3.0.4.Final</version>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.debezium</groupId>
     <artifactId>debezium-server-iceberg</artifactId>
-    <name>Debezium Server Parent</name>
+    <name>Debezium Server Iceberg</name>
     <version>${revision}</version>
     <packaging>pom</packaging>
 
     <properties>
-        <revision>0.4.0-SNAPSHOT</revision>
+        <!-- NOTE: this is override by release process using CLI argument -->
+        <revision>0.0.1-SNAPSHOT</revision>
+        <!-- Debezium Version! NOTE: keep same as parent.version above! -->
+        <version.debezium>3.0.4.Final</version.debezium>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -39,14 +46,6 @@
         <version.hive>3.1.3</version.hive>
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
         <version.testcontainers>1.20.4</version.testcontainers>
-        <!-- Debezium -->
-        <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/pom.xml -->
-        <version.debezium>3.0.4.Final</version.debezium>
-        <!-- NOTE:Use same version as debezium ${quarkus.version.runtime} https://github.com/debezium/debezium/blob/main/pom.xml -->
-        <!-- NOTE:This is only needed for quarkus-maven-plugin Quarkus dependency is defined by Debezium -->
-        <version.quarkus>3.8.5</version.quarkus>
-        <!-- NOTE:Use same version as debezium https://github.com/debezium/debezium/blob/main/debezium-bom/pom.xml -->
-        <version.groovy>4.0.17</version.groovy>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -70,14 +69,6 @@
                 <groupId>org.jboss.slf4j</groupId>
                 <artifactId>slf4j-jboss-logmanager</artifactId>
                 <version>[1.2.0.Final,)</version>
-            </dependency>
-            <!-- Debezium Scripting -->
-            <dependency>
-                <groupId>org.apache.groovy</groupId>
-                <artifactId>groovy-bom</artifactId>
-                <version>${version.groovy}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
             <!-- Test dependencies -->
             <dependency>
