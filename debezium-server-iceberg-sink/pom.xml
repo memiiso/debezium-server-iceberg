@@ -51,32 +51,26 @@
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-core</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-data</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-parquet</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-orc</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-arrow</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-hive-metastore</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hive</groupId>
@@ -96,47 +90,38 @@
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-gcp</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-gcp-bundle</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-aws</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-aws-bundle</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-dell</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-aliyun</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-azure</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-azure-bundle</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-bundled-guava</artifactId>
-            <version>${version.iceberg}</version>
         </dependency>
         <!-- Google -->
         <dependency>
@@ -257,13 +242,11 @@
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-spark-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
-            <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-spark-extensions-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
-            <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -360,7 +343,7 @@
             <plugin>
                 <groupId>io.smallrye</groupId>
                 <artifactId>jandex-maven-plugin</artifactId>
-                <version>3.2.3</version>
+                <version>3.1.8</version>
                 <executions>
                     <execution>
                         <id>make-index</id>
