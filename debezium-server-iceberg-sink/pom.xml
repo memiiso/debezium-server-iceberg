@@ -145,13 +145,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!-- aws-java-sdk-bundle Test dependency -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-bundle</artifactId>
-            <version>1.11.1026</version>
-            <scope>test</scope>
-        </dependency>
         <!-- Hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>

@@ -46,6 +46,7 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.table-prefix", "debeziumcdc_");
     config.put("debezium.sink.iceberg.table-namespace", CATALOG_TABLE_NAMESPACE);
     config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
+    config.put("debezium.sink.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO");
     // use hadoop catalog for tests
     config.put("debezium.sink.iceberg.type", "hadoop");
     // drop tombstones for delete events
