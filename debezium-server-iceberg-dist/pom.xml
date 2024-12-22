@@ -50,6 +50,13 @@
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.version.runtime}</version>
+                <configuration>
+                    <systemProperties>
+                        <quarkus.kubernetes-config.secrets.enabled>true</quarkus.kubernetes-config.secrets.enabled>
+                        <!-- Required in order to support SRV protocol in MongoDB connector (due to java drive) -->
+                        <quarkus.naming.enable-jndi>true</quarkus.naming.enable-jndi>
+                    </systemProperties>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -68,6 +75,14 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <dependencies>
+                <dependency>
+                    <groupId>io.prometheus.jmx</groupId>
+                    <artifactId>jmx_prometheus_javaagent</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>io.debezium</groupId>
+                    <artifactId>debezium-connector-mariadb</artifactId>
+                </dependency>
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-connector-mysql</artifactId>
@@ -94,48 +109,25 @@
                 </dependency>
                 <dependency>
                     <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-core</artifactId>
+                    <artifactId>debezium-scripting</artifactId>
                 </dependency>
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-kinesis</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-pubsub</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-pulsar</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-eventhubs</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-redis</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-kafka</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-pravega</artifactId>-->
-<!--                </dependency>-->
-<!--                <dependency>-->
-<!--                    <groupId>io.debezium</groupId>-->
-<!--                    <artifactId>debezium-server-nats-streaming</artifactId>-->
-<!--                </dependency>-->
                 <dependency>
-                    <groupId>io.quarkus</groupId>
-                    <artifactId>quarkus-logging-json</artifactId>
+                    <groupId>io.debezium</groupId>
+                    <artifactId>debezium-scripting-languages</artifactId>
+                    <type>pom</type>
+                </dependency>
+                <dependency>
+                    <groupId>io.debezium</groupId>
+                    <artifactId>debezium-server-core</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-server-iceberg-sink</artifactId>
                     <version>${revision}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-logging-json</artifactId>
                 </dependency>
             </dependencies>
             <build>
