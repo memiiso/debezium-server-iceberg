@@ -34,8 +34,8 @@ git clone https://github.com/memiiso/debezium-server-iceberg.git
 cd debezium-server-iceberg
 mvn -Passembly -Dmaven.test.skip package
 unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
-cd appdist
-nano conf/application.properties
+cd appdist/debezium-server-iceberg
+mv conf/application.properties.example conf/application.properties
 bash run.sh
 ```
 
