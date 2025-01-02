@@ -65,6 +65,28 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>2.5.0</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                    <thirdPartyFilename>LICENSE-3RD-PARTY.txt</thirdPartyFilename>
+                    <emptyLineAfterHeader>true</emptyLineAfterHeader>
+                    <includeTransitiveDependencies>true</includeTransitiveDependencies>
+                    <licensesOutputFileEncoding>UTF-8</licensesOutputFileEncoding>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-license-report</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>add-third-party</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

@@ -1,6 +1,6 @@
 [![License](http://img.shields.io/:license-apache%202.0-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 ![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)
-![Java CI](https://github.com/memiiso/debezium-server-iceberg/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)
+![Create Release](https://github.com/memiiso/debezium-server-iceberg/actions/workflows/release.yml/badge.svg)
 
 # Debezium Iceberg Consumer
 

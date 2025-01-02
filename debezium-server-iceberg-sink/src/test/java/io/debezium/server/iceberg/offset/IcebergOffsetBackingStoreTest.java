@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.offset;
 
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseTest;
+import io.debezium.server.iceberg.testresources.IcebergCatalog;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -30,7 +31,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.fromByteBuffer;
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,7 +91,7 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
     assertEquals(("value"), fromByteBuffer(values.get(toByteBuffer("key"))));
     Assertions.assertNull(values.get(toByteBuffer("bad")));
 
-    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of(CATALOG_TABLE_NAMESPACE, "debezium_offset_storage"));
+    CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of(IcebergCatalog.ICEBERG_CATALOG_TABLE_NAMESPACE, "debezium_offset_storage"));
     Assertions.assertEquals(1, Lists.newArrayList(d).size());
   }
 

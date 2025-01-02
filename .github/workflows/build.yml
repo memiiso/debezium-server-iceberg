@@ -1,7 +1,4 @@
-# This workflow will build a Java project with Maven
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
-
-name: Java CI with Maven
+name: Build Java Project
 
 on:
   push:
@@ -21,13 +18,13 @@ env:
   SPARK_LOCAL_IP: 127.0.0.1
 
 jobs:
-  build:
-
+  build-java-project:
+    name: Build Java Project
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'

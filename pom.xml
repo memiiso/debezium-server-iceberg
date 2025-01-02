@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.debezium</groupId>
         <artifactId>debezium-build-parent</artifactId>
-        <version>3.0.6.Final</version>
+        <version>3.0.7.Final</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>debezium-server-iceberg</artifactId>
@@ -22,10 +22,10 @@
     <packaging>pom</packaging>
 
     <properties>
-        <!-- NOTE: this is override by release process using CLI argument -->
+        <!-- NOTE: this is overriden by release process using CLI argument -->
         <revision>0.0.1-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
-        <version.debezium>3.0.6.Final</version.debezium>
+        <version.debezium>3.0.7.Final</version.debezium>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -47,6 +47,24 @@
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
         <version.testcontainers>1.20.4</version.testcontainers>
     </properties>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
+        </repository>
+        <snapshotRepository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
+        </snapshotRepository>
+    </distributionManagement>
     <dependencyManagement>
         <dependencies>
             <!-- debezium server -->

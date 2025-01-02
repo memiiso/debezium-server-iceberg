@@ -55,6 +55,7 @@
             <outputDirectory>${project.parent.artifactId}</outputDirectory>
             <includes>
                 <include>*-runner.jar</include>
+                <include>LICENSE-3RD-PARTY.txt</include>
             </includes>
         </fileSet>
         <fileSet>
