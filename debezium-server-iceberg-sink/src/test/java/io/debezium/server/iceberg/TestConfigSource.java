@@ -8,11 +8,11 @@
 
 package io.debezium.server.iceberg;
 
+import org.eclipse.microprofile.config.spi.ConfigSource;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
-import org.eclipse.microprofile.config.spi.ConfigSource;
 
 public class TestConfigSource implements ConfigSource {
 
@@ -20,6 +20,7 @@ public class TestConfigSource implements ConfigSource {
   public static final String S3_BUCKET_NAME = "test-bucket";
   public static final String CATALOG_TABLE_NAMESPACE = "debeziumevents";
   public static final String ICEBERG_CATALOG_NAME = "iceberg";
+  public static final String ICEBERG_CATALOG_FILEIO = "org.apache.iceberg.aws.s3.S3FileIO";
   public static final String S3_BUCKET = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
   protected Map<String, String> config = new HashMap<>();
 

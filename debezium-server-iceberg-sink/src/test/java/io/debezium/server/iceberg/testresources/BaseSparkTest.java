@@ -10,10 +10,6 @@ package io.debezium.server.iceberg.testresources;
 
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.TestConfigSource;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.spark.SparkConf;
@@ -23,6 +19,10 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructField;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeAll;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
 import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
 
@@ -54,8 +54,8 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
         .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
         .set("spark.sql.catalog.spark_catalog.default-namespaces", CATALOG_TABLE_NAMESPACE)
-        .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-        .set("spark.sql.catalog.spark_catalog.s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString())
+        .set("spark.sql.catalog.spark_catalog.io-impl", TestConfigSource.ICEBERG_CATALOG_FILEIO)
+        .set("spark.sql.catalog.spark_catalog.s3.endpoint", S3Minio.container.getS3URL())
         .set("spark.sql.catalog.spark_catalog.s3.path-style-access", "true")
         .set("spark.sql.catalog.spark_catalog.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
         .set("spark.sql.catalog.spark_catalog.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY)

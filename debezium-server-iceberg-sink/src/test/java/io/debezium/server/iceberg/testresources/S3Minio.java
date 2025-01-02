@@ -16,18 +16,15 @@ import io.minio.Result;
 import io.minio.messages.Bucket;
 import io.minio.messages.Item;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.utility.DockerImageName;
 
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.utility.DockerImageName;
 import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
 import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET_NAME;
 
@@ -36,37 +33,12 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   public static final String MINIO_ACCESS_KEY = "admin";
   public static final String MINIO_SECRET_KEY = "12345678";
   protected static final Logger LOGGER = LoggerFactory.getLogger(S3Minio.class);
-  static final int MINIO_DEFAULT_PORT = 9000;
   static final String DEFAULT_IMAGE = "minio/minio:latest";
-  static final String DEFAULT_STORAGE_DIRECTORY = "/data";
-  static final String HEALTH_ENDPOINT = "/minio/health/ready";
-  static private final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(DEFAULT_IMAGE))
-      .withExposedPorts(MINIO_DEFAULT_PORT)
-      .waitingFor(new HttpWaitStrategy()
-          .forPath(HEALTH_ENDPOINT)
-          .forPort(MINIO_DEFAULT_PORT)
-          .withStartupTimeout(Duration.ofSeconds(30)))
-      .withEnv("MINIO_ACCESS_KEY", MINIO_ACCESS_KEY)
-      .withEnv("MINIO_SECRET_KEY", MINIO_SECRET_KEY)
-      .withEnv("MINIO_REGION_NAME", TestConfigSource.S3_REGION)
-      .withCommand("server " + DEFAULT_STORAGE_DIRECTORY)
-      .withExposedPorts(MINIO_DEFAULT_PORT);
   public static MinioClient client;
 
-  public static List<Item> getObjectList(String bucketName) {
-    List<Item> objects = new ArrayList<>();
-
-    try {
-      Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucketName).recursive(true).build());
-      for (Result<Item> result : results) {
-        Item item = result.get();
-        objects.add(item);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return objects;
-  }
+  static public final MinIOContainer container = new MinIOContainer(DockerImageName.parse(DEFAULT_IMAGE))
+      .withUserName(MINIO_ACCESS_KEY)
+      .withPassword(MINIO_SECRET_KEY);
 
   public static void listFiles() {
     LOGGER.info("-----------------------------------------------------------------");
@@ -87,25 +59,6 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
   }
 
-  public static List<Item> getIcebergDataFiles(String bucketName) {
-    List<Item> objects = new ArrayList<>();
-    try {
-      List<Item> results = getObjectList(bucketName);
-      for (Item result : results) {
-        if (result.objectName().contains("/data/") && result.objectName().endsWith("parquet")) {
-          objects.add(result);
-        }
-      }
-    } catch (Exception e) {
-      LOGGER.info("Failed listing bucket");
-    }
-    return objects;
-  }
-
-  public static Integer getMappedPort() {
-    return container.getMappedPort(MINIO_DEFAULT_PORT);
-  }
-
   @Override
   public void stop() {
     container.stop();
@@ -114,11 +67,12 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   @Override
   public Map<String, String> start() {
     container.start();
-
-    client = MinioClient.builder()
-        .endpoint("http://" + container.getHost() + ":" + container.getMappedPort(MINIO_DEFAULT_PORT))
-        .credentials(MINIO_ACCESS_KEY, MINIO_SECRET_KEY)
+    client = MinioClient
+        .builder()
+        .endpoint(container.getS3URL())
+        .credentials(container.getUserName(), container.getPassword())
         .build();
+
     try {
       client.ignoreCertCheck();
       client.makeBucket(MakeBucketArgs.builder()
@@ -131,15 +85,15 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     LOGGER.info("Minio Started!");
     Map<String, String> config = new ConcurrentHashMap<>();
     // FOR JDBC CATALOG
-    config.put("debezium.sink.iceberg.s3.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString());
+    config.put("debezium.sink.iceberg.s3.endpoint", container.getS3URL());
     config.put("debezium.sink.iceberg.s3.path-style-access", "true");
     config.put("debezium.sink.iceberg.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY);
     config.put("debezium.sink.iceberg.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY);
     config.put("debezium.sink.iceberg.client.region", TestConfigSource.S3_REGION);
-    config.put("debezium.sink.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO");
+    config.put("debezium.sink.iceberg.io-impl", TestConfigSource.ICEBERG_CATALOG_FILEIO);
     config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
     // FOR HADOOP CATALOG
-    config.put("debezium.sink.iceberg.fs.s3a.endpoint", "http://localhost:" + S3Minio.getMappedPort().toString());
+    config.put("debezium.sink.iceberg.fs.s3a.endpoint", container.getS3URL());
     config.put("debezium.sink.iceberg.fs.s3a.access.key", S3Minio.MINIO_ACCESS_KEY);
     config.put("debezium.sink.iceberg.fs.s3a.secret.key", S3Minio.MINIO_SECRET_KEY);
     config.put("debezium.sink.iceberg.fs.s3a.path.style.access", "true");
