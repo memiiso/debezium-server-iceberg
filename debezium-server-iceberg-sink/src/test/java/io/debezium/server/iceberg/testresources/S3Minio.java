@@ -90,7 +90,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     config.put("debezium.sink.iceberg.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY);
     config.put("debezium.sink.iceberg.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY);
     config.put("debezium.sink.iceberg.client.region", TestConfigSource.S3_REGION);
-    config.put("debezium.sink.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO");
+    config.put("debezium.sink.iceberg.io-impl", TestConfigSource.ICEBERG_CATALOG_FILEIO);
     config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
     // FOR HADOOP CATALOG
     config.put("debezium.sink.iceberg.fs.s3a.endpoint", container.getS3URL());

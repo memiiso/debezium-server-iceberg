@@ -54,7 +54,7 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
         .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
         .set("spark.sql.catalog.spark_catalog.default-namespaces", CATALOG_TABLE_NAMESPACE)
-        .set("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+        .set("spark.sql.catalog.spark_catalog.io-impl", TestConfigSource.ICEBERG_CATALOG_FILEIO)
         .set("spark.sql.catalog.spark_catalog.s3.endpoint", S3Minio.container.getS3URL())
         .set("spark.sql.catalog.spark_catalog.s3.path-style-access", "true")
         .set("spark.sql.catalog.spark_catalog.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
