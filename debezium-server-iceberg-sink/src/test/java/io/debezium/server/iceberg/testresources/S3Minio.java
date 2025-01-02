@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,22 +40,6 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
       .withUserName(MINIO_ACCESS_KEY)
       .withPassword(MINIO_SECRET_KEY);
 
-
-  public static List<Item> getObjectList(String bucketName) {
-    List<Item> objects = new ArrayList<>();
-
-    try {
-      Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucketName).recursive(true).build());
-      for (Result<Item> result : results) {
-        Item item = result.get();
-        objects.add(item);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return objects;
-  }
-
   public static void listFiles() {
     LOGGER.info("-----------------------------------------------------------------");
     try {
@@ -74,21 +57,6 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     }
     LOGGER.info("-----------------------------------------------------------------");
 
-  }
-
-  public static List<Item> getIcebergDataFiles(String bucketName) {
-    List<Item> objects = new ArrayList<>();
-    try {
-      List<Item> results = getObjectList(bucketName);
-      for (Item result : results) {
-        if (result.objectName().contains("/data/") && result.objectName().endsWith("parquet")) {
-          objects.add(result);
-        }
-      }
-    } catch (Exception e) {
-      LOGGER.info("Failed listing bucket");
-    }
-    return objects;
   }
 
   @Override
