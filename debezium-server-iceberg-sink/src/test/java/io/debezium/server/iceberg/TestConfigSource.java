@@ -22,7 +22,7 @@ public class TestConfigSource implements ConfigSource {
   public static final String S3_MINIO_SECRET_KEY = "12345678";
   public static final String ICEBERG_CATALOG_TABLE_NAMESPACE = "debeziumevents";
   public static final String ICEBERG_CATALOG_NAME = "iceberg";
-  public static final String ICEBERG_FILEIO = "org.apache.iceberg.aws.s3.S3FileIO";
+  public static final String ICEBERG_FILEIO = "org.apache.iceberg.io.ResolvingFileIO";
   public static final String ICEBERG_WAREHOUSE_S3A = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
   protected Map<String, String> config = new HashMap<>();
 
