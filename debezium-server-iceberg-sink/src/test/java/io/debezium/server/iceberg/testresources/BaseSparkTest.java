@@ -23,8 +23,8 @@ import org.junit.jupiter.api.BeforeAll;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.debezium.server.iceberg.TestConfigSource.CATALOG_TABLE_NAMESPACE;
-import static io.debezium.server.iceberg.TestConfigSource.S3_BUCKET;
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
 
 /**
  * Integration test that uses spark to consumer data is consumed.
@@ -48,17 +48,17 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.eventLog.enabled", "false")
         // enable iceberg SQL Extensions and Catalog
         .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-        .set("spark.sql.warehouse.dir", S3_BUCKET)
+        .set("spark.sql.warehouse.dir", ICEBERG_WAREHOUSE_S3A)
         // hadoop catalog
         .set("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
         .set("spark.sql.catalog.spark_catalog.type", "hadoop")
-        .set("spark.sql.catalog.spark_catalog.warehouse", S3_BUCKET)
-        .set("spark.sql.catalog.spark_catalog.default-namespaces", CATALOG_TABLE_NAMESPACE)
-        .set("spark.sql.catalog.spark_catalog.io-impl", TestConfigSource.ICEBERG_CATALOG_FILEIO)
+        .set("spark.sql.catalog.spark_catalog.warehouse", ICEBERG_WAREHOUSE_S3A)
+        .set("spark.sql.catalog.spark_catalog.default-namespaces", ICEBERG_CATALOG_TABLE_NAMESPACE)
+        .set("spark.sql.catalog.spark_catalog.io-impl", TestConfigSource.ICEBERG_FILEIO)
         .set("spark.sql.catalog.spark_catalog.s3.endpoint", S3Minio.container.getS3URL())
         .set("spark.sql.catalog.spark_catalog.s3.path-style-access", "true")
-        .set("spark.sql.catalog.spark_catalog.s3.access-key-id", S3Minio.MINIO_ACCESS_KEY)
-        .set("spark.sql.catalog.spark_catalog.s3.secret-access-key", S3Minio.MINIO_SECRET_KEY)
+        .set("spark.sql.catalog.spark_catalog.s3.access-key-id", TestConfigSource.S3_MINIO_ACCESS_KEY)
+        .set("spark.sql.catalog.spark_catalog.s3.secret-access-key", TestConfigSource.S3_MINIO_SECRET_KEY)
         .set("spark.sql.catalog.spark_catalog.client.region", TestConfigSource.S3_REGION)
     ;
 
@@ -140,7 +140,7 @@ public class BaseSparkTest extends BaseTest {
   }
 
   public Dataset<Row> getTableData(String table) {
-    table = CATALOG_TABLE_NAMESPACE + ".debeziumcdc_" + table.replace(".", "_");
+    table = ICEBERG_CATALOG_TABLE_NAMESPACE + ".debeziumcdc_" + table.replace(".", "_");
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 

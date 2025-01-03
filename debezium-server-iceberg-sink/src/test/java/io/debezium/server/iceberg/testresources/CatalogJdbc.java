@@ -13,11 +13,12 @@ import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.iceberg.jdbc.JdbcCatalog;
 import org.testcontainers.containers.MySQLContainer;
 
-public class JdbcCatalogDB implements QuarkusTestResourceLifecycleManager {
-  public static MySQLContainer<?> container = new MySQLContainer<>();
+public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
+  public static final String ICEBERG_CATALOG_TABLE_NAMESPACE = "debeziumevents";
+  public static final String ICEBERG_CATALOG_NAME = "iceberg";
+  public static final MySQLContainer<?> container = new MySQLContainer<>("mysql:8");
 
   @Override
   public Map<String, String> start() {
@@ -25,10 +26,12 @@ public class JdbcCatalogDB implements QuarkusTestResourceLifecycleManager {
 
     Map<String, String> config = new ConcurrentHashMap<>();
 
-    config.put("debezium.sink.iceberg.catalog-impl", JdbcCatalog.class.getName());
+    config.put("debezium.sink.iceberg.type", "jdbc");
     config.put("debezium.sink.iceberg.uri", container.getJdbcUrl());
     config.put("debezium.sink.iceberg.jdbc.user", container.getUsername());
     config.put("debezium.sink.iceberg.jdbc.password", container.getPassword());
+    config.put("debezium.sink.iceberg.table-namespace", ICEBERG_CATALOG_TABLE_NAMESPACE);
+    config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
 
     return config;
   }

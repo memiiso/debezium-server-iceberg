@@ -25,7 +25,7 @@ import org.apache.iceberg.io.CloseableIterable;
 public class BaseTest {
 
   @Inject
-  IcebergChangeConsumer consumer;
+  public IcebergChangeConsumer consumer;
 
   public CloseableIterable<Record> getTableDataV2(String table) {
     return getTableDataV2("debeziumevents", table);

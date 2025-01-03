@@ -18,10 +18,12 @@ public class TestConfigSource implements ConfigSource {
 
   public static final String S3_REGION = "us-east-1";
   public static final String S3_BUCKET_NAME = "test-bucket";
-  public static final String CATALOG_TABLE_NAMESPACE = "debeziumevents";
+  public static final String S3_MINIO_ACCESS_KEY = "admin";
+  public static final String S3_MINIO_SECRET_KEY = "12345678";
+  public static final String ICEBERG_CATALOG_TABLE_NAMESPACE = "debeziumevents";
   public static final String ICEBERG_CATALOG_NAME = "iceberg";
-  public static final String ICEBERG_CATALOG_FILEIO = "org.apache.iceberg.aws.s3.S3FileIO";
-  public static final String S3_BUCKET = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
+  public static final String ICEBERG_FILEIO = "org.apache.iceberg.aws.s3.S3FileIO";
+  public static final String ICEBERG_WAREHOUSE_S3A = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
   protected Map<String, String> config = new HashMap<>();
 
 
@@ -34,7 +36,7 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
 
     // iceberg config
-    config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
+    config.put("debezium.sink.iceberg.warehouse", ICEBERG_WAREHOUSE_S3A);
 
     // ==== configure batch behaviour/size ====
     // Positive integer value that specifies the maximum size of each batch of events that should be processed during
@@ -45,7 +47,7 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.source.poll.interval.ms", "10000"); // 5 seconds!
     // iceberg
     config.put("debezium.sink.iceberg.table-prefix", "debeziumcdc_");
-    config.put("debezium.sink.iceberg.table-namespace", CATALOG_TABLE_NAMESPACE);
+    config.put("debezium.sink.iceberg.table-namespace", ICEBERG_CATALOG_TABLE_NAMESPACE);
     config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
     // use hadoop catalog for tests
     config.put("debezium.sink.iceberg.type", "hadoop");

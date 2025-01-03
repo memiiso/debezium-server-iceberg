@@ -149,7 +149,7 @@ public class IcebergUtil {
       Table table = icebergCatalog.loadTable(tableId);
       return Optional.of(table);
     } catch (NoSuchTableException e) {
-      LOGGER.warn("Table not found: {}", tableId.toString());
+      LOGGER.debug("Table not found: {}", tableId.toString());
       return Optional.empty();
     }
   }
