@@ -31,9 +31,9 @@ import java.util.List;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = false)
-@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = false)
-@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = false)
+@QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
 
   @Test
