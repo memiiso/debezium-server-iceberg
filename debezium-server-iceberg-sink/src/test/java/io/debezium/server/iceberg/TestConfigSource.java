@@ -21,7 +21,7 @@ public class TestConfigSource implements ConfigSource {
   public static final String CATALOG_TABLE_NAMESPACE = "debeziumevents";
   public static final String ICEBERG_CATALOG_NAME = "iceberg";
   public static final String ICEBERG_CATALOG_FILEIO = "org.apache.iceberg.aws.s3.S3FileIO";
-  public static final String S3_BUCKET = "s3a://" + S3_BUCKET_NAME + "/iceberg_warehouse";
+  public static final String S3_BUCKET = "s3://" + S3_BUCKET_NAME + "/iceberg_warehouse";
   protected Map<String, String> config = new HashMap<>();
 
 
@@ -32,9 +32,6 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.upsert", "false");
     config.put("debezium.sink.iceberg.upsert-keep-deletes", "true");
     config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
-
-    // iceberg config
-    config.put("debezium.sink.iceberg.warehouse", S3_BUCKET);
 
     // ==== configure batch behaviour/size ====
     // Positive integer value that specifies the maximum size of each batch of events that should be processed during
