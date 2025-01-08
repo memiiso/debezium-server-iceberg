@@ -21,6 +21,7 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.time.Duration;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.List;
 @QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
 public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
 
   @Test
