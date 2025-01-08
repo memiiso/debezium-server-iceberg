@@ -26,7 +26,12 @@ import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import static io.debezium.server.iceberg.IcebergChangeConsumer.keyDeserializer;
 import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
@@ -71,7 +76,17 @@ public class RecordConverter {
   }
 
   public Long cdcSourceTsMsValue(String cdcSourceTsMsField) {
-    return value().get(cdcSourceTsMsField).asLong(0);
+
+    final JsonNode element = value().get(cdcSourceTsMsField);
+    if (element == null) {
+      throw new DebeziumException("Field '" + cdcSourceTsMsField + "' not found in JSON object: " + value());
+    }
+
+    try {
+      return element.asLong();
+    } catch (NumberFormatException e) {
+      throw new DebeziumException("Error converting field '" + cdcSourceTsMsField + "' value '" + element + "' to Long: " + e.getMessage(), e);
+    }
   }
 
   public Operation cdcOpValue(String cdcOpField) {
@@ -100,7 +115,7 @@ public class RecordConverter {
       return Operation.READ;
     } else if (opFieldValue.equals("c")) {
       return Operation.INSERT;
-    }else if (opFieldValue.equals("i")) {
+    } else if (opFieldValue.equals("i")) {
       return Operation.INSERT;
     }
     throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");

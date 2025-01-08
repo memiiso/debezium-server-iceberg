@@ -14,7 +14,11 @@ import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.RecordConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
-import org.apache.iceberg.*;
+import org.apache.iceberg.AppendFiles;
+import org.apache.iceberg.RowDelta;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.UpdateSchema;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
@@ -63,14 +67,18 @@ public class IcebergTableOperator {
             throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
           }
 
-          // deduplicate using key(PK)
-          deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-            if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
-              return newValue;
-            } else {
-              return oldValue;
-            }
-          });
+      try {
+        // deduplicate using key(PK)
+        deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+          if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
+            return newValue;
+          } else {
+            return oldValue;
+          }
+        });
+      } catch (Exception ex) {
+        throw new DebeziumException("Failed to deduplicate events", ex);
+      }
         }
     );
 
