@@ -18,10 +18,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "pyjnius==1.4.2"
+    "pyjnius==1.6.1"
 ]
 [project.scripts]
-debezium = "debezium:main"
+debezium = "debezium.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/memiiso/debezium-server-iceberg "
