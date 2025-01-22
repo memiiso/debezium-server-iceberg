@@ -1,12 +1,10 @@
 import logging
 import os
 import sys
-#####  loggger
 import threading
 from pathlib import Path
 
 
-#####
 class LoggerClass:
     def __init__(self):
         self._log = None
