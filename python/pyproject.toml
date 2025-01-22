@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "debezium"
+version = "0.1.0"
+authors = [
+    { name = "Memiiso Organization" },
+]
+description = "Debezium Server Python runner"
+# readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["Debezium", "Replication", "Apache", "Iceberg"]
+license = { text = "Apache License 2.0" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pyjnius==1.4.2"
+]
+[project.scripts]
+debezium = "debezium:main"
+
+[project.urls]
+Homepage = "https://github.com/memiiso/debezium-server-iceberg "
+Documentation = "https://github.com/memiiso/debezium-server-iceberg "
+Repository = "https://github.com/memiiso/debezium-server-iceberg "
