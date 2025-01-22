@@ -48,16 +48,20 @@ class Debezium(LoggerClass):
             os.environ["JAVA_HOME"] = java_home
             self.log.info("JAVA_HOME env variable set to %s" % java_home)
 
-    def _jnius_config(self):
+    def _jnius_config(self, *java_args):
         import jnius_config
-        debezium_classpath: list = [
-            self.debezium_server_dir.joinpath('*').as_posix(),
-            self.debezium_server_dir.joinpath("lib/*").as_posix(),
-            self.conf_dir.as_posix()]
 
         if jnius_config.vm_running:
             raise ValueError(
                 "VM is already running, can't set classpath/options; VM started at %s" % jnius_config.vm_started_at)
+
+        # NOTE this needs to be set before add_classpath
+        jnius_config.add_options(*java_args)
+
+        debezium_classpath: list = [
+            self.debezium_server_dir.joinpath('*').as_posix(),
+            self.debezium_server_dir.joinpath("lib/*").as_posix(),
+            self.conf_dir.as_posix()]
 
         jnius_config.add_classpath(*debezium_classpath)
         self.log.info("VM Classpath: %s" % jnius_config.get_classpath())
@@ -80,10 +84,9 @@ class Debezium(LoggerClass):
             return jvm_option
 
     # pylint: disable=no-name-in-module
-    def run(self, *args: str):
-        jnius_config = self._jnius_config()
+    def run(self, *java_args: str):
+        jnius_config = self._jnius_config(java_args)
         try:
-            jnius_config.add_options(*args)
             __jvm_options: list = [self._sanitize(p) for p in jnius_config.get_options()]
             self.log.info("Configured jvm options:%s" % __jvm_options)
 
