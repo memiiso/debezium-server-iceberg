@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 #####
-class ObjectWithLogger:
+class LoggerClass:
     def __init__(self):
         self._log = None
 
@@ -25,7 +25,7 @@ class ObjectWithLogger:
         return self._log
 
 
-class Debezium(ObjectWithLogger):
+class Debezium(LoggerClass):
 
     def __init__(self, debezium_dir: str = None, conf_dir: str = None, java_home: str = None):
         super().__init__()
