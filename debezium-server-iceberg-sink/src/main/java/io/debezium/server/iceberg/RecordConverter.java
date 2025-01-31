@@ -90,35 +90,23 @@ public class RecordConverter {
   }
 
   public Operation cdcOpValue(String cdcOpField) {
-    final String opFieldValue;
-    if (value().has(cdcOpField)) {
-      opFieldValue = value().get(cdcOpField).asText("c");
-    } else if (value().has("ddl") && value().has("databaseName")
-        && value().has("tableChanges")) {
-      // its "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
-      opFieldValue = "c";
-    } else {
-      opFieldValue = null;
-    }
-
-    if (opFieldValue == null) {
+    if (!value().has(cdcOpField)) {
       throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
 
-    if (opFieldValue.equals("u")) {
-      return Operation.UPDATE;
-    } else if (opFieldValue.equals("d")) {
-      return Operation.DELETE;
-    } else if (opFieldValue.equals("r")) {
-      return Operation.READ;
-    } else if (opFieldValue.equals("c")) {
-      return Operation.INSERT;
-    } else if (opFieldValue.equals("i")) {
-      return Operation.INSERT;
-    }
-    throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+    final String opFieldValue = value().get(cdcOpField).asText("c");
+
+    return switch (opFieldValue) {
+      case "u" -> Operation.UPDATE;
+      case "d" -> Operation.DELETE;
+      case "r" -> Operation.READ;
+      case "c" -> Operation.INSERT;
+      case "i" -> Operation.INSERT;
+      default ->
+          throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+    };
   }
 
   public SchemaConverter schemaConverter() {
@@ -129,7 +117,36 @@ public class RecordConverter {
     }
   }
 
+
+  /**
+   * Checks if the current message represents a schema change event.
+   * Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
+   *
+   * @return True if it's a schema change event, false otherwise.
+   */
+  private boolean isSchemaChangeEvent() {
+    return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
+  }
+
+
+  /**
+   * Converts the Kafka Connect schema to an Iceberg schema.
+   *
+   * @param createIdentifierFields Whether to include identifier fields in the Iceberg schema.
+   *                               Identifier fields are typically used for primary keys and are
+   *                               required for upsert/merge operations.  They should be *excluded*
+   *                               for schema change topic messages to ensure append-only mode.
+   * @return The Iceberg schema.
+   */
   public Schema icebergSchema(boolean createIdentifierFields) {
+    // Check if the message is a schema change event (DDL statement).
+    // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
+    // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+    if (isSchemaChangeEvent()) {
+      LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
+      return schemaConverter().icebergSchema(false); // Force no identifier fields for schema changes
+    }
+
     return schemaConverter().icebergSchema(createIdentifierFields);
   }
 
@@ -379,26 +396,29 @@ public class RecordConverter {
       }
 
       RecordSchemaData schemaData = new RecordSchemaData();
+      final JsonNode keySchemaNode;
       if (!createIdentifierFields) {
-        LOGGER.warn("Creating identifier fields is disabled, creating table without identifier field!");
-        icebergSchemaFields(valueSchema, null, schemaData);
+        LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
+        keySchemaNode = null;
       } else if (!eventsAreUnwrapped && keySchema != null) {
         ObjectNode nestedKeySchema = mapper.createObjectNode();
         nestedKeySchema.put("type", "struct");
         nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
-        icebergSchemaFields(valueSchema, nestedKeySchema, schemaData);
-
-        if (!schemaData.identifierFieldIds().isEmpty()) {
-          // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
-          // due to inconsistency in the after and before fields.
-          // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
-          // This inconsistency prevents using either field as a reliable key.
-          throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
-              "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
-              " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
-        }
+        keySchemaNode = nestedKeySchema;
       } else {
-        icebergSchemaFields(valueSchema, keySchema, schemaData);
+        keySchemaNode = keySchema;
+      }
+
+      icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
+
+      if (!eventsAreUnwrapped && !schemaData.identifierFieldIds().isEmpty()) {
+        // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
+        // due to inconsistency in the after and before fields.
+        // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
+        // This inconsistency prevents using either field as a reliable key.
+        throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
+            "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+            " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
       }
 
       if (schemaData.fields().isEmpty()) {
