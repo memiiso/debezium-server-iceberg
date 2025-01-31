@@ -143,8 +143,8 @@ public class RecordConverter {
     // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
     // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
     if (isSchemaChangeEvent()) {
-      LOGGER.warn("Schema change event detected. Creating Iceberg schema without identifier fields for append-only mode.");
-      schemaConverter().icebergSchema(false); // Force no identifier fields for schema changes
+      LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
+      return schemaConverter().icebergSchema(false); // Force no identifier fields for schema changes
     }
 
     return schemaConverter().icebergSchema(createIdentifierFields);
