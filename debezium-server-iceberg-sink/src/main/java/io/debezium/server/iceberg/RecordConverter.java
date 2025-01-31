@@ -90,35 +90,23 @@ public class RecordConverter {
   }
 
   public Operation cdcOpValue(String cdcOpField) {
-    final String opFieldValue;
-    if (value().has(cdcOpField)) {
-      opFieldValue = value().get(cdcOpField).asText("c");
-    } else if (value().has("ddl") && value().has("databaseName")
-        && value().has("tableChanges")) {
-      // its "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
-      opFieldValue = "c";
-    } else {
-      opFieldValue = null;
-    }
-
-    if (opFieldValue == null) {
+    if (!value().has(cdcOpField)) {
       throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
 
-    if (opFieldValue.equals("u")) {
-      return Operation.UPDATE;
-    } else if (opFieldValue.equals("d")) {
-      return Operation.DELETE;
-    } else if (opFieldValue.equals("r")) {
-      return Operation.READ;
-    } else if (opFieldValue.equals("c")) {
-      return Operation.INSERT;
-    } else if (opFieldValue.equals("i")) {
-      return Operation.INSERT;
-    }
-    throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+    final String opFieldValue = value().get(cdcOpField).asText("c");
+
+    return switch (opFieldValue) {
+      case "u" -> Operation.UPDATE;
+      case "d" -> Operation.DELETE;
+      case "r" -> Operation.READ;
+      case "c" -> Operation.INSERT;
+      case "i" -> Operation.INSERT;
+      default ->
+          throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+    };
   }
 
   public SchemaConverter schemaConverter() {
