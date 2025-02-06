@@ -1,29 +1,29 @@
-version: "3.7"
-
 services:
-  debezium-iceberg:
-    image: ghcr.io/memiiso/debezium-server-iceberg:latest
-    container_name: debezium-server-iceberg
+  debezium:
+    container_name: debezium
+    image: ghcr.io/memiiso/debezium-server-iceberg:local-05
+#    command: sh -c 'sleep infinity'
+#    entrypoint: sh -c 'sleep infinity'
     networks:
-      iceberg_net:
+      iceberg:
     depends_on:
-      - jdbccatalog
-      - minio
-      - postgresqlsourcedb
-      - mc
+#    - rest
+#    - minio
+    - tsdb
+#    - mc
     volumes:
-      - ./conf/application.properties:/app/conf/application.properties
+    - ./conf/application.properties:/app/conf/application.properties
+    - $HOME/.aws/credentials:/root/.aws/credentials:ro
+    - $HOME/.aws/config:/root/.aws/config:ro
     environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
-#    links:
-#      - jdbccatalog
-#      - minio
-#      - postgresqlsourcedb
-  postgresqlsourcedb:
-    image: debezium/example-postgres:2.5
-    container_name: postgresql-source-db
+      AWS_REGION: us-east-2
+      AWS_PROFILE: mfa # Change this to match your local AWS profile, best to use MFA w/ session tokens.
+
+  tsdb:
+    container_name: tsdb
+    image: ts2pg17-dbz3:latest
+    build:
+      dockerfile: Dockerfile.Timescale
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -31,52 +31,87 @@ services:
       - POSTGRES_INITDB_ARGS="-E UTF8"
       - LANG=en_US.utf8
     networks:
-      iceberg_net:
+      iceberg:
     ports:
       - "5432:5432"
-  jdbccatalog:
-    image: postgres:14-alpine
-    container_name: iceberg-jdbc-catalog
-    networks:
-      iceberg_net:
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=test
-      - POSTGRES_USER=testuser
-      - POSTGRES_PASSWORD=testpass
-  minio:
-    image: minio/minio
-    container_name: minio
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password
-      - MINIO_DOMAIN=minio
-      - MINIO_BUCKET=warehouse
-    networks:
-      iceberg_net:
-    ports:
-      - "9001:9001"
-      - "9000:9000"
-    command: ["server", "/data", "--console-address", ":9001"]
-  mc:
-    image: minio/mc
-    container_name: mc
-    networks:
-      iceberg_net:
-    depends_on:
-      - minio
-    environment:
-      - AWS_ACCESS_KEY_ID=demo
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
-    entrypoint: >
-      /bin/sh -c "
-      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
-      /usr/bin/mc mb --ignore-existing minio/warehouse;
-      /usr/bin/mc anonymous set public minio/warehouse;
-      exit 0;
-      "
+
+#  rest:
+#    container_name: rest
+#    image: apache/iceberg-rest-fixture
+#    networks:
+#      iceberg:
+#    ports:
+#    - "8181:8181"
+#    volumes:
+#    - $HOME/.aws/credentials:/home/iceberg/.aws/credentials:ro
+#    - $HOME/.aws/config:/home/iceberg/.aws/config:ro
+#    environment:
+#      AWS_REGION: us-east-1
+#      AWS_PROFILE: mfa # Change this to match your local AWS profile, best to use MFA w/ session tokens.
+#      CATALOG_WAREHOUSE: s3://dodd-iceberg-basic
+#      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+##    - CATALOG_WAREHOUSE=s3://warehouse/
+##    - CATALOG_S3_ENDPOINT=http://minio:9000
+
+#  minio:
+#    container_name: minio
+#    image: minio/minio
+#    environment:
+#      - MINIO_ROOT_USER=admin
+#      - MINIO_ROOT_PASSWORD=password
+#      - MINIO_DOMAIN=minio
+#    networks:
+#      iceberg:
+#        aliases:
+#          - warehouse.minio
+#    ports:
+#      - "9001:9001"
+#      - "9000:9000"
+#    command: ["server", "/data", "--console-address", ":9001"]
+#
+#  mc:
+#    container_name: mc
+#    depends_on:
+#      - minio
+#    image: minio/mc
+#    networks:
+#      iceberg:
+#    environment:
+#      - AWS_ACCESS_KEY_ID=admin
+#      - AWS_SECRET_ACCESS_KEY=password
+#      - AWS_REGION=us-east-1
+#    entrypoint: |
+#      /bin/sh -c "
+#      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+#      /usr/bin/mc rm -r --force minio/warehouse;
+#      /usr/bin/mc mb minio/warehouse;
+#      /usr/bin/mc policy set public minio/warehouse;
+#      tail -f /dev/null
+#      "
+
+#  # Spark is added here specifically to facilitate easy spark-sql verification of Iceberg data.
+#  spark:
+#    container_name: spark
+#    image: tabulario/spark-iceberg
+#    build: spark/
+#    networks:
+#      iceberg:
+##    depends_on:
+##      - rest
+###      - minio
+#    volumes:
+#      - $HOME/.aws/credentials:$HOME/.aws/credentials:ro
+##      - ./warehouse:/home/iceberg/warehouse
+##      - ./notebooks:/home/iceberg/notebooks/notebooks
+#    environment:
+#      AWS_REGION: us-east-2
+#      AWS_PROFILE: mfa # Change this to match your local AWS profile, best to use MFA w/ session tokens.
+#    ports:
+#      - "8888:8888"
+#      - "8080:8080"
+#      - "10000:10000"
+#      - "10001:10001"
+
 networks:
-  iceberg_net:
-    name: icebergnet
+  iceberg:
+    name: iceberg

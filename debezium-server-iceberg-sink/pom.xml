@@ -114,7 +114,6 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-aws</artifactId>
             <version>${version.hadoop}</version>
-            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>com.amazonaws</groupId>
@@ -127,7 +126,6 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-bundle</artifactId>
             <version>1.11.1026</version>
-            <scope>test</scope>
         </dependency>
         <!-- Hadoop -->
         <dependency>
@@ -157,7 +155,6 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${version.hadoop}</version>
-            <scope>test</scope>
             <exclusions>
                 <exclusion>
                     <groupId>log4j</groupId>
