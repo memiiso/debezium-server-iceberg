@@ -37,12 +37,9 @@ jobs:
         run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
 
       - name: Delete previous ${{ env.RELEASE_NAME }} release
-        uses: dev-drprasad/delete-tag-and-release@v1.1
-        with:
-          delete_release: true
-          tag_name: ${{ env.RELEASE_NAME }}
+      - run: gh release delete ${{ env.RELEASE_NAME }} --cleanup-tag --yes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release
         id: create_release
@@ -56,9 +53,10 @@ jobs:
           draft: false
           prerelease: true
 
-          files: |
-            debezium-server-iceberg-sink/target/debezium-server-iceberg-sink-${{ env.RELEASE_NAME }}.jar
-            debezium-server-iceberg-dist/target/debezium-server-iceberg-dist-${{ env.RELEASE_NAME }}.zip
+      - name: Publish to GitHub Packages
+        run: mvn clean package -Passembly --batch-mode deploy -Drevision=0.0.2-SNAPSHOT -Dmaven.test.skip=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
