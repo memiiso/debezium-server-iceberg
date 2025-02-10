@@ -22,7 +22,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <!-- NOTE: this is override by release process using CLI argument -->
+        <!-- NOTE: this is overriden by release process using CLI argument -->
         <revision>0.0.1-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
         <version.debezium>3.0.7.Final</version.debezium>
