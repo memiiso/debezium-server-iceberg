@@ -82,8 +82,7 @@
                         <id>generate-license-report</id>
                         <phase>package</phase>
                         <goals>
-                            <!--                            <goal>add-third-party</goal>-->
-                            <goal>aggregate-add-third-party</goal>
+                            <goal>add-third-party</goal>
                         </goals>
                     </execution>
                 </executions>
