@@ -96,7 +96,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION, defaultValue = "s3://my_bucket/iceberg_warehouse")
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;

@@ -78,7 +78,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   String valueFormat;
   @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
   String keyFormat;
-  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
+  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION, defaultValue = "s3://my_bucket/iceberg_warehouse")
   String warehouseLocation;
   @ConfigProperty(name = "debezium.sink.iceberg.destination-regexp", defaultValue = "")
   protected Optional<String> destinationRegexp;

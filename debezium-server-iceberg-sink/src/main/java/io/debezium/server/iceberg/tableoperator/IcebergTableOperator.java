@@ -42,6 +42,12 @@ import java.util.stream.Collectors;
 @Dependent
 public class IcebergTableOperator {
 
+  IcebergTableWriterFactory writerFactory2;
+
+  public IcebergTableOperator() {
+    writerFactory2 = new IcebergTableWriterFactory();
+  }
+
   static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of(Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
   @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
@@ -183,7 +189,7 @@ public class IcebergTableOperator {
   private void addToTablePerSchema(Table icebergTable, List<RecordConverter> events) {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
-    BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
+    BaseTaskWriter<Record> writer = writerFactory2.create(icebergTable);
     try (writer) {
       for (RecordConverter e : events) {
         final RecordWrapper record = (upsert && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema, cdcOpField) : e.convertAsAppend(tableSchema);

@@ -33,8 +33,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import static io.debezium.server.iceberg.IcebergChangeConsumer.keyDeserializer;
-import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
+import static io.debezium.server.iceberg.OlakeRpcServer.keyDeserializer;
+import static io.debezium.server.iceberg.OlakeRpcServer.valDeserializer;
 
 /**
  * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
