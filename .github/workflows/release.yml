@@ -37,7 +37,7 @@ jobs:
         run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
 
       - name: Delete previous ${{ env.RELEASE_NAME }} release
-      - run: gh release delete ${{ env.RELEASE_NAME }} --cleanup-tag --yes
+        run: gh release delete ${{ env.RELEASE_NAME }} --cleanup-tag --yes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
