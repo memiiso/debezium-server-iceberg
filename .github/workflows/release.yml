@@ -54,7 +54,7 @@ jobs:
           prerelease: true
 
       - name: Publish to GitHub Packages
-        run: mvn clean package -Passembly --batch-mode deploy -Drevision=0.0.2-SNAPSHOT -Dmaven.test.skip=true
+        run: mvn clean package -Passembly --batch-mode deploy -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
