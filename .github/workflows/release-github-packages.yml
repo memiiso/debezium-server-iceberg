@@ -1,0 +1,42 @@
+name: Publishing Packages to GitHub Packages
+
+on:
+  push:
+    #    tags: [ '*.*.*.*' ]
+    branches: [ releaselatest ]
+
+env:
+  SPARK_LOCAL_IP: 127.0.0.1
+
+jobs:
+  build:
+    name: Main
+    if: github.repository_owner == 'memiiso'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: 'maven'
+
+      - name: Determine Release Name
+        id: set_release_name
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "RELEASE_NAME=latest" >> $GITHUB_ENV
+          else
+            echo "RELEASE_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+        shell: bash # Explicitly set shell to bash
+
+      - name: Publish ${{ env.RELEASE_NAME }} to GitHub Packages
+        run: mvn clean package -Passembly --batch-mode deploy -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
