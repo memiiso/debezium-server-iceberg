@@ -6,7 +6,7 @@
 
 This project adds Iceberg consumer
 to [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html). It could be used to
-replicate any database(CDC changes) to could as an Iceberg table in realtime. Without requiring Spark, Kafka or
+replicate any database(CDC changes) to cloud as an Iceberg table in realtime. Without requiring Spark, Kafka or
 Streaming platform. It's possible to consume data in append or update modes.
 
 This project introduces an Iceberg consumer for [Debezium Server](https://debezium.io/documentation/reference/operations/debezium-server.html), enabling real-time replication of Change Data Capture (CDC) events from any database to an Iceberg table. This eliminates the need for additional tools like Spark, Kafka, or dedicated streaming platforms.  The consumer supports data ingestion in both append and upsert modes.
