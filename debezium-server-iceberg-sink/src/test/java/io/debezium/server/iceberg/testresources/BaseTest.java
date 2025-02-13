@@ -47,7 +47,7 @@ public class BaseTest {
   }
 
   public CloseableIterable<Record> getTableDataV2(TableIdentifier table) throws InterruptedException {
-    // Introduce a delay to avoid excessive checks.    Thread.sleep(5000);
+    // Introduce a delay to avoid excessive checks.
     Thread.sleep(5000);
     Table iceTable = consumer.loadIcebergTable(table, null);
     return IcebergGenerics.read(iceTable).build();

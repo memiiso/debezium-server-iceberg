@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerTest.TestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
 
@@ -289,6 +291,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         ds.show(false);
         return ds.count() >= 3;
       } catch (Exception e) {
+//        e.printStackTrace();
         return false;
       }
     });
