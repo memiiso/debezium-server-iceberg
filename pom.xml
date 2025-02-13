@@ -57,12 +57,12 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
+            <url>https://maven.pkg.github.com/ismailsimsek/debezium-server-iceberg</url>
         </repository>
         <snapshotRepository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
+            <url>https://maven.pkg.github.com/ismailsimsek/debezium-server-iceberg</url>
         </snapshotRepository>
     </distributionManagement>
     <dependencyManagement>
