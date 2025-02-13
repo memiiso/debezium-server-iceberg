@@ -144,7 +144,7 @@ public class BaseSparkTest extends BaseTest {
   }
 
   public Dataset<Row> getTableData(String schema, String table) throws InterruptedException {
-    Thread.sleep(5000);
+    // Introduce a delay to avoid excessive checks.    Thread.sleep(5000);
     table = schema + "." + table.replace(".", "_");
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
