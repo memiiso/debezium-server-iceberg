@@ -17,6 +17,8 @@ import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+
 /**
  * Integration test that uses spark to consumer data is consumed.
  *
@@ -27,8 +29,8 @@ public class BaseTest {
   @Inject
   public IcebergChangeConsumer consumer;
 
-  public CloseableIterable<Record> getTableDataV2(String table) {
-    return getTableDataV2("debeziumevents", table);
+  public CloseableIterable<Record> getTableDataV2(String table) throws InterruptedException {
+    return getTableDataV2(ICEBERG_CATALOG_TABLE_NAMESPACE, table);
   }
 
   public void printTableData(CloseableIterable<Record> data) {
@@ -39,12 +41,14 @@ public class BaseTest {
     System.out.println("======================");
   }
 
-  public CloseableIterable<Record> getTableDataV2(String catalog, String table) {
+  public CloseableIterable<Record> getTableDataV2(String catalog, String table) throws InterruptedException {
     String tableName = "debeziumcdc_" + table.replace(".", "_");
     return getTableDataV2(TableIdentifier.of(catalog, tableName));
   }
 
-  public CloseableIterable<Record> getTableDataV2(TableIdentifier table) {
+  public CloseableIterable<Record> getTableDataV2(TableIdentifier table) throws InterruptedException {
+    // Introduce a delay to avoid excessive checks.    Thread.sleep(5000);
+    Thread.sleep(5000);
     Table iceTable = consumer.loadIcebergTable(table, null);
     return IcebergGenerics.read(iceTable).build();
   }

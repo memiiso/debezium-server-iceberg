@@ -26,6 +26,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+
 /**
  *
  * @author Ismail Simsek
@@ -43,7 +45,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
     Assertions.assertEquals(sinkType, "icebergevents");
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        Dataset<Row> ds = spark.newSession().sql("SELECT * FROM debeziumevents.debezium_events");
+        Dataset<Row> ds = spark.newSession().sql("SELECT * FROM "+ICEBERG_CATALOG_TABLE_NAMESPACE+".debezium_events");
         ds.show(false);
         return ds.count() >= 10
                && ds.select("event_destination").distinct().count() >= 2;
