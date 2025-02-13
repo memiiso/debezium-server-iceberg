@@ -9,11 +9,13 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.RecordConverter;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 
 import java.util.List;
 import java.util.Set;
 
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
@@ -27,6 +29,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  * @author Ismail Simsek
  */
 @QuarkusTest
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 class RecordConverterBuilderTest {
 
   @Test

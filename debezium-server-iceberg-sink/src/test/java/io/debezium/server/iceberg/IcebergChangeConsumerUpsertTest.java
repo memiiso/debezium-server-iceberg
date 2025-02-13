@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.debezium.server.iceberg.testresources.TestUtil;
@@ -37,6 +38,7 @@ import java.util.Map;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 

@@ -12,6 +12,7 @@ import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -41,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 class IcebergTableOperatorTest extends BaseSparkTest {
 
   static String testTable = "inventory.test_table_operator";

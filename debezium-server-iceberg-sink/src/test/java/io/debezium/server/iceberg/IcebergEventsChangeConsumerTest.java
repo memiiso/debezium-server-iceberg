@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -35,6 +36,7 @@ import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
 public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
