@@ -46,7 +46,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
     int iteration = 100;
     PGCreateTestDataTable();
     for (int i = 0; i <= iteration; i++) {
-      PGLoadTestDataTable(maxBatchSize / 10, true);
+      this.PGLoadTestDataTable(maxBatchSize / 10, true);
     }
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
