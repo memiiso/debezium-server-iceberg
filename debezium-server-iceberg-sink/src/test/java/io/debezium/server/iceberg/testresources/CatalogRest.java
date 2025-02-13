@@ -42,9 +42,7 @@ public class CatalogRest implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public void stop() {
-    if (container != null) {
       container.stop();
-    }
   }
 
 }

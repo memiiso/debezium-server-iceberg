@@ -16,8 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.testcontainers.containers.MySQLContainer;
 
 public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
-  public static final String ICEBERG_CATALOG_TABLE_NAMESPACE = "debeziumevents";
-  public static final String ICEBERG_CATALOG_NAME = "iceberg";
   public static final MySQLContainer<?> container = new MySQLContainer<>("mysql:8");
 
   @Override
@@ -30,17 +28,14 @@ public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
     config.put("debezium.sink.iceberg.uri", container.getJdbcUrl());
     config.put("debezium.sink.iceberg.jdbc.user", container.getUsername());
     config.put("debezium.sink.iceberg.jdbc.password", container.getPassword());
-    config.put("debezium.sink.iceberg.table-namespace", ICEBERG_CATALOG_TABLE_NAMESPACE);
-    config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
+    config.put("debezium.sink.iceberg.jdbc.schema-version", "V1");
 
     return config;
   }
 
   @Override
   public void stop() {
-    if (container != null) {
-      container.stop();
-    }
+    container.stop();
   }
 
 }

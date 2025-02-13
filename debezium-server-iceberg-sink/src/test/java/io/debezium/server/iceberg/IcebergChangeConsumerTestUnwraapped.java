@@ -10,6 +10,7 @@ package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -28,6 +29,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -38,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerTestUnwraapped.TestProfile.class)
 public class IcebergChangeConsumerTestUnwraapped extends BaseSparkTest {
 
@@ -71,7 +74,7 @@ public class IcebergChangeConsumerTestUnwraapped extends BaseSparkTest {
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of("debeziumevents", "debezium_offset_storage_table"));
+        CloseableIterable<Record> d = getTableDataV2(TableIdentifier.of(ICEBERG_CATALOG_TABLE_NAMESPACE, "debezium_offset_storage_table"));
         System.out.println(Lists.newArrayList(d));
         return Lists.newArrayList(d).size() == 1;
       } catch (Exception e) {

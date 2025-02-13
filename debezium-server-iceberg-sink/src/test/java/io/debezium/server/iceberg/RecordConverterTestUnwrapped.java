@@ -8,6 +8,8 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
 @TestProfile(RecordConverterTestUnwrapped.TestProfile.class)
+@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 class RecordConverterTestUnwrapped {
 
   @Test

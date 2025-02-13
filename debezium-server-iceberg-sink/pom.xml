@@ -110,35 +110,6 @@
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-bundled-guava</artifactId>
         </dependency>
-        <!-- Google -->
-        <dependency>
-            <groupId>com.google.cloud.bigdataoss</groupId>
-            <artifactId>gcs-connector</artifactId>
-            <version>hadoop3-${version.googlebigdataoss}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.cloud.bigdataoss</groupId>
-            <artifactId>gcsio</artifactId>
-            <version>${version.googlebigdataoss}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-aws</artifactId>
-            <version>${version.hadoop}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-bundle</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <!-- aws-java-sdk-bundle Test dependency -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-bundle</artifactId>
-            <version>1.11.1026</version>
-            <scope>test</scope>
-        </dependency>
         <!-- Hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -152,29 +123,6 @@
                 <exclusion>
                     <groupId>log4j</groupId>
                     <artifactId>log4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-reload4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>ch.qos.logback</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-client</artifactId>
-            <version>${version.hadoop}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>org.slf4j</groupId>

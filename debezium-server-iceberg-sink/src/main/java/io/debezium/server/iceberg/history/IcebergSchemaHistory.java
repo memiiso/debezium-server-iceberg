@@ -185,12 +185,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
   @Override
   public boolean storageExists() {
-    try {
-      Table table = icebergCatalog.loadTable(tableId);
-      return table != null;
-    } catch (NoSuchTableException e) {
-      return false;
-    }
+      return icebergCatalog.tableExists(tableId);
   }
 
   @Override
