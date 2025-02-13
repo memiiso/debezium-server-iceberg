@@ -74,9 +74,9 @@ public class BaseSparkTest extends BaseTest {
   public static String dataTypeString(Dataset<Row> dataset, String colName) {
     StructField[] fields = dataset.schema().fields();
     String dataType = null;
-    for(StructField field: fields) {
-      if(field.name().equals(colName)) {
-        dataType =  field.dataType().typeName();
+    for (StructField field : fields) {
+      if (field.name().equals(colName)) {
+        dataType = field.dataType().typeName();
         break;
       }
     }
@@ -86,11 +86,11 @@ public class BaseSparkTest extends BaseTest {
   public static void PGCreateTestDataTable() throws Exception {
     // create test table
     String sql = "" +
-                 "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
-                 "            c_id INTEGER ,\n" +
-                 "            c_text TEXT,\n" +
-                 "            c_varchar VARCHAR" +
-                 "          );";
+        "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
+        "            c_id INTEGER ,\n" +
+        "            c_text TEXT,\n" +
+        "            c_varchar VARCHAR" +
+        "          );";
     SourcePostgresqlDB.runSQL(sql);
   }
 
@@ -104,7 +104,7 @@ public class BaseSparkTest extends BaseTest {
             Thread.sleep(TestUtil.randomInt(20000, 100000));
           }
           String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
-                       "VALUES ";
+              "VALUES ";
           StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '" + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
           for (int i = 0; i < 100; i++) {
             values.append("\n,(").append(TestUtil.randomInt(15, 32)).append(", '").append(TestUtil.randomString(524)).append("', '").append(TestUtil.randomString(524)).append("')");
@@ -139,8 +139,13 @@ public class BaseSparkTest extends BaseTest {
     return icebergCatalog;
   }
 
-  public Dataset<Row> getTableData(String table) {
-    table = ICEBERG_CATALOG_TABLE_NAMESPACE + ".debeziumcdc_" + table.replace(".", "_");
+  public Dataset<Row> getTableData(String table) throws InterruptedException {
+    return getTableData(ICEBERG_CATALOG_TABLE_NAMESPACE, "debeziumcdc_" + table);
+  }
+
+  public Dataset<Row> getTableData(String schema, String table) throws InterruptedException {
+    Thread.sleep(5000);
+    table = schema + "." + table.replace(".", "_");
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 

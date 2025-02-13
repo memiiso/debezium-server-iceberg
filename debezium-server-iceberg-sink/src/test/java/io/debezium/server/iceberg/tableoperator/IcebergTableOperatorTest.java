@@ -63,7 +63,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   }
 
   @Test
-  public void testIcebergTableOperator() {
+  public void testIcebergTableOperator() throws InterruptedException {
     // setup
     List<RecordConverter> events = new ArrayList<>();
     Table icebergTable = this.createTable(
