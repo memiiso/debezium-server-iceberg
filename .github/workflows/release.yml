@@ -39,7 +39,7 @@ jobs:
         shell: bash # Explicitly set shell to bash
 
       - name: Build Project
-        run: mvn -B --no-transfer-progress package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
+        run: mvn -B --no-transfer-progress clean package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
 
       - name: Delete Existing Release (if any)
         run: gh release delete ${{ env.RELEASE_NAME }} --cleanup-tag --yes
@@ -58,10 +58,26 @@ jobs:
           body: Release ${{ env.RELEASE_NAME }}
           draft: false
           prerelease: true
-
+      - name: Delete Maven Package from Github
+        uses: paulushcgcj/delete-github-package@1.0.0
+        with:
+          type: maven
+          name: io.debezium.debezium-server-iceberg
+          version: ${{ env.RELEASE_NAME }}
+      - name: Delete Maven Package Dist from Github
+        uses: paulushcgcj/delete-github-package@1.0.0
+        with:
+          type: maven
+          name: io.debezium.debezium-server-iceberg-dist
+          version: ${{ env.RELEASE_NAME }}
+      - name: Delete Maven Package Sink from Github
+        uses: paulushcgcj/delete-github-package@1.0.0
+        with:
+          type: maven
+          name: io.debezium.debezium-server-iceberg-sink
+          version: ${{ env.RELEASE_NAME }}
       - name: Publish ${{ env.RELEASE_NAME }} to GitHub Packages
-        if: startsWith(github.ref, 'refs/tags/')
-        run: mvn clean package -Passembly --batch-mode deploy -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
+        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
