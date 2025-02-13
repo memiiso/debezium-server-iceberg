@@ -17,9 +17,11 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructField;
+import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeAll;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +43,9 @@ public class BaseSparkTest extends BaseTest {
 
   @BeforeAll
   static void setup() {
+    Awaitility.setDefaultTimeout(Duration.ofMinutes(3));
+    Awaitility.setDefaultPollInterval(Duration.ofSeconds(10));
+
     Map<String, String> appSparkConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), SPARK_PROP_PREFIX);
     appSparkConf.forEach(BaseSparkTest.sparkconf::set);
     sparkconf
@@ -144,7 +149,6 @@ public class BaseSparkTest extends BaseTest {
   }
 
   public Dataset<Row> getTableData(String schema, String table) throws InterruptedException {
-    // Introduce a delay to avoid excessive checks.    Thread.sleep(5000);
     table = schema + "." + table.replace(".", "_");
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
