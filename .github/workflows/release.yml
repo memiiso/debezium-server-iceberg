@@ -64,18 +64,21 @@ jobs:
           type: maven
           name: io.debezium.debezium-server-iceberg
           version: ${{ env.RELEASE_NAME }}
+        continue-on-error: true
       - name: Delete Maven Package Dist from Github
         uses: paulushcgcj/delete-github-package@1.0.0
         with:
           type: maven
           name: io.debezium.debezium-server-iceberg-dist
           version: ${{ env.RELEASE_NAME }}
+        continue-on-error: true
       - name: Delete Maven Package Sink from Github
         uses: paulushcgcj/delete-github-package@1.0.0
         with:
           type: maven
           name: io.debezium.debezium-server-iceberg-sink
           version: ${{ env.RELEASE_NAME }}
+        continue-on-error: true
       - name: Publish ${{ env.RELEASE_NAME }} to GitHub Packages
         run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
         env:
