@@ -110,6 +110,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                         "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
                         "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
       } catch (Exception e) {
+        e.printStackTrace();
         return false;
       }
     });
