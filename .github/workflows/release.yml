@@ -77,7 +77,7 @@ jobs:
           name: io.debezium.debezium-server-iceberg-sink
           version: ${{ env.RELEASE_NAME }}
       - name: Publish ${{ env.RELEASE_NAME }} to GitHub Packages
-        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
+        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
