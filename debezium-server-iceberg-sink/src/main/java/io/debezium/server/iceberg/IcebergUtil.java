@@ -145,13 +145,12 @@ public class IcebergUtil {
   }
 
   public static Optional<Table> loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId) {
-    try {
+    if (icebergCatalog.tableExists(tableId)){
       Table table = icebergCatalog.loadTable(tableId);
       return Optional.of(table);
-    } catch (NoSuchTableException e) {
-      LOGGER.debug("Table not found: {}", tableId.toString());
-      return Optional.empty();
     }
+    LOGGER.debug("Table not found: {}", tableId.toString());
+    return Optional.empty();
   }
 
   public static FileFormat getTableFileFormat(Table icebergTable) {
