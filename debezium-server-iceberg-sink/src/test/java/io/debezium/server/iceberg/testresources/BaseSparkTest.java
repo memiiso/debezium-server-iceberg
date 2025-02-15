@@ -73,7 +73,7 @@ public class BaseSparkTest extends BaseTest {
         .config(BaseSparkTest.sparkconf)
         .getOrCreate();
 
-    System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
+//    System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
   }
 
   public static String dataTypeString(Dataset<Row> dataset, String colName) {
