@@ -151,7 +151,7 @@ public class BaseSparkTest extends BaseTest {
   public Dataset<Row> getTableData(String namespace, String table) {
     table = namespace + "." + table.replace(".", "_");
 //    printSparkTables();
-    return spark.sql("SELECT *, input_file_name() as input_file FROM " + table);
+    return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 
   public void printSparkTables() {
