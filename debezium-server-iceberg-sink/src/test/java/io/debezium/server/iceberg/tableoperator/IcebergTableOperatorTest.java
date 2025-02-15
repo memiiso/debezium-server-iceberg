@@ -8,10 +8,12 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
+import com.google.common.collect.Lists;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergChangeConsumer;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
@@ -42,26 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-class IcebergTableOperatorTest extends BaseSparkTest {
+class IcebergTableOperatorTest extends BaseTest {
 
   static String testTable = "inventory.test_table_operator";
-  @ConfigProperty(name = "debezium.sink.iceberg.table-prefix", defaultValue = "")
-  String tablePrefix;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
-  boolean upsert;
-  @ConfigProperty(name = "debezium.sink.iceberg." + DEFAULT_FILE_FORMAT, defaultValue = DEFAULT_FILE_FORMAT_DEFAULT)
-  String writeFormat;
   @Inject
   IcebergTableOperator icebergTableOperator;
-  IcebergChangeEventBuilder eventBuilder = new IcebergChangeEventBuilder().destination(testTable);
 
   @Inject
   IcebergChangeConsumer icebergConsumer;
 
   public Table createTable(RecordConverter sampleEvent) {
-    final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destination());
+    TableIdentifier tableId =  icebergConsumer.mapDestination(sampleEvent.destination());
     return icebergConsumer.loadIcebergTable(tableId, sampleEvent);
   }
 
@@ -99,8 +92,7 @@ class IcebergTableOperatorTest extends BaseSparkTest {
     );
     icebergTableOperator.addToTable(icebergTable, events);
 
-    getTableData(testTable).show(false);
-    Assertions.assertEquals(3, getTableData(testTable).count());
+    Assertions.assertEquals(3, Lists.newArrayList(getTableDataV2(testTable)).size());
     events.clear();
     events.add(new IcebergChangeEventBuilder()
         .destination(testTable)
@@ -112,10 +104,9 @@ class IcebergTableOperatorTest extends BaseSparkTest {
         .build()
     );
     icebergTableOperator.addToTable(icebergTable, events);
-    getTableData(testTable).show(false);
-    Assertions.assertEquals(4, getTableData(testTable).count());
-    Assertions.assertEquals(1, getTableData(testTable).where("user_name == 'Alice-Updated'").count());
-    //Assertions.assertEquals(1, getTableData(testTable).where("preferences.feature2 == 'feature2Val2'").count());
+    Assertions.assertEquals(4, Lists.newArrayList(getTableDataV2(testTable)).size());
+    Assertions.assertTrue(Lists.newArrayList(getTableDataV2(testTable)).toString().contains("Alice-Updated"));
+    Assertions.assertTrue(Lists.newArrayList(getTableDataV2(testTable)).toString().contains("feature2Val2"));
   }
 
   @Test

@@ -126,23 +126,6 @@ public class BaseSparkTest extends BaseTest {
     return numInsert;
   }
 
-  protected HadoopCatalog getIcebergCatalog() {
-    // loop and set hadoopConf
-    Configuration hadoopConf = new Configuration();
-    for (String name : ConfigProvider.getConfig().getPropertyNames()) {
-      if (name.startsWith("debezium.sink.iceberg.")) {
-        hadoopConf.set(name.substring("debezium.sink.iceberg.".length()),
-            ConfigProvider.getConfig().getValue(name, String.class));
-      }
-    }
-    HadoopCatalog icebergCatalog = new HadoopCatalog();
-    icebergCatalog.setConf(hadoopConf);
-
-    Map<String, String> configMap = new HashMap<>();
-    hadoopConf.forEach(e -> configMap.put(e.getKey(), e.getValue()));
-    icebergCatalog.initialize("iceberg", configMap);
-    return icebergCatalog;
-  }
 
   public Dataset<Row> getTableData(String table) throws InterruptedException {
     return getTableData(ICEBERG_CATALOG_TABLE_NAMESPACE, "debeziumcdc_" + table);
