@@ -259,7 +259,7 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
-            <version>42.7.4</version>
+            <version>42.7.5</version>
         </dependency>
         <dependency>
             <groupId>io.minio</groupId>
