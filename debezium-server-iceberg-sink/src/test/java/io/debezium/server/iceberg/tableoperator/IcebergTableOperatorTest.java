@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.IcebergChangeConsumer;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
@@ -22,7 +22,6 @@ import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -58,14 +57,16 @@ class IcebergTableOperatorTest extends BaseSparkTest {
   IcebergTableOperator icebergTableOperator;
   IcebergChangeEventBuilder eventBuilder = new IcebergChangeEventBuilder().destination(testTable);
 
+  @Inject
+  IcebergChangeConsumer icebergConsumer;
+
   public Table createTable(RecordConverter sampleEvent) {
-    HadoopCatalog icebergCatalog = getIcebergCatalog();
     final TableIdentifier tableId = TableIdentifier.of(Namespace.of(namespace), tablePrefix + sampleEvent.destination());
-    return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(true), writeFormat);
+    return icebergConsumer.loadIcebergTable(tableId, sampleEvent);
   }
 
   @Test
-  public void testIcebergTableOperator() throws InterruptedException {
+  public void testIcebergTableOperator() throws Exception {
     // setup
     List<RecordConverter> events = new ArrayList<>();
     Table icebergTable = this.createTable(
