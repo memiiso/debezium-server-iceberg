@@ -376,12 +376,8 @@
                         --add-opens=java.base/sun.security.action=ALL-UNNAMED
                         --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
                     </argLine>
-                    <systemProperties>
-                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                        <maven.home>${maven.home}</maven.home>
-                        <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
-                    </systemProperties>
                     <systemPropertyVariables>
+                        <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
@@ -409,9 +405,9 @@
                 <configuration>
                     <skipTests>${skipITs}</skipTests>
                     <enableAssertions>true</enableAssertions>
-                    <systemProperties>
+                    <systemPropertyVariables>
                         <test.type>IT</test.type>
-                    </systemProperties>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>

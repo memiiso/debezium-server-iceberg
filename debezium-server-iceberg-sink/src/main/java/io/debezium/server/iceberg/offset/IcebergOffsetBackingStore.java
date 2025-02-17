@@ -162,6 +162,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       if (!(obj instanceof HashMap))
         throw new ConnectException("Expected HashMap but found " + obj.getClass());
 
+      @SuppressWarnings("unchecked")
       Map<byte[], byte[]> raw = (Map<byte[], byte[]>) obj;
       for (Map.Entry<byte[], byte[]> mapEntry : raw.entrySet()) {
         ByteBuffer key = (mapEntry.getKey() != null) ? ByteBuffer.wrap(mapEntry.getKey()) : null;
