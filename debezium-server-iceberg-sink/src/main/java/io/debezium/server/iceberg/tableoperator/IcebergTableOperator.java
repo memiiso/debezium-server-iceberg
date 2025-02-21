@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.RecordConverter;
+import io.debezium.server.iceberg.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.AppendFiles;
@@ -159,12 +160,12 @@ public class IcebergTableOperator {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
-      Map<RecordConverter.SchemaConverter, List<RecordConverter>> eventsGroupedBySchema =
+      Map<SchemaConverter, List<RecordConverter>> eventsGroupedBySchema =
           events.stream()
               .collect(Collectors.groupingBy(RecordConverter::schemaConverter));
       LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
 
-      for (Map.Entry<RecordConverter.SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
+      for (Map.Entry<SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(createIdentifierFields));
         // add set of events to table
