@@ -11,13 +11,13 @@ class RecordConverterSchemaDataTest {
   @Test
   void testIcebergSchemaConverterDataBehaviourAndCloning() {
 
-    RecordSchemaData test = new RecordSchemaData(5);
+    IcebergSchemaInfo test = new IcebergSchemaInfo(5);
     test.identifierFieldIds().add(3);
     assertEquals(6, test.nextFieldId().incrementAndGet());
     assertEquals(Set.of(3), test.identifierFieldIds());
 
     // test cloning and then changing nextFieldId is persisting
-    RecordSchemaData copy = test.copyKeepIdentifierFieldIdsAndNextFieldId();
+    IcebergSchemaInfo copy = test.copyPreservingMetadata();
     assertEquals(6, test.nextFieldId().get());
     copy.nextFieldId().incrementAndGet();
     assertEquals(7, test.nextFieldId().get());
