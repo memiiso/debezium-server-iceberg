@@ -68,7 +68,7 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         df.schema().printTreeString();
 
         Assertions.assertEquals(3, df.count(), "Incorrect row count");
-        Assertions.assertEquals(DataTypes.DateType, getSchemaField(df.schema(), "c_date").dataType());
+        Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = CURRENT_DATE()").count());
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_date = to_date('2024-01-02', 'yyyy-MM-dd')").count());
         return true;
@@ -77,16 +77,6 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         return false;
       }
     });
-  }
-
-
-  public static StructField getSchemaField(StructType schema, String colName) {
-    for (StructField field : schema.fields()) {
-      if (field.name().equals(colName)) {
-        return field;
-      }
-    }
-    return null;
   }
 
   public static class TestProfile implements QuarkusTestProfile {
