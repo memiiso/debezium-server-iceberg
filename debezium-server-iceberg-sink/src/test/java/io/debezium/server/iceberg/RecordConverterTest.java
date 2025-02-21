@@ -20,6 +20,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Serde;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -32,7 +33,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 class RecordConverterTest {
   final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
   final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
@@ -41,6 +41,10 @@ class RecordConverterTest {
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
   RecordConverterTest() throws IOException {
+  }
+
+  @BeforeAll
+  static void setup() {
     // configure and set
     IcebergChangeConsumer.valSerde.configure(Collections.emptyMap(), false);
     IcebergChangeConsumer.valDeserializer = IcebergChangeConsumer.valSerde.deserializer();
