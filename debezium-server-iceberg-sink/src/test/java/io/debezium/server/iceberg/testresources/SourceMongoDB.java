@@ -19,7 +19,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 
-public class SourceMangoDB implements QuarkusTestResourceLifecycleManager {
+public class SourceMongoDB implements QuarkusTestResourceLifecycleManager {
 
   public static final int MONGODB_PORT = 27017;
   public static final GenericContainer<?> container = new GenericContainer(
