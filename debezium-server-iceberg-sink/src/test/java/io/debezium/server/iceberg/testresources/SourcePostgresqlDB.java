@@ -53,7 +53,7 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
       st.execute(query);
       con.close();
     } catch (Exception e) {
-      LOGGER.error("Error running SQL:\n{}", query, e);
+      e.printStackTrace();
       throw e;
     }
   }
