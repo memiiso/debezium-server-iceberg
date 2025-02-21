@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Set;
 
@@ -77,11 +78,11 @@ class RecordConverterTest {
     Schema schema = e.icebergSchema(true);
     RecordWrapper record = e.convert(schema, "__op");
     assertEquals("orders", record.getField("__table").toString());
-    assertEquals(16850, record.getField("order_date"));
+    assertEquals(LocalDate.parse("2016-02-19"), record.getField("order_date"));
     assertEquals(schema.toString(), """
         table {
           1: id: optional int
-          2: order_date: optional int
+          2: order_date: optional date
           3: purchaser: optional int
           4: quantity: optional int
           5: product_id: optional int
