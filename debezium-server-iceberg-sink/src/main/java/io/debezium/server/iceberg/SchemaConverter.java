@@ -185,13 +185,18 @@ public class SchemaConverter {
       case "int8":
       case "int16":
       case "int32": // int 4 bytes
-        return Types.IntegerType.get();
+        return switch (fieldTypeName) {
+          case "io.debezium.time.Date" -> Types.DateType.get();
+          default -> Types.IntegerType.get();
+        };
       case "int64": // long 8 bytes
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
-        } else {
-          return Types.LongType.get();
         }
+        return switch (fieldTypeName) {
+          case "io.debezium.time.Date" -> Types.DateType.get();
+          default -> Types.LongType.get();
+        };
       case "float8":
       case "float16":
       case "float32": // float is represented in 32 bits,
