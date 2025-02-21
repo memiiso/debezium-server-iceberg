@@ -117,7 +117,8 @@ public class IcebergChangeEventBuilder {
         ("{" +
             "\"schema\":" + this.keySchema() + "," +
             "\"payload\":" + (keyPayload.isEmpty() ? "null" : keyPayload.toString()) +
-            "} ").getBytes(StandardCharsets.UTF_8)
+            "} ").getBytes(StandardCharsets.UTF_8),
+        this.config
     );
     // reset the builder
     this.reset();

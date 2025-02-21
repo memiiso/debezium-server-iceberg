@@ -77,4 +77,8 @@ public interface IcebergConsumerConfig {
     @WithName(value = "debezium.sink.iceberg.allow-field-addition")
     @WithDefault(value = "true")
     public boolean allowFieldAddition();
+
+    default boolean isIsoStringTemporalMode() {
+        return temporalPrecisionMode() == TemporalPrecisionMode.ISOSTRING;
+    }
 }

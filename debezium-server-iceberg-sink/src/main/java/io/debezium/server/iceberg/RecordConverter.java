@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.debezium.server.iceberg.IcebergChangeConsumer.keyDeserializer;
-import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
 
 /**
  * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
@@ -50,53 +49,49 @@ public class RecordConverter {
   protected final String destination;
   protected final byte[] valueData;
   protected final byte[] keyData;
-  private JsonNode value;
-  private JsonNode key;
+  private final JsonNode value;
+  private final JsonNode key;
+  private final IcebergConsumerConfig config;
 
-  public RecordConverter(String destination, byte[] valueData, byte[] keyData) {
+  public RecordConverter(String destination, byte[] valueData, byte[] keyData, IcebergConsumerConfig config) {
     this.destination = destination;
     this.valueData = valueData;
     this.keyData = keyData;
+    this.config = config;
+    this.key = keyDeserializer.deserialize(destination, keyData);
+    this.value = keyDeserializer.deserialize(destination, valueData);
   }
 
   public JsonNode key() {
-    if (key == null && keyData != null) {
-      key = keyDeserializer.deserialize(destination, keyData);
-    }
-
     return key;
   }
 
   public JsonNode value() {
-    if (value == null && valueData != null) {
-      value = valDeserializer.deserialize(destination, valueData);
-    }
-
     return value;
   }
 
-  public Long cdcSourceTsMsValue(String cdcSourceTsMsField) {
+  public Long cdcSourceTsMsValue() {
 
-    final JsonNode element = value().get(cdcSourceTsMsField);
+    final JsonNode element = value().get(config.cdcSourceTsMsField());
     if (element == null) {
-      throw new DebeziumException("Field '" + cdcSourceTsMsField + "' not found in JSON object: " + value());
+      throw new DebeziumException("Field '" + config.cdcSourceTsMsField() + "' not found in JSON object: " + value());
     }
 
     try {
       return element.asLong();
     } catch (NumberFormatException e) {
-      throw new DebeziumException("Error converting field '" + cdcSourceTsMsField + "' value '" + element + "' to Long: " + e.getMessage(), e);
+      throw new DebeziumException("Error converting field '" + config.cdcSourceTsMsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
     }
   }
 
-  public Operation cdcOpValue(String cdcOpField) {
-    if (!value().has(cdcOpField)) {
-      throw new DebeziumException("The value for field `" + cdcOpField + "` is missing. " +
+  public Operation cdcOpValue() {
+    if (!value().has(config.cdcOpField())) {
+      throw new DebeziumException("The value for field `" + config.cdcOpField() + "` is missing. " +
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
 
-    final String opFieldValue = value().get(cdcOpField).asText("c");
+    final String opFieldValue = value().get(config.cdcOpField()).asText("c");
 
     return switch (opFieldValue) {
       case "u" -> Operation.UPDATE;
@@ -105,13 +100,17 @@ public class RecordConverter {
       case "c" -> Operation.INSERT;
       case "i" -> Operation.INSERT;
       default ->
-          throw new DebeziumException("Unexpected `" + cdcOpField + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+          throw new DebeziumException("Unexpected `" + config.cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
   }
 
   public SchemaConverter schemaConverter() {
     try {
-      return new SchemaConverter(mapper.readTree(valueData).get("schema"), keyData == null ? null : mapper.readTree(keyData).get("schema"));
+      return new SchemaConverter(
+          mapper.readTree(valueData).get("schema"),
+          keyData == null ? null : mapper.readTree(keyData).get("schema"),
+          config
+      );
     } catch (IOException e) {
       throw new DebeziumException("Failed to get event schema", e);
     }
@@ -124,7 +123,7 @@ public class RecordConverter {
    *
    * @return True if it's a schema change event, false otherwise.
    */
-  private boolean isSchemaChangeEvent() {
+  public boolean isSchemaChangeEvent() {
     return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
   }
 
@@ -132,22 +131,10 @@ public class RecordConverter {
   /**
    * Converts the Kafka Connect schema to an Iceberg schema.
    *
-   * @param createIdentifierFields Whether to include identifier fields in the Iceberg schema.
-   *                               Identifier fields are typically used for primary keys and are
-   *                               required for upsert/merge operations.  They should be *excluded*
-   *                               for schema change topic messages to ensure append-only mode.
    * @return The Iceberg schema.
    */
-  public Schema icebergSchema(boolean createIdentifierFields) {
-    // Check if the message is a schema change event (DDL statement).
-    // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
-    // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
-    if (isSchemaChangeEvent()) {
-      LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-      return schemaConverter().icebergSchema(false); // Force no identifier fields for schema changes
-    }
-
-    return schemaConverter().icebergSchema(createIdentifierFields);
+  public Schema icebergSchema() {
+    return schemaConverter().icebergSchema();
   }
 
   public String destination() {
@@ -159,9 +146,9 @@ public class RecordConverter {
     return new RecordWrapper(row, Operation.INSERT);
   }
 
-  public RecordWrapper convert(Schema schema, String cdcOpField) {
+  public RecordWrapper convert(Schema schema) {
     GenericRecord row = convert(schema.asStruct(), value());
-    Operation op = cdcOpValue(cdcOpField);
+    Operation op = cdcOpValue();
     return new RecordWrapper(row, op);
   }
 
@@ -209,7 +196,7 @@ public class RecordConverter {
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
         break;
       case DATE:
-        if (node.isNull()){
+        if (node.isNull()) {
           val = null;
         } else if ((node.isInt())) {
           // io.debezium.time.Date

@@ -24,7 +24,6 @@ import org.apache.iceberg.UpdateSchema;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,13 +92,13 @@ public class IcebergTableOperator {
    */
   private int compareByTsThenOp(RecordConverter lhs, RecordConverter rhs) {
 
-    int result = Long.compare(lhs.cdcSourceTsMsValue(config.cdcSourceTsMsField()), rhs.cdcSourceTsMsValue(config.cdcSourceTsMsField()));
+    int result = Long.compare(lhs.cdcSourceTsMsValue(), rhs.cdcSourceTsMsValue());
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(config.cdcOpField()), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(), -1)
           .compareTo(
-              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(config.cdcOpField()), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(), -1)
           );
     }
 
@@ -159,7 +158,7 @@ public class IcebergTableOperator {
 
       for (Map.Entry<SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
-        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(config.createIdentifierFields()));
+        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
@@ -179,7 +178,7 @@ public class IcebergTableOperator {
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
       for (RecordConverter e : events) {
-        final RecordWrapper record = (config.upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema, config.cdcOpField()) : e.convertAsAppend(tableSchema);
+        final RecordWrapper record = (config.upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
         writer.write(record);
       }
 

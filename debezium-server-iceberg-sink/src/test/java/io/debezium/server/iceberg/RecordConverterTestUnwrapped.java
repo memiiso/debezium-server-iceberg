@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @TestProfile(RecordConverterTestUnwrapped.TestProfile.class)
@@ -45,11 +46,12 @@ class RecordConverterTestUnwrapped {
     TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      dbzEvent.toIcebergChangeEvent(config).icebergSchema(true);
+      dbzEvent.toIcebergChangeEvent(config).icebergSchema();
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
-    Schema schema = dbzEvent.toIcebergChangeEvent(config).icebergSchema(false);
+    when(config.createIdentifierFields()).thenReturn(false);
+    Schema schema = dbzEvent.toIcebergChangeEvent(config).icebergSchema();
     assertEquals(config.temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
@@ -76,7 +78,7 @@ class RecordConverterTestUnwrapped {
     RecordConverter ie = dbzEvent.toIcebergChangeEvent(config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      ie.icebergSchema(true);
+      ie.icebergSchema();
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
     // print converted event value!

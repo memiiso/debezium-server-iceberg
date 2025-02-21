@@ -56,7 +56,7 @@ class RecordConverterBuilderTest {
         .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", true)
         .build();
-    Assertions.assertTrue(schema1.sameSchema(t.icebergSchema(true)));
+    Assertions.assertTrue(schema1.sameSchema(t.icebergSchema()));
 
     Schema schema2 = new Schema(
         optional(1, "id", Types.IntegerType.get()),
@@ -73,8 +73,8 @@ class RecordConverterBuilderTest {
         .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", true)
         .build();
-    Assertions.assertEquals(schema2.identifierFieldIds(), t2.icebergSchema(true).identifierFieldIds());
-    Assertions.assertTrue(schema2.sameSchema(t2.icebergSchema(true)));
+    Assertions.assertEquals(schema2.identifierFieldIds(), t2.icebergSchema().identifierFieldIds());
+    Assertions.assertTrue(schema2.sameSchema(t2.icebergSchema()));
   }
 
 

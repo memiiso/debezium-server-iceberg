@@ -44,6 +44,8 @@ class RecordConverterTest {
 
   @Inject
   IcebergChangeEventBuilder eventBuilder;
+  @Inject
+  IcebergConsumerConfig config;
 
   RecordConverterTest() throws IOException {
   }
@@ -61,8 +63,8 @@ class RecordConverterTest {
   @Test
   public void testNestedJsonRecord() {
     RecordConverter e = new RecordConverter("test",
-        serdeWithSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema(true);
+        serdeWithSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    Schema schema = e.icebergSchema();
     System.out.println(schema.toString());
     assertEquals(schema.toString(), ("""
         table {
@@ -78,9 +80,9 @@ class RecordConverterTest {
   @Test
   public void testUnwrapJsonRecord() {
     RecordConverter e = new RecordConverter("test",
-        unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema(true);
-    RecordWrapper record = e.convert(schema, "__op");
+        unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    Schema schema = e.icebergSchema();
+    RecordWrapper record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(LocalDate.parse("2016-02-19"), record.getField("order_date"));
     assertEquals(schema.toString(), """
@@ -103,9 +105,9 @@ class RecordConverterTest {
   @Test
   public void testNestedArrayJsonRecord() {
     RecordConverter e = new RecordConverter("test",
-        unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null);
+        unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null, config);
 
-    Schema schema = e.icebergSchema(true);
+    Schema schema = e.icebergSchema();
     assertEquals(schema.toString(), """
         table {
           1: name: optional string
@@ -120,7 +122,7 @@ class RecordConverterTest {
     assertEquals(schema.identifierFieldIds(), Set.of());
     assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
     assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
-    RecordWrapper record = e.convert(schema,"__op");
+    RecordWrapper record = e.convert(schema);
     //System.out.println(record);
     assertTrue(record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
@@ -128,8 +130,8 @@ class RecordConverterTest {
   @Test
   public void testNestedArray2JsonRecord() {
     RecordConverter e = new RecordConverter("test",
-        unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema(true);
+        unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null, config);
+    Schema schema = e.icebergSchema();
     System.out.println(schema);
     assertEquals(schema.toString(), """
         table {
@@ -145,9 +147,9 @@ class RecordConverterTest {
   @Test
   public void testNestedGeomJsonRecord() {
     RecordConverter e = new RecordConverter("test",
-        unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null);
-    Schema schema = e.icebergSchema(true);
-    RecordWrapper record = e.convert(schema,"__op");
+        unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    Schema schema = e.icebergSchema();
+    RecordWrapper record = e.convert(schema);
     assertEquals(schema.toString(), """
         table {
           1: id: optional int
@@ -198,7 +200,7 @@ class RecordConverterTest {
         .addField("__deleted", false)
         .build();
 
-    Schema schema = t1.icebergSchema(true);
+    Schema schema = t1.icebergSchema();
     assertEquals(schema.toString(), """
         table {
           1: id: required int (id)
