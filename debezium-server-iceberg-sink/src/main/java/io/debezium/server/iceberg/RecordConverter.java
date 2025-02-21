@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
+import io.debezium.time.IsoDate;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
@@ -23,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -205,6 +207,22 @@ public class RecordConverter {
         break;
       case UUID:
         val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
+        break;
+      case DATE:
+        if (node.isNull()){
+          val = null;
+        } else if ((node.isInt())) {
+          // io.debezium.time.Date
+          // org.apache.kafka.connect.data.Date
+          // Represents the number of days since the epoch.
+          val = LocalDate.ofEpochDay(node.longValue());
+        } else if (node.isTextual()) {
+          // io.debezium.time.IsoDate
+          // Represents date values in UTC format, according to the ISO 8601 standard, for example, 2017-09-15Z.
+          val = LocalDate.parse(node.asText(), IsoDate.FORMATTER);
+        } else {
+          throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+        }
         break;
       case TIMESTAMP:
         if ((node.isLong() || node.isNumber()) && TS_MS_FIELDS.contains(field.name())) {

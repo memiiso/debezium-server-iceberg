@@ -10,8 +10,6 @@ package io.debezium.server.iceberg.testresources;
 
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.TestConfigSource;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.hadoop.HadoopCatalog;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,7 +23,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
@@ -145,6 +142,15 @@ public class BaseSparkTest extends BaseTest {
     dbs.show(false);
     Dataset<Table> tables = spark.catalog().listTables();
     tables.show(false);
+  }
+
+  public static StructField getSchemaField(Dataset<Row> df, String colName) {
+    for (StructField field : df.schema().fields()) {
+      if (field.name().equals(colName)) {
+        return field;
+      }
+    }
+    return null;
   }
 
 }

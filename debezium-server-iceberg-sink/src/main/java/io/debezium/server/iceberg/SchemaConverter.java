@@ -26,6 +26,16 @@ public class SchemaConverter {
     return keySchema;
   }
 
+  private static String getFieldName(JsonNode fieldSchema) {
+    JsonNode nameNode = fieldSchema.get("name");
+    if (nameNode == null || nameNode.isNull()) {
+      return "";
+    }
+
+    return nameNode.textValue();
+  }
+
+
   /***
    * converts given debezium filed to iceberg field equivalent. does recursion in case of complex/nested types.
    *
@@ -36,6 +46,12 @@ public class SchemaConverter {
    */
   private static IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
     String fieldType = fieldSchema.get("type").textValue();
+    String fieldTypeName = getFieldName(fieldSchema);
+
+    if (fieldType == null || fieldType.isBlank()) {
+      throw new DebeziumException("Unexpected schema field, field type is null or empty, fieldSchema:" + fieldSchema + " fieldName:" + fieldName);
+    }
+
     boolean isPkField = !(keySchemaNode == null || keySchemaNode.isNull());
     switch (fieldType) {
       case "struct":
@@ -78,7 +94,7 @@ public class SchemaConverter {
         return schemaData;
       default:
         // its primitive field
-        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType));
+        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType, fieldTypeName));
         schemaData.fields().add(field);
         if (isPkField) schemaData.identifierFieldIds().add(field.fieldId());
         return schemaData;
@@ -94,21 +110,18 @@ public class SchemaConverter {
     if (node != null && !node.isNull() && node.has("fields") && node.get("fields").isArray()) {
       return node.get("fields");
     }
-
     return RecordConverter.mapper.createObjectNode();
   }
 
   private static JsonNode findNodeFieldByName(String fieldName, JsonNode node) {
-
     for (JsonNode field : getNodeFieldsArray(node)) {
-
-      if (Objects.equals(field.get("field").textValue(), fieldName)) {
+      if (field.has("field") && Objects.equals(field.get("field").textValue(), fieldName)) {
         return field;
       }
     }
-
     return null;
   }
+
 
   /***
    * Converts debezium event fields to iceberg equivalent and returns list of iceberg fields.
@@ -167,18 +180,21 @@ public class SchemaConverter {
 
   }
 
-  private static Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType) {
+  private static Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
+    // Debezium Temporal types: https://debezium.io/documentation//reference/connectors/postgresql.html#postgresql-temporal-types
     switch (fieldType) {
       case "int8":
       case "int16":
       case "int32": // int 4 bytes
-        return Types.IntegerType.get();
+        return switch (fieldTypeName) {
+          case "io.debezium.time.Date", "org.apache.kafka.connect.data.Date" -> Types.DateType.get();
+          default -> Types.IntegerType.get();
+        };
       case "int64": // long 8 bytes
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
-        } else {
-          return Types.LongType.get();
         }
+        return Types.LongType.get();
       case "float8":
       case "float16":
       case "float32": // float is represented in 32 bits,
@@ -189,7 +205,10 @@ public class SchemaConverter {
       case "boolean":
         return Types.BooleanType.get();
       case "string":
-        return Types.StringType.get();
+        return switch (fieldTypeName) {
+          case "io.debezium.time.IsoDate" -> Types.DateType.get();
+          default -> Types.StringType.get();
+        };
       case "uuid":
         return Types.UUIDType.get();
       case "bytes":
