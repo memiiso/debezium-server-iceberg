@@ -25,8 +25,10 @@ import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +96,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "VALUES (1, null, null, null,null,null,null," +
         "null,null,null,null,null,null,null," +
         "null,null, null, null)," +
-        "(2, 'val_text', 'A', 123, current_date , current_timestamp, current_timestamp," +
+        "(2, 'val_text', 'A', 123, '2024-05-05'::DATE , current_timestamp, current_timestamp," +
         "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea," +
         "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb, " +
@@ -118,7 +120,12 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       try {
         Dataset<Row> df = getTableData("testc.inventory.data_types");
         df.show(false);
-        return df.count() == 2;
+
+        Assertions.assertEquals(2, df.count());
+
+        Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = to_date('2024-05-05', 'yyyy-MM-dd')").count());
+        return true;
       } catch (Exception e) {
         return false;
       }
