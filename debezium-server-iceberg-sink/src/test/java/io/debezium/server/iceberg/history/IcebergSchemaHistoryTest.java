@@ -8,9 +8,7 @@
 
 package io.debezium.server.iceberg.history;
 
-import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
@@ -18,11 +16,9 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -76,6 +72,8 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
       config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
       config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_table");
       config.put("debezium.source.table.whitelist", "inventory.customers");
+      // "The 'adaptive' time.precision.mode is not supported for this connector"
+      config.put("%mysql.debezium.source.time.precision.mode", "connect");
       return config;
     }
 
