@@ -45,11 +45,11 @@ class RecordConverterTestUnwrapped {
     TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      dbzEvent.toIcebergChangeEvent().icebergSchema(true);
+      dbzEvent.toIcebergChangeEvent(config).icebergSchema(true);
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
-    Schema schema = dbzEvent.toIcebergChangeEvent().icebergSchema(false);
+    Schema schema = dbzEvent.toIcebergChangeEvent(config).icebergSchema(false);
     assertEquals(config.temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
@@ -73,7 +73,7 @@ class RecordConverterTestUnwrapped {
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
     TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
-    RecordConverter ie = dbzEvent.toIcebergChangeEvent();
+    RecordConverter ie = dbzEvent.toIcebergChangeEvent(config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema(true);

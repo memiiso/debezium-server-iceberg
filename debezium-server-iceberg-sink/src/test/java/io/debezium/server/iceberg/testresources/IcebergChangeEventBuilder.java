@@ -13,7 +13,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.server.iceberg.IcebergChangeConsumerTest;
+import io.debezium.server.iceberg.IcebergConsumerConfig;
 import io.debezium.server.iceberg.RecordConverter;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +29,7 @@ import java.util.Map;
  *
  * @author Ismail Simsek
  */
+@ApplicationScoped
 public class IcebergChangeEventBuilder {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
@@ -33,8 +37,8 @@ public class IcebergChangeEventBuilder {
   ObjectNode keyPayload = JsonNodeFactory.instance.objectNode();
   String destination = "test";
 
-  public IcebergChangeEventBuilder() {
-  }
+  @Inject
+  IcebergConsumerConfig config;
 
   public IcebergChangeEventBuilder destination(String destination) {
     this.destination = destination;
@@ -104,7 +108,7 @@ public class IcebergChangeEventBuilder {
   }
 
   public RecordConverter build() {
-    return new RecordConverter(
+    RecordConverter result = new RecordConverter(
         this.destination,
         ("{" +
             "\"schema\":" + this.valueSchema() + "," +
@@ -115,7 +119,17 @@ public class IcebergChangeEventBuilder {
             "\"payload\":" + (keyPayload.isEmpty() ? "null" : keyPayload.toString()) +
             "} ").getBytes(StandardCharsets.UTF_8)
     );
+    // reset the builder
+    this.reset();
+    return result;
   }
+
+  private void reset() {
+    payload = JsonNodeFactory.instance.objectNode();
+    keyPayload = JsonNodeFactory.instance.objectNode();
+    destination = "test";
+  }
+
 
   private ObjectNode valueSchema() {
     return getSchema(payload);

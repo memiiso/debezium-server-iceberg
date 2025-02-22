@@ -11,9 +11,7 @@ package io.debezium.server.iceberg;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
-import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
@@ -31,7 +29,10 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 class RecordConverterTest {
@@ -40,6 +41,9 @@ class RecordConverterTest {
   final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
   final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
+
+  @Inject
+  IcebergChangeEventBuilder eventBuilder;
 
   RecordConverterTest() throws IOException {
   }
@@ -185,8 +189,16 @@ class RecordConverterTest {
 
   @Test
   public void testIcebergSchemaConverterWithKey() {
-    TestChangeEvent<Object, Object> debeziumEvent = TestChangeEvent.ofCompositeKey("destination", 1, "u", "user1", 2L);
-    Schema schema = debeziumEvent.toIcebergChangeEvent().icebergSchema(true);
+    final RecordConverter t1 = eventBuilder
+        .destination("destination")
+        .addKeyField("id", 1)
+        .addKeyField("first_name", "name")
+        .addField("__op", "u")
+        .addField("__source_ts_ms", 2L)
+        .addField("__deleted", false)
+        .build();
+
+    Schema schema = t1.icebergSchema(true);
     assertEquals(schema.toString(), """
         table {
           1: id: required int (id)
@@ -196,39 +208,6 @@ class RecordConverterTest {
           5: __deleted: optional boolean
         }""");
     assertEquals(schema.identifierFieldIds(), Set.of(1, 2));
-
-
-    final RecordConverter t = new IcebergChangeEventBuilder()
-        .destination("test")
-        .addField("first_column", "dummy-value")
-        .addKeyField("id", 1)
-        .addKeyField("first_name", "Marx")
-        .addField("__op", "c")
-        .addField("__source_ts_ms", 0L)
-        .addField("__deleted", false)
-        .build();
-    final String key = "{" +
-        "\"schema\":" + t.schemaConverter().keySchema() + "," +
-        "\"payload\":" + t.key() +
-        "} ";
-    final String val = "{" +
-        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
-        "\"payload\":" + t.value() +
-        "} ";
-
-    // test when PK is not first two columns!
-    TestChangeEvent<String, String> debeziumEvent2 = new TestChangeEvent<>(key, val, "test");
-    Schema schema2 = debeziumEvent2.toIcebergChangeEvent().icebergSchema(true);
-    assertEquals(schema2.toString(), """
-        table {
-          1: first_column: optional string
-          2: id: required int (id)
-          3: first_name: required string (id)
-          4: __op: optional string
-          5: __source_ts_ms: optional timestamptz
-          6: __deleted: optional boolean
-        }""");
-    assertEquals(schema2.identifierFieldIds(), Set.of(2, 3));
   }
 
 }

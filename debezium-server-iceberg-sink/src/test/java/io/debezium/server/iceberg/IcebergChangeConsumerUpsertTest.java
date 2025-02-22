@@ -44,6 +44,8 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   @Inject
   IcebergChangeConsumer consumer;
+  @Inject
+  TestChangeEventFactory eventFactory;
   final static Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
@@ -51,9 +53,9 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     String dest = "testc.inventory.customers_upsert";
     // test simple inserts
     List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
-    records.add(TestChangeEvent.of(dest, 1, "c"));
-    records.add(TestChangeEvent.of(dest, 2, "c"));
-    records.add(TestChangeEvent.of(dest, 3, "c"));
+    records.add(eventFactory.of(dest, 1, "c"));
+    records.add(eventFactory.of(dest, 2, "c"));
+    records.add(eventFactory.of(dest, 3, "c"));
     consumer.handleBatch(records, TestUtil.getCommitter());
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert");
@@ -62,10 +64,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     // 3 records should be updated 4th one should be inserted
     records.clear();
-    records.add(TestChangeEvent.of(dest, 1, "r"));
-    records.add(TestChangeEvent.of(dest, 2, "d"));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV1"));
-    records.add(TestChangeEvent.of(dest, 4, "c"));
+    records.add(eventFactory.of(dest, 1, "r"));
+    records.add(eventFactory.of(dest, 2, "d"));
+    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV1"));
+    records.add(eventFactory.of(dest, 4, "c"));
     consumer.handleBatch(records, TestUtil.getCommitter());
 
     ds = getTableData("testc.inventory.customers_upsert");
@@ -79,17 +81,17 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     records.clear();
     // incase of duplicate records it should only keep the latest by epoch ts
-    records.add(TestChangeEvent.of(dest, 3, "r", "UpdatednameV2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV3", TEST_EPOCH_MS + 2L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV4", TEST_EPOCH_MS + 3L));
-    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V1", TEST_EPOCH_MS + 4L));
-    records.add(TestChangeEvent.of(dest, 4, "u", "Updatedname-4-V2", TEST_EPOCH_MS + 5L));
-    records.add(TestChangeEvent.of(dest, 4, "r", "Updatedname-4-V3", TEST_EPOCH_MS + 6L));
-    records.add(TestChangeEvent.of(dest, 5, "r", TEST_EPOCH_MS + 7L));
-    records.add(TestChangeEvent.of(dest, 6, "r", TEST_EPOCH_MS + 8L));
-    records.add(TestChangeEvent.of(dest, 6, "r", TEST_EPOCH_MS + 9L));
-    records.add(TestChangeEvent.of(dest, 6, "u", TEST_EPOCH_MS + 10L));
-    records.add(TestChangeEvent.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 11L));
+    records.add(eventFactory.of(dest, 3, "r", "UpdatednameV2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV3", TEST_EPOCH_MS + 2L));
+    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV4", TEST_EPOCH_MS + 3L));
+    records.add(eventFactory.of(dest, 4, "u", "Updatedname-4-V1", TEST_EPOCH_MS + 4L));
+    records.add(eventFactory.of(dest, 4, "u", "Updatedname-4-V2", TEST_EPOCH_MS + 5L));
+    records.add(eventFactory.of(dest, 4, "r", "Updatedname-4-V3", TEST_EPOCH_MS + 6L));
+    records.add(eventFactory.of(dest, 5, "r", TEST_EPOCH_MS + 7L));
+    records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 8L));
+    records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 9L));
+    records.add(eventFactory.of(dest, 6, "u", TEST_EPOCH_MS + 10L));
+    records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 11L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.sort("id").show(false);
@@ -102,10 +104,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     // in case of duplicate records including epoch ts, its should keep latest one based on operation priority
     // ("c", 1, "r", 2, "u", 3, "d", 4);
     records.clear();
-    records.add(TestChangeEvent.of(dest, 3, "d", "UpdatednameV5", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.of(dest, 3, "u", "UpdatednameV6", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.of(dest, 6, "c", "Updatedname-6-V2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.of(dest, 6, "r", "Updatedname-6-V3", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 3, "d", "UpdatednameV5", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV6", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 6, "c", "Updatedname-6-V2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 6, "r", "Updatedname-6-V3", TEST_EPOCH_MS + 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -114,10 +116,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
-    records.add(TestChangeEvent.of(dest, 7, "u", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.of(dest, 7, "u", TEST_EPOCH_MS + 2L));
-    records.add(TestChangeEvent.of(dest, 7, "r", TEST_EPOCH_MS + 3L));
-    records.add(TestChangeEvent.of(dest, 7, "u", "Updatedname-7-V1", TEST_EPOCH_MS + 4L));
+    records.add(eventFactory.of(dest, 7, "u", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.of(dest, 7, "u", TEST_EPOCH_MS + 2L));
+    records.add(eventFactory.of(dest, 7, "r", TEST_EPOCH_MS + 3L));
+    records.add(eventFactory.of(dest, 7, "u", "Updatedname-7-V1", TEST_EPOCH_MS + 4L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -130,10 +132,10 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     String dest = "testc.inventory.customers_upsert_compositekey";
     // test simple inserts
     List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
+    records.add(eventFactory.ofCompositeKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofCompositeKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
+    records.add(eventFactory.ofCompositeKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
     consumer.handleBatch(records, TestUtil.getCommitter());
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_compositekey");
@@ -142,7 +144,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     Assertions.assertEquals(ds.where("id = 1").count(), 2);
 
     records.clear();
-    records.add(TestChangeEvent.ofCompositeKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofCompositeKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
@@ -155,9 +157,9 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     String dest = "testc.inventory.customers_upsert_nokey";
     // when there is no PK it should fall back to append mode
     List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
+    records.add(eventFactory.ofNoKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofNoKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();
@@ -165,9 +167,9 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     Assertions.assertEquals(ds.where("id = 1").count(), 3);
 
     records.clear();
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
-    records.add(TestChangeEvent.ofNoKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
+    records.add(eventFactory.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofNoKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
+    records.add(eventFactory.ofNoKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();

@@ -11,16 +11,17 @@ package io.debezium.server.iceberg.tableoperator;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
-
-import java.util.List;
-import java.util.Set;
-
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
+
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
@@ -31,6 +32,9 @@ import static org.apache.iceberg.types.Types.NestedField.required;
 @QuarkusTest
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 class RecordConverterBuilderTest {
+
+  @Inject
+  IcebergChangeEventBuilder eventBuilder;
 
   @Test
   public void testIcebergChangeEventBuilder() {
@@ -46,8 +50,7 @@ class RecordConverterBuilderTest {
         , Set.of(1)
     );
 
-    IcebergChangeEventBuilder b = new IcebergChangeEventBuilder();
-    RecordConverter t = b.
+    RecordConverter t = eventBuilder.
         addKeyField("id", 1)
         .addField("data", "testdatavalue")
         .addField("preferences", "feature1", true)
@@ -64,14 +67,14 @@ class RecordConverterBuilderTest {
         ))
     );
 
-    b = new IcebergChangeEventBuilder();
-    t = b.
+    RecordConverter t2 = eventBuilder.
         addField("id", 1)
         .addField("data", "testdatavalue")
         .addField("preferences", "feature1", true)
         .addField("preferences", "feature2", true)
         .build();
-    Assertions.assertTrue(schema2.sameSchema(t.icebergSchema(true)));
+    Assertions.assertEquals(schema2.identifierFieldIds(), t2.icebergSchema(true).identifierFieldIds());
+    Assertions.assertTrue(schema2.sameSchema(t2.icebergSchema(true)));
   }
 
 
