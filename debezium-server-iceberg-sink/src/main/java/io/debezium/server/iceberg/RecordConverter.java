@@ -329,9 +329,7 @@ public class RecordConverter {
 
     if (node.isTextual()) {
       return switch (temporalPrecisionMode) {
-        case ISOSTRING -> OffsetDateTime.parse(node.asText(), ZonedTimestamp.FORMATTER);
-        default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+        default -> OffsetDateTime.parse(node.asText(), ZonedTimestamp.FORMATTER);
       };
     }
 
