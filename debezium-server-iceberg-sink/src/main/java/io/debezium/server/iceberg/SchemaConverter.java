@@ -196,7 +196,13 @@ public class SchemaConverter {
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
         }
-        return Types.LongType.get();
+        return switch (fieldTypeName) {
+          case "io.debezium.time.Timestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.MicroTimestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.NanoTimestamp" -> Types.TimestampType.withoutZone();
+          case "org.apache.kafka.connect.data.Timestamp" -> Types.TimestampType.withoutZone();
+          default -> Types.LongType.get();
+        };
       case "float8":
       case "float16":
       case "float32": // float is represented in 32 bits,
@@ -209,6 +215,8 @@ public class SchemaConverter {
       case "string":
         return switch (fieldTypeName) {
           case "io.debezium.time.IsoDate" -> Types.DateType.get();
+          case "io.debezium.time.IsoTimestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.ZonedTimestamp" -> Types.TimestampType.withZone();
           default -> Types.StringType.get();
         };
       case "uuid":

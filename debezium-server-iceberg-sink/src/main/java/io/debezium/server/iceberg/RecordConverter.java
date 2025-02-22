@@ -11,22 +11,26 @@ package io.debezium.server.iceberg;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
+import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
+import io.debezium.time.IsoTimestamp;
+import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.util.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -152,7 +156,19 @@ public class RecordConverter {
     return new RecordWrapper(row, op);
   }
 
-  private static GenericRecord convert(Types.StructType tableFields, JsonNode data) {
+  public static LocalDateTime timestampFromMillis(long millisFromEpoch) {
+    return ChronoUnit.MILLIS.addTo(DateTimeUtil.EPOCH, millisFromEpoch).toLocalDateTime();
+  }
+
+  public static OffsetDateTime timestamptzFromNanos(long nanosFromEpoch) {
+    return ChronoUnit.NANOS.addTo(DateTimeUtil.EPOCH, nanosFromEpoch);
+  }
+
+  public static OffsetDateTime timestamptzFromMillis(long millisFromEpoch) {
+    return ChronoUnit.MILLIS.addTo(DateTimeUtil.EPOCH, millisFromEpoch);
+  }
+
+  private GenericRecord convert(Types.StructType tableFields, JsonNode data) {
     LOGGER.debug("Processing nested field:{}", tableFields);
     GenericRecord record = GenericRecord.create(tableFields);
 
@@ -169,7 +185,7 @@ public class RecordConverter {
     return record;
   }
 
-  private static Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
+  private Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
     final Object val;
     switch (field.type().typeId()) {
@@ -197,29 +213,32 @@ public class RecordConverter {
         break;
       case DATE:
         if (node.isNull()) {
-          val = null;
-        } else if ((node.isInt())) {
+          return null;
+        }
+        if ((node.isInt())) {
           // io.debezium.time.Date
           // org.apache.kafka.connect.data.Date
           // Represents the number of days since the epoch.
-          val = LocalDate.ofEpochDay(node.longValue());
-        } else if (node.isTextual()) {
+          return LocalDate.ofEpochDay(node.longValue());
+        }
+        if (node.isTextual()) {
           // io.debezium.time.IsoDate
           // Represents date values in UTC format, according to the ISO 8601 standard, for example, 2017-09-15Z.
-          val = LocalDate.parse(node.asText(), IsoDate.FORMATTER);
-        } else {
-          throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+          return LocalDate.parse(node.asText(), IsoDate.FORMATTER);
         }
-        break;
+        throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
-        if ((node.isLong() || node.isNumber()) && TS_MS_FIELDS.contains(field.name())) {
-          val = OffsetDateTime.ofInstant(Instant.ofEpochMilli(node.longValue()), ZoneOffset.UTC);
-        } else if (node.isTextual()) {
-          val = OffsetDateTime.parse(node.asText());
-        } else {
-          throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+        if (node.isNull()) {
+          return null;
         }
-        break;
+        if (node.isNumber() && TS_MS_FIELDS.contains(field.name())) {
+          return timestamptzFromMillis(node.asLong());
+        }
+        boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
+        if (isTsWithZone) {
+          return convertOffsetDateTimeValue(field, node, config.temporalPrecisionMode());
+        }
+        return convertLocalDateTimeValue(field, node, config.temporalPrecisionMode());
       case BINARY:
         try {
           val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
@@ -274,5 +293,49 @@ public class RecordConverter {
     return val;
   }
 
+  public LocalDateTime convertLocalDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
+
+    if (node.isNumber()) {
+      return switch (config.temporalPrecisionMode()) {
+        case MICROSECONDS -> DateTimeUtil.timestampFromMicros(node.asLong());
+        case NANOSECONDS -> DateTimeUtil.timestampFromNanos(node.asLong());
+        case CONNECT -> timestampFromMillis(node.asLong());
+        default ->
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+      };
+    }
+
+    if (node.isTextual()) {
+      return switch (temporalPrecisionMode) {
+        case ISOSTRING -> LocalDateTime.parse(node.asText(), IsoTimestamp.FORMATTER);
+        default ->
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+      };
+    }
+    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+  }
+
+  private OffsetDateTime convertOffsetDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
+    if (node.isNumber()) {
+      // non Timezone
+      return switch (temporalPrecisionMode) {
+        case MICROSECONDS -> DateTimeUtil.timestamptzFromMicros(node.asLong());
+        case NANOSECONDS -> timestamptzFromNanos(node.asLong());
+        case CONNECT -> timestamptzFromMillis(node.asLong());
+        default ->
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+      };
+    }
+
+    if (node.isTextual()) {
+      return switch (temporalPrecisionMode) {
+        case ISOSTRING -> OffsetDateTime.parse(node.asText(), ZonedTimestamp.FORMATTER);
+        default ->
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+      };
+    }
+
+    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+  }
 
 }
