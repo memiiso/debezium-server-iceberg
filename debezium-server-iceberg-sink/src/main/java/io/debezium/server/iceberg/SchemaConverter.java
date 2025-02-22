@@ -221,6 +221,7 @@ public class SchemaConverter {
           case "io.debezium.time.IsoDate" -> Types.DateType.get();
           case "io.debezium.time.IsoTimestamp" -> Types.TimestampType.withoutZone();
           case "io.debezium.time.ZonedTimestamp" -> Types.TimestampType.withZone();
+          case "io.debezium.time.IsoTime" -> Types.TimeType.get();
           default -> Types.StringType.get();
         };
       case "uuid":

@@ -15,6 +15,7 @@ import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
+import io.debezium.time.IsoTime;
 import io.debezium.time.IsoTimestamp;
 import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.Schema;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -221,6 +223,28 @@ public class RecordConverter {
           return LocalDate.parse(node.asText(), IsoDate.FORMATTER);
         }
         throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+
+      case TIME:
+        if (node.isTextual()) {
+          // io.debezium.time.IsoTime
+          return LocalTime.parse(node.asText(), IsoTime.FORMATTER);
+        }
+        if (node.isNumber()) {
+          return switch (config.temporalPrecisionMode()) {
+            // io.debezium.time.MicroTime
+            // Represents the time value in microseconds
+            case MICROSECONDS -> LocalTime.ofNanoOfDay(node.asLong() * 1000);
+            // io.debezium.time.NanoTime
+            // Represents the time value in nanoseconds
+            case NANOSECONDS -> LocalTime.ofNanoOfDay(node.asLong());
+            // org.apache.kafka.connect.data.Timestamp
+            // Represents the number of milliseconds since midnight
+            case CONNECT -> LocalTime.ofNanoOfDay(node.asLong() * 1_000_000);
+            default ->
+                throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
+          };
+        }
+        throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
         if (node.isNumber() && TS_MS_FIELDS.contains(field.name())) {
           return timestamptzFromMillis(node.asLong());
@@ -317,4 +341,5 @@ public class RecordConverter {
 
     throw new RuntimeException(eexMessage);
   }
+
 }
