@@ -28,8 +28,6 @@ public interface IcebergConsumerConfig {
     public String cdcSourceTsMsField();
 
     @WithName(value = "debezium.source.time.precision.mode")
-    // IMPORTANT! keep default value in sync with debezium Debezium default value
-    @WithDefault(value = "adaptive")
     public TemporalPrecisionMode temporalPrecisionMode();
 
     @WithName(value = "debezium.format.value")

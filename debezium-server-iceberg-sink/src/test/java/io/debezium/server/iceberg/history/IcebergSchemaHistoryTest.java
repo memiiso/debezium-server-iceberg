@@ -72,8 +72,6 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
       config.put("debezium.source.schema.history.internal", "io.debezium.server.iceberg.history.IcebergSchemaHistory");
       config.put("debezium.source.schema.history.internal.iceberg.table-name", "debezium_database_history_storage_table");
       config.put("debezium.source.table.whitelist", "inventory.customers");
-      // "The 'adaptive' time.precision.mode is not supported for this connector"
-      config.put("%mysql.debezium.source.time.precision.mode", "connect");
       return config;
     }
 

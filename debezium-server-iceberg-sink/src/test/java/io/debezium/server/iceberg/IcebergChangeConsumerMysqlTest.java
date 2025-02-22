@@ -94,8 +94,6 @@ public class IcebergChangeConsumerMysqlTest extends BaseTest {
       config.put("quarkus.profile", "mysql");
       config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
       config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
-      // "The 'adaptive' time.precision.mode is not supported for this connector"
-      config.put("%mysql.debezium.source.time.precision.mode", "connect");
       //config.put("%mysql.debezium.source.include.schema.changes", "false");
       return config;
     }
