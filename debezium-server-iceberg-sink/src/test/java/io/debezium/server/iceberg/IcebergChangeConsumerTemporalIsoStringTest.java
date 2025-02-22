@@ -19,8 +19,6 @@ import io.quarkus.test.junit.TestProfile;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -58,7 +56,7 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         "VALUES \n" +
         "(1, null, null, null, null) \n" +
         ",(2, CURRENT_DATE , CURRENT_TIME, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP ) \n" +
-        ",(3, '2024-01-02'::DATE , CURRENT_TIME, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP ) ";
+        ",(3, '2024-01-02'::DATE , CURRENT_TIME, '2023-10-11 10:30:00'::timestamp, '2023-11-12 10:30:00+02'::timestamptz ) ";
 
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
@@ -72,6 +70,12 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = CURRENT_DATE()").count());
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_date = to_date('2024-01-02', 'yyyy-MM-dd')").count());
+        // Validate time field and values
+        System.out.println(getSchemaField(df, "c_timestamp").dataType());
+        Assertions.assertEquals(DataTypes.TimestampNTZType, getSchemaField(df, "c_timestamp").dataType());
+        Assertions.assertEquals(1, df.filter("c_id = 3 AND c_timestamp = to_timestamp('2023-10-11 10:30:00')").count());
+        Assertions.assertEquals(DataTypes.TimestampType, getSchemaField(df, "c_timestamptz").dataType());
+        Assertions.assertEquals(1, df.filter("c_id = 3 AND c_timestamptz = to_timestamp('2023-11-12 10:30:00+02')").count());
         return true;
       } catch (Exception e) {
 //        e.printStackTrace();

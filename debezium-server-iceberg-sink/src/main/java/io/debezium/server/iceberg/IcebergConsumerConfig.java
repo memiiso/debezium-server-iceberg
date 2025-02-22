@@ -81,4 +81,9 @@ public interface IcebergConsumerConfig {
     default boolean isIsoStringTemporalMode() {
         return temporalPrecisionMode() == TemporalPrecisionMode.ISOSTRING;
     }
+
+    default boolean isAdaptiveTemporalMode() {
+        return temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE ||
+            temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE_TIME_MICROSECONDS;
+    }
 }

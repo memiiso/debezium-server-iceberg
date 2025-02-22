@@ -46,7 +46,7 @@ public class SchemaConverter {
    * @param schemaData keeps information of iceberg schema like fields, nextFieldId and identifier fields
    * @return map entry Key being the last id assigned to the iceberg field, Value being the converted iceberg NestedField.
    */
-  private static IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
+  private IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
     String fieldType = fieldSchema.get("type").textValue();
     String fieldTypeName = getFieldName(fieldSchema);
 
@@ -130,7 +130,7 @@ public class SchemaConverter {
    * @param schemaNode
    * @return
    */
-  private static IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
+  private IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
     RecordConverter.LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
@@ -182,7 +182,7 @@ public class SchemaConverter {
 
   }
 
-  private static Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
+  private Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
     // Debezium Temporal types: https://debezium.io/documentation//reference/connectors/postgresql.html#postgresql-temporal-types
     switch (fieldType) {
       case "int8":
@@ -196,7 +196,16 @@ public class SchemaConverter {
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
         }
-        return Types.LongType.get();
+        if (config.isAdaptiveTemporalMode()) {
+          return Types.LongType.get();
+        }
+        return switch (fieldTypeName) {
+          case "io.debezium.time.Timestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.MicroTimestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.NanoTimestamp" -> Types.TimestampType.withoutZone();
+          case "org.apache.kafka.connect.data.Timestamp" -> Types.TimestampType.withoutZone();
+          default -> Types.LongType.get();
+        };
       case "float8":
       case "float16":
       case "float32": // float is represented in 32 bits,
@@ -209,6 +218,8 @@ public class SchemaConverter {
       case "string":
         return switch (fieldTypeName) {
           case "io.debezium.time.IsoDate" -> Types.DateType.get();
+          case "io.debezium.time.IsoTimestamp" -> Types.TimestampType.withoutZone();
+          case "io.debezium.time.ZonedTimestamp" -> Types.TimestampType.withZone();
           default -> Types.StringType.get();
         };
       case "uuid":

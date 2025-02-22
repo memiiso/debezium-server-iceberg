@@ -284,7 +284,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         ds.show();
         System.out.println(dataTypeString(ds, "c_timestamptz"));
         return ds.count() >= 3 &&
-            Objects.equals(dataTypeString(ds, "c_timestamptz"), "string");
+            Objects.equals(dataTypeString(ds, "c_timestamptz"), "timestamp");
       } catch (Exception e) {
         return false;
       }
