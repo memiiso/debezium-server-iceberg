@@ -121,6 +121,8 @@ public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
       config.put("debezium.transforms", ",");
       config.put("debezium.sink.iceberg.upsert", "false");
       config.put("debezium.sink.iceberg.create-identifier-fields", "false");
+      // "The 'adaptive' time.precision.mode is not supported for this connector"
+      config.put("%mysql.debezium.source.time.precision.mode", "connect");
       return config;
     }
 
