@@ -187,34 +187,28 @@ public class RecordConverter {
 
   private Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
     LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
-    final Object val;
+
+    if (node.isNull()) {
+      return null;
+    }
+
     switch (field.type().typeId()) {
       case INTEGER: // int 4 bytes
-        val = node.isNull() ? null : node.asInt();
-        break;
+        return node.asInt();
       case LONG: // long 8 bytes
-        val = node.isNull() ? null : node.asLong();
-        break;
+        return node.asLong();
       case FLOAT: // float is represented in 32 bits,
-        val = node.isNull() ? null : node.floatValue();
-        break;
+        return node.floatValue();
       case DOUBLE: // double is represented in 64 bits
-        val = node.isNull() ? null : node.asDouble();
-        break;
+        return node.asDouble();
       case BOOLEAN:
-        val = node.isNull() ? null : node.asBoolean();
-        break;
-      case STRING:
-        // if the node is not a value node (method isValueNode returns false), convert it to string.
-        val = node.isValueNode() ? node.asText(null) : node.toString();
-        break;
+        return node.asBoolean();
       case UUID:
-        val = node.isValueNode() ? UUID.fromString(node.asText(null)) : UUID.fromString(node.toString());
-        break;
-      case DATE:
-        if (node.isNull()) {
-          return null;
+        if (node.isTextual()) {
+          return UUID.fromString(node.textValue());
         }
+        throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+      case DATE:
         if ((node.isInt())) {
           // io.debezium.time.Date
           // org.apache.kafka.connect.data.Date
@@ -228,9 +222,6 @@ public class RecordConverter {
         }
         throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
-        if (node.isNull()) {
-          return null;
-        }
         if (node.isNumber() && TS_MS_FIELDS.contains(field.name())) {
           return timestamptzFromMillis(node.asLong());
         }
@@ -241,11 +232,10 @@ public class RecordConverter {
         return convertLocalDateTimeValue(field, node, config.temporalPrecisionMode());
       case BINARY:
         try {
-          val = node.isNull() ? null : ByteBuffer.wrap(node.binaryValue());
+          return ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
           throw new RuntimeException("Failed to convert binary value to iceberg value, field: " + field.name(), e);
         }
-        break;
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
         // recursive value mapping when list elements are nested type
@@ -254,18 +244,14 @@ public class RecordConverter {
           node.elements().forEachRemaining(element -> {
             listVal.add(jsonValToIcebergVal(field.type().asListType().fields().get(0), element));
           });
-          val = listVal;
-          break;
+          return listVal;
         }
-
-        val = mapper.convertValue(node, ArrayList.class);
-        break;
+        return mapper.convertValue(node, ArrayList.class);
       case MAP:
         Type keyType = field.type().asMapType().keyType();
         Type valType = field.type().asMapType().valueType();
         if (keyType.isPrimitiveType() && valType.isPrimitiveType()) {
-          val = mapper.convertValue(node, Map.class);
-          break;
+          return mapper.convertValue(node, Map.class);
         }
         // convert complex/nested map value with recursion
         HashMap<Object, Object> mapVal = new HashMap<>();
@@ -276,54 +262,50 @@ public class RecordConverter {
             mapVal.put(f.getKey(), f.getValue());
           }
         });
-        val = mapVal;
-        break;
+        return mapVal;
       case STRUCT:
         // create it as struct, nested type
         // recursive call to get nested data/record
-        val = convert(field.type().asStructType(), node);
-        break;
+        return convert(field.type().asStructType(), node);
+      case STRING:
       default:
         // default to String type
         // if the node is not a value node (method isValueNode returns false), convert it to string.
-        val = node.isValueNode() ? node.asText(null) : node.toString();
-        break;
+        return node.isValueNode() ? node.textValue() : node.toString();
     }
-
-    return val;
   }
 
   public LocalDateTime convertLocalDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
 
+    final String eexMessage = "Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode;
     if (node.isNumber()) {
       return switch (temporalPrecisionMode) {
         case MICROSECONDS -> DateTimeUtil.timestampFromMicros(node.asLong());
         case NANOSECONDS -> DateTimeUtil.timestampFromNanos(node.asLong());
         case CONNECT -> timestampFromMillis(node.asLong());
-        default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+        default -> throw new RuntimeException(eexMessage);
       };
     }
 
     if (node.isTextual()) {
       return switch (temporalPrecisionMode) {
         case ISOSTRING -> LocalDateTime.parse(node.asText(), IsoTimestamp.FORMATTER);
-        default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+        default -> throw new RuntimeException(eexMessage);
       };
     }
-    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+    throw new RuntimeException(eexMessage);
   }
 
   private OffsetDateTime convertOffsetDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
+    final String eexMessage = "Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode;
+
     if (node.isNumber()) {
       // non Timezone
       return switch (temporalPrecisionMode) {
         case MICROSECONDS -> DateTimeUtil.timestamptzFromMicros(node.asLong());
         case NANOSECONDS -> timestamptzFromNanos(node.asLong());
         case CONNECT -> timestamptzFromMillis(node.asLong());
-        default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+        default -> throw new RuntimeException(eexMessage);
       };
     }
 
@@ -333,7 +315,6 @@ public class RecordConverter {
       };
     }
 
-    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
+    throw new RuntimeException(eexMessage);
   }
-
 }

@@ -217,6 +217,7 @@ public class SchemaConverter {
         return Types.BooleanType.get();
       case "string":
         return switch (fieldTypeName) {
+          case "io.debezium.data.Uuid" -> Types.UUIDType.get();
           case "io.debezium.time.IsoDate" -> Types.DateType.get();
           case "io.debezium.time.IsoTimestamp" -> Types.TimestampType.withoutZone();
           case "io.debezium.time.ZonedTimestamp" -> Types.TimestampType.withZone();
