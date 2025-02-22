@@ -12,7 +12,6 @@ import com.google.common.collect.Lists;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergChangeConsumer;
 import io.debezium.server.iceberg.RecordConverter;
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
@@ -22,17 +21,13 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
@@ -53,6 +48,9 @@ class IcebergTableOperatorTest extends BaseTest {
   @Inject
   IcebergChangeConsumer icebergConsumer;
 
+  @Inject
+  IcebergChangeEventBuilder eventBuilder;
+
   public Table createTable(RecordConverter sampleEvent) {
     TableIdentifier tableId =  icebergConsumer.mapDestination(sampleEvent.destination());
     return icebergConsumer.loadIcebergTable(tableId, sampleEvent);
@@ -63,7 +61,7 @@ class IcebergTableOperatorTest extends BaseTest {
     // setup
     List<RecordConverter> events = new ArrayList<>();
     Table icebergTable = this.createTable(
-        new IcebergChangeEventBuilder()
+        eventBuilder
             .destination(testTable)
             .addKeyField("id", 1)
             .addField("data", "record1")
@@ -71,19 +69,19 @@ class IcebergTableOperatorTest extends BaseTest {
             .build()
     );
 
-    events.add(new IcebergChangeEventBuilder()
+    events.add(eventBuilder
         .destination(testTable)
         .addKeyField("id", 1)
         .addField("data", "record1")
         .build()
     );
-    events.add(new IcebergChangeEventBuilder()
+    events.add(eventBuilder
         .destination(testTable)
         .addKeyField("id", 2)
         .addField("data", "record2")
         .build()
     );
-    events.add(new IcebergChangeEventBuilder()
+    events.add(eventBuilder
         .destination(testTable)
         .addKeyField("id", 3)
         .addField("user_name", "Alice")
@@ -94,7 +92,7 @@ class IcebergTableOperatorTest extends BaseTest {
 
     Assertions.assertEquals(3, Lists.newArrayList(getTableDataV2(testTable)).size());
     events.clear();
-    events.add(new IcebergChangeEventBuilder()
+    events.add(eventBuilder
         .destination(testTable)
         .addKeyField("id", 3)
         .addField("user_name", "Alice-Updated")
@@ -111,13 +109,13 @@ class IcebergTableOperatorTest extends BaseTest {
 
   @Test
   public void testDeduplicateBatch() throws Exception {
-    RecordConverter e1 = new IcebergChangeEventBuilder()
+    RecordConverter e1 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
         .addField("__source_ts_ms", 1L)
         .build();
-    RecordConverter e2 = new IcebergChangeEventBuilder()
+    RecordConverter e2 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
@@ -129,13 +127,13 @@ class IcebergTableOperatorTest extends BaseTest {
     Assertions.assertEquals(1, dedups.size());
     Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ms").asLong(0L));
 
-    RecordConverter e21 = new IcebergChangeEventBuilder()
+    RecordConverter e21 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "r")
         .addField("__source_ts_ms", 1L)
         .build();
-    RecordConverter e22 = new IcebergChangeEventBuilder()
+    RecordConverter e22 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "u")
@@ -148,13 +146,13 @@ class IcebergTableOperatorTest extends BaseTest {
     Assertions.assertEquals("u", dedups2.get(0).value().get("__op").asText("x"));
 
     // deduplicating wth null key should fail!
-    RecordConverter e31 = new IcebergChangeEventBuilder()
+    RecordConverter e31 = eventBuilder
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "r")
         .addField("__source_ts_ms", 1L)
         .build();
-    RecordConverter e32 = new IcebergChangeEventBuilder()
+    RecordConverter e32 = eventBuilder
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "u")
