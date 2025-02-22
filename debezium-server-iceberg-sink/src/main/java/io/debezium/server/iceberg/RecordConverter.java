@@ -296,12 +296,12 @@ public class RecordConverter {
   public LocalDateTime convertLocalDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
 
     if (node.isNumber()) {
-      return switch (config.temporalPrecisionMode()) {
+      return switch (temporalPrecisionMode) {
         case MICROSECONDS -> DateTimeUtil.timestampFromMicros(node.asLong());
         case NANOSECONDS -> DateTimeUtil.timestampFromNanos(node.asLong());
         case CONNECT -> timestampFromMillis(node.asLong());
         default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
       };
     }
 
@@ -309,10 +309,10 @@ public class RecordConverter {
       return switch (temporalPrecisionMode) {
         case ISOSTRING -> LocalDateTime.parse(node.asText(), IsoTimestamp.FORMATTER);
         default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
       };
     }
-    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
   }
 
   private OffsetDateTime convertOffsetDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
@@ -323,7 +323,7 @@ public class RecordConverter {
         case NANOSECONDS -> timestamptzFromNanos(node.asLong());
         case CONNECT -> timestamptzFromMillis(node.asLong());
         default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
       };
     }
 
@@ -331,11 +331,11 @@ public class RecordConverter {
       return switch (temporalPrecisionMode) {
         case ISOSTRING -> OffsetDateTime.parse(node.asText(), ZonedTimestamp.FORMATTER);
         default ->
-            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+            throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
       };
     }
 
-    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node);
+    throw new RuntimeException("Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode);
   }
 
 }

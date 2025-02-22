@@ -46,7 +46,7 @@ public class SchemaConverter {
    * @param schemaData keeps information of iceberg schema like fields, nextFieldId and identifier fields
    * @return map entry Key being the last id assigned to the iceberg field, Value being the converted iceberg NestedField.
    */
-  private static IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
+  private IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
     String fieldType = fieldSchema.get("type").textValue();
     String fieldTypeName = getFieldName(fieldSchema);
 
@@ -130,7 +130,7 @@ public class SchemaConverter {
    * @param schemaNode
    * @return
    */
-  private static IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
+  private IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
     RecordConverter.LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
@@ -182,7 +182,7 @@ public class SchemaConverter {
 
   }
 
-  private static Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
+  private Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
     // Debezium Temporal types: https://debezium.io/documentation//reference/connectors/postgresql.html#postgresql-temporal-types
     switch (fieldType) {
       case "int8":
@@ -195,6 +195,9 @@ public class SchemaConverter {
       case "int64": // long 8 bytes
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
+        }
+        if (config.isAdaptiveTemporalMode()) {
+          return Types.LongType.get();
         }
         return switch (fieldTypeName) {
           case "io.debezium.time.Timestamp" -> Types.TimestampType.withoutZone();
