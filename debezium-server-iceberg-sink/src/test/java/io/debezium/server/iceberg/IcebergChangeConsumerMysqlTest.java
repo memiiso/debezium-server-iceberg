@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
+import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
@@ -17,6 +18,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import jakarta.inject.Inject;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
@@ -25,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Ismail Simsek
@@ -36,8 +40,12 @@ import java.util.Map;
 @TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
+  @Inject
+  IcebergConsumerConfig config;
+
   @Test
   public void testSimpleUpload() throws Exception {
+    assertEquals(config.temporalPrecisionMode(), TemporalPrecisionMode.CONNECT);
     String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
                        " c_id INTEGER ," +
                        " c_id2 INTEGER ," +
