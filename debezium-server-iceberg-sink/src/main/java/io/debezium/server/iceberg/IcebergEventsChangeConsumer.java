@@ -88,22 +88,13 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       .asc("event_sink_timestamptz", NullOrder.NULLS_LAST)
       .build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
-  private static final String PROP_PREFIX = "debezium.sink.iceberg.";
   static Deserializer<JsonNode> valDeserializer;
   static Deserializer<JsonNode> keyDeserializer;
   final Configuration hadoopConf = new Configuration();
-  @ConfigProperty(name = "debezium.format.value", defaultValue = "json")
-  String valueFormat;
-  @ConfigProperty(name = "debezium.format.key", defaultValue = "json")
-  String keyFormat;
-  @ConfigProperty(name = PROP_PREFIX + CatalogProperties.WAREHOUSE_LOCATION)
-  String warehouseLocation;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
-  @ConfigProperty(name = "debezium.sink.iceberg.catalog-name", defaultValue = "default")
-  String catalogName;
-  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait", defaultValue = "NoBatchSizeWait")
-  String batchSizeWaitName;
+
+  @Inject
+  IcebergConsumerConfig config;
+
   @Inject
   @Any
   Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
@@ -113,20 +104,18 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
   @PostConstruct
   void connect() {
-    if (!valueFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.value={" + valueFormat + "} not supported, " +
-                                  "Supported (debezium.format.value=*) formats are {json,}!");
+    if (!config.valueFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.value={" + config.valueFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
     }
-    if (!keyFormat.equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.key={" + valueFormat + "} not supported, " +
-                                  "Supported (debezium.format.key=*) formats are {json,}!");
+    if (!config.keyFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.key={" + config.valueFormat() + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
-    Map<String, String> icebergProperties = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), PROP_PREFIX);
-    icebergProperties.forEach(this.hadoopConf::set);
+    // pass iceberg properties to iceberg and hadoop
+    config.icebergConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(catalogName, icebergProperties, hadoopConf);
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(namespace), TABLE_NAME);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.catalogName(), config.icebergConfigs(), hadoopConf);
+    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(config.namespace()), TABLE_NAME);
 
     // create table if not exists
     if (!icebergCatalog.tableExists(tableIdentifier)) {
@@ -139,7 +128,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
 
-    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, batchSizeWaitName);
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batchSizeWaitName());
     batchSizeWait.initizalize();
 
     // configure and set 

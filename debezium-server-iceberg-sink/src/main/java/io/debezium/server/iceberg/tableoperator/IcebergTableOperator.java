@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.tableoperator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
+import io.debezium.server.iceberg.IcebergConsumerConfig;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
@@ -45,19 +46,10 @@ public class IcebergTableOperator {
 
   static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of(Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-dedup-column", defaultValue = "__source_ts_ms")
-  String cdcSourceTsMsField;
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert-op-field", defaultValue = "__op")
-  String cdcOpField;
-  @ConfigProperty(name = "debezium.sink.iceberg.allow-field-addition", defaultValue = "true")
-  boolean allowFieldAddition;
-  @ConfigProperty(name = "debezium.sink.iceberg.create-identifier-fields", defaultValue = "true")
-  boolean createIdentifierFields;
   @Inject
   IcebergTableWriterFactory writerFactory;
-
-  @ConfigProperty(name = "debezium.sink.iceberg.upsert", defaultValue = "true")
-  boolean upsert;
+  @Inject
+  IcebergConsumerConfig config;
 
   protected List<RecordConverter> deduplicateBatch(List<RecordConverter> events) {
 
@@ -101,13 +93,13 @@ public class IcebergTableOperator {
    */
   private int compareByTsThenOp(RecordConverter lhs, RecordConverter rhs) {
 
-    int result = Long.compare(lhs.cdcSourceTsMsValue(cdcSourceTsMsField), rhs.cdcSourceTsMsValue(cdcSourceTsMsField));
+    int result = Long.compare(lhs.cdcSourceTsMsValue(config.cdcSourceTsMsField()), rhs.cdcSourceTsMsValue(config.cdcSourceTsMsField()));
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(cdcOpField), -1)
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(config.cdcOpField()), -1)
           .compareTo(
-              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(cdcOpField), -1)
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(config.cdcOpField()), -1)
           );
     }
 
@@ -152,11 +144,11 @@ public class IcebergTableOperator {
   public void addToTable(Table icebergTable, List<RecordConverter> events) {
 
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
-    if (upsert && !icebergTable.schema().identifierFieldIds().isEmpty()) {
+    if (config.upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
       events = deduplicateBatch(events);
     }
 
-    if (!allowFieldAddition) {
+    if (!config.allowFieldAddition()) {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
@@ -167,7 +159,7 @@ public class IcebergTableOperator {
 
       for (Map.Entry<SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
-        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(createIdentifierFields));
+        applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema(config.createIdentifierFields()));
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
@@ -187,7 +179,7 @@ public class IcebergTableOperator {
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
       for (RecordConverter e : events) {
-        final RecordWrapper record = (upsert && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema, cdcOpField) : e.convertAsAppend(tableSchema);
+        final RecordWrapper record = (config.upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema, config.cdcOpField()) : e.convertAsAppend(tableSchema);
         writer.write(record);
       }
 

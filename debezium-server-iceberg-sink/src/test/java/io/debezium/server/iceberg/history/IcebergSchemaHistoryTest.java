@@ -8,9 +8,7 @@
 
 package io.debezium.server.iceberg.history;
 
-import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
@@ -18,11 +16,9 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;

@@ -11,7 +11,6 @@ package io.debezium.server.iceberg;
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
-import io.debezium.server.iceberg.testresources.CatalogRest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -40,6 +39,7 @@ import java.util.Objects;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -345,13 +345,14 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   public void testMapDestination() {
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
-    icebergConsumer.destinationUppercaseTableNames = true;
-    icebergConsumer.destinationLowercaseTableNames = false;
+    // test
+    when(consumer.config.destinationUppercaseTableNames()).thenReturn(true);
+    when(consumer.config.destinationLowercaseTableNames()).thenReturn(false);
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("table_name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("Table_Name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("TABLE_NAME"));
-    icebergConsumer.destinationUppercaseTableNames = false;
-    icebergConsumer.destinationLowercaseTableNames = true;
+    when(consumer.config.destinationUppercaseTableNames()).thenReturn(false);
+    when(consumer.config.destinationLowercaseTableNames()).thenReturn(true);
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("Table_Name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("TABLE_NAME"));
   }
