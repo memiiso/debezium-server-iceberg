@@ -28,6 +28,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -42,7 +43,6 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -110,7 +110,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     Map<String, List<RecordConverter>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
-                -> new RecordConverter(e.destination(), getBytes(e.value()), e.key() == null ? null : getBytes(e.key())))
+                -> new RecordConverter(e.destination(),
+                getBytes(e.value()),
+                e.key() == null ? null : getBytes(e.key())
+                , config))
             .collect(Collectors.groupingBy(RecordConverter::destination));
 
     // consume list of events for each destination table
@@ -143,7 +146,16 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
       try {
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, sampleEvent.icebergSchema(config.createIdentifierFields()), config.writeFormat());
+        final Schema schema = sampleEvent.icebergSchema();
+        // Check if the message is a schema change event (DDL statement).
+        // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
+        // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+        if (sampleEvent.isSchemaChangeEvent()) {
+          LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
+          return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.writeFormat());
+        }
+
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.writeFormat());
       } catch (Exception e) {
         throw new DebeziumException("Failed to create table from debezium event schema:" + tableId + " Error:" + e.getMessage(), e);
       }

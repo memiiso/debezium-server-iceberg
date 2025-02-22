@@ -12,10 +12,12 @@ import java.util.Objects;
 public class SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
+  private final IcebergConsumerConfig config;
 
-  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema) {
+  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, IcebergConsumerConfig config) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
+    this.config = config;
   }
 
   protected JsonNode valueSchema() {
@@ -139,7 +141,7 @@ public class SchemaConverter {
     return schemaData;
   }
 
-  public Schema icebergSchema(boolean createIdentifierFields) {
+  public Schema icebergSchema() {
 
     if (this.valueSchema.isNull()) {
       throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
@@ -147,7 +149,7 @@ public class SchemaConverter {
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
     final JsonNode keySchemaNode;
-    if (!createIdentifierFields) {
+    if (!config.createIdentifierFields()) {
       RecordConverter.LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
       keySchemaNode = null;
     } else if (!RecordConverter.eventsAreUnwrapped && keySchema != null) {

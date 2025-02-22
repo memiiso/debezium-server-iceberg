@@ -67,7 +67,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
   }
 
   public RecordConverter toIcebergChangeEvent(IcebergConsumerConfig config) {
-    return new RecordConverter(this.destination(), this.getValueBytes(), this.getKeyBytes());
+    return new RecordConverter(this.destination(), this.getValueBytes(), this.getKeyBytes(), config);
   }
 
 }
