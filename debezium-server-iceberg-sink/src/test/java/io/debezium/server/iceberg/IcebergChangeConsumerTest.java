@@ -299,7 +299,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         ds.show(false);
         return ds.count() >= 3;
       } catch (Exception e) {
-//        e.printStackTrace();
+        e.printStackTrace();
         return false;
       }
     });

@@ -34,7 +34,10 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.upsert", "false");
     config.put("debezium.sink.iceberg.upsert-keep-deletes", "true");
     config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
-
+    // test values to keep debezium starting without error on missing config values
+    config.put("debezium.source.database.dbname", "testing-without-source-db");
+    config.put("debezium.source.database.user", "testing-without-source-db-user");
+    config.put("debezium.source.database.hostname", "testing-without-source-db-hostname");
     // iceberg config
     config.put("debezium.sink.iceberg.warehouse", ICEBERG_WAREHOUSE_S3A);
 
