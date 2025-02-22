@@ -166,8 +166,7 @@ class RecordConverterTest {
     GenericRecord h = (GenericRecord) record.getField("h");
     assertEquals("AQEAAAAAAAAAAADwPwAAAAAAAPA/", g.get(0, Types.StringType.get().typeId().javaClass()));
     assertEquals(123, g.get(1, Types.IntegerType.get().typeId().javaClass()));
-    assertEquals("Record(null, null)", h.toString());
-    assertNull(h.get(0, Types.BinaryType.get().typeId().javaClass()));
+    assertNull(h);
   }
 
   @Test
