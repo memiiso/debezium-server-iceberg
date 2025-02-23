@@ -45,7 +45,7 @@ class RecordConverterTest {
   @Inject
   IcebergChangeEventBuilder eventBuilder;
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   RecordConverterTest() throws IOException {
   }

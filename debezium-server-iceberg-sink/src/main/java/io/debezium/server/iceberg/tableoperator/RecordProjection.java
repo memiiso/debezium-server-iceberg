@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  * This is copy of tabular-io iceberg-kafka-connect code!
- * https://github.com/tabular-io/iceberg-kafka-connect/blob/main/kafka-connect/src/main/java/io/tabular/iceberg/connect/data/RecordProjection.java
+ * <a href="https://github.com/tabular-io/iceberg-kafka-connect/blob/main/kafka-connect/src/main/java/io/tabular/iceberg/connect/data/RecordProjection.java">...</a>
  * <p>
  * This is modified from {@link org.apache.iceberg.util.StructProjection} to support record types.
  */

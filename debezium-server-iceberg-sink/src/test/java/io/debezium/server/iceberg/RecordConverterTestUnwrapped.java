@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 class RecordConverterTestUnwrapped {
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {
@@ -50,9 +50,9 @@ class RecordConverterTestUnwrapped {
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
-    when(config.createIdentifierFields()).thenReturn(false);
+    when(config.iceberg().createIdentifierFields()).thenReturn(false);
     Schema schema = dbzEvent.toIcebergChangeEvent(config).icebergSchema();
-    assertEquals(config.temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
+    assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
           1: before: optional struct<2: order_number: optional int, 3: order_date: optional date, 4: purchaser: optional int, 5: quantity: optional int, 6: product_id: optional int>

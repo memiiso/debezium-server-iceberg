@@ -12,9 +12,9 @@ import java.util.Objects;
 public class SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
-  private final IcebergConsumerConfig config;
+  private final GlobalConfig config;
 
-  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, IcebergConsumerConfig config) {
+  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, GlobalConfig config) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;
@@ -149,7 +149,7 @@ public class SchemaConverter {
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
     final JsonNode keySchemaNode;
-    if (!config.createIdentifierFields()) {
+    if (!config.iceberg().createIdentifierFields()) {
       RecordConverter.LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
       keySchemaNode = null;
     } else if (!RecordConverter.eventsAreUnwrapped && keySchema != null) {
@@ -205,7 +205,7 @@ public class SchemaConverter {
         if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
         }
-        if (config.isAdaptiveTemporalMode()) {
+        if (config.debezium().isAdaptiveTemporalMode()) {
           return Types.LongType.get();
         }
         return switch (fieldTypeName) {

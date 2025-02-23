@@ -62,6 +62,9 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   String namespace;
 
+  @Inject
+  IcebergConfig icebergConfig;
+
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
     assertEquals(sinkType, "iceberg");
@@ -346,13 +349,15 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
     // test
-    when(consumer.config.destinationUppercaseTableNames()).thenReturn(true);
-    when(consumer.config.destinationLowercaseTableNames()).thenReturn(false);
+    when(consumer.config.iceberg()).thenReturn(icebergConfig);
+    when(icebergConfig.destinationUppercaseTableNames()).thenReturn(true);
+    when(icebergConfig.destinationLowercaseTableNames()).thenReturn(false);
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("table_name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("Table_Name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("TABLE_NAME"));
-    when(consumer.config.destinationUppercaseTableNames()).thenReturn(false);
-    when(consumer.config.destinationLowercaseTableNames()).thenReturn(true);
+    when(consumer.config.iceberg()).thenReturn(icebergConfig);
+    when(icebergConfig.destinationUppercaseTableNames()).thenReturn(false);
+    when(icebergConfig.destinationLowercaseTableNames()).thenReturn(true);
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("Table_Name"));
     assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("TABLE_NAME"));
   }

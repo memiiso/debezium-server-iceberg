@@ -66,7 +66,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
     return "EmbeddedEngineChangeEvent [key=" + key + ", value=" + value + ", sourceRecord=" + destination + "]";
   }
 
-  public RecordConverter toIcebergChangeEvent(IcebergConsumerConfig config) {
+  public RecordConverter toIcebergChangeEvent(GlobalConfig config) {
     return new RecordConverter(this.destination(), this.getValueBytes(), this.getKeyBytes(), config);
   }
 

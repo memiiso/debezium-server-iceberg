@@ -59,9 +59,9 @@ public class RecordConverter {
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
-  private final IcebergConsumerConfig config;
+  private final GlobalConfig config;
 
-  public RecordConverter(String destination, byte[] valueData, byte[] keyData, IcebergConsumerConfig config) {
+  public RecordConverter(String destination, byte[] valueData, byte[] keyData, GlobalConfig config) {
     this.destination = destination;
     this.valueData = valueData;
     this.keyData = keyData;
@@ -80,26 +80,26 @@ public class RecordConverter {
 
   public Long cdcSourceTsMsValue() {
 
-    final JsonNode element = value().get(config.cdcSourceTsMsField());
+    final JsonNode element = value().get(config.iceberg().cdcSourceTsMsField());
     if (element == null) {
-      throw new DebeziumException("Field '" + config.cdcSourceTsMsField() + "' not found in JSON object: " + value());
+      throw new DebeziumException("Field '" + config.iceberg().cdcSourceTsMsField() + "' not found in JSON object: " + value());
     }
 
     try {
       return element.asLong();
     } catch (NumberFormatException e) {
-      throw new DebeziumException("Error converting field '" + config.cdcSourceTsMsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
+      throw new DebeziumException("Error converting field '" + config.iceberg().cdcSourceTsMsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
     }
   }
 
   public Operation cdcOpValue() {
-    if (!value().has(config.cdcOpField())) {
-      throw new DebeziumException("The value for field `" + config.cdcOpField() + "` is missing. " +
+    if (!value().has(config.iceberg().cdcOpField())) {
+      throw new DebeziumException("The value for field `" + config.iceberg().cdcOpField() + "` is missing. " +
           "This field is required when updating or deleting data, when running in upsert mode."
       );
     }
 
-    final String opFieldValue = value().get(config.cdcOpField()).asText("c");
+    final String opFieldValue = value().get(config.iceberg().cdcOpField()).asText("c");
 
     return switch (opFieldValue) {
       case "u" -> Operation.UPDATE;
@@ -108,7 +108,7 @@ public class RecordConverter {
       case "c" -> Operation.INSERT;
       case "i" -> Operation.INSERT;
       default ->
-          throw new DebeziumException("Unexpected `" + config.cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+          throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
   }
 
@@ -228,7 +228,7 @@ public class RecordConverter {
 
       case TIME:
         if (node.isTextual()) {
-          return switch (config.temporalPrecisionMode()) {
+          return switch (config.debezium().temporalPrecisionMode()) {
             // io.debezium.time.IsoTime
             case ISOSTRING -> LocalTime.parse(node.asText(), IsoTime.FORMATTER);
             // io.debezium.time.ZonedTime
@@ -238,7 +238,7 @@ public class RecordConverter {
           };
         }
         if (node.isNumber()) {
-          return switch (config.temporalPrecisionMode()) {
+          return switch (config.debezium().temporalPrecisionMode()) {
             // io.debezium.time.MicroTime
             // Represents the time value in microseconds
             case MICROSECONDS -> LocalTime.ofNanoOfDay(node.asLong() * 1000);
@@ -259,9 +259,9 @@ public class RecordConverter {
         }
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
         if (isTsWithZone) {
-          return convertOffsetDateTimeValue(field, node, config.temporalPrecisionMode());
+          return convertOffsetDateTimeValue(field, node, config.debezium().temporalPrecisionMode());
         }
-        return convertLocalDateTimeValue(field, node, config.temporalPrecisionMode());
+        return convertLocalDateTimeValue(field, node, config.debezium().temporalPrecisionMode());
       case BINARY:
         try {
           return ByteBuffer.wrap(node.binaryValue());

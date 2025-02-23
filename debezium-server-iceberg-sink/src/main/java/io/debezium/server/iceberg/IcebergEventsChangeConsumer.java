@@ -101,7 +101,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   final Configuration hadoopConf = new Configuration();
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   @Inject
   @Any
@@ -112,18 +112,18 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
   @PostConstruct
   void connect() {
-    if (!config.valueFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.value={" + config.valueFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
+    if (!config.debezium().valueFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.value={" + config.debezium().valueFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
     }
-    if (!config.keyFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.key={" + config.valueFormat() + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
+    if (!config.debezium().keyFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.key={" + config.debezium().valueFormat() + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
     // pass iceberg properties to iceberg and hadoop
-    config.icebergConfigs().forEach(this.hadoopConf::set);
+    config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.catalogName(), config.icebergConfigs(), hadoopConf);
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(config.namespace()), TABLE_NAME);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
+    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(config.iceberg().namespace()), TABLE_NAME);
 
     // create table if not exists
     if (!icebergCatalog.tableExists(tableIdentifier)) {
@@ -136,7 +136,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
 
-    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batchSizeWaitName());
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.iceberg().batchSizeWaitName());
     batchSizeWait.initizalize();
 
     // configure and set 

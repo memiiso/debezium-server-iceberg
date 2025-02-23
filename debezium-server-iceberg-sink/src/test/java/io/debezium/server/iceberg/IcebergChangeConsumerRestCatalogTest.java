@@ -49,8 +49,8 @@ public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
       }
     });
 
-    List<TableIdentifier> tables = consumer.icebergCatalog.listTables(Namespace.of(consumer.config.namespace()));
-    Assertions.assertTrue(tables.contains(TableIdentifier.of(Namespace.of(consumer.config.namespace()), "debezium_offset_storage_table")));
-    Assertions.assertTrue(tables.contains(TableIdentifier.of(Namespace.of(consumer.config.namespace()), "debeziumcdc_testc_inventory_customers")));
+    List<TableIdentifier> tables = consumer.icebergCatalog.listTables(Namespace.of(consumer.config.iceberg().namespace()));
+    Assertions.assertTrue(tables.contains(TableIdentifier.of(Namespace.of(consumer.config.iceberg().namespace()), "debezium_offset_storage_table")));
+    Assertions.assertTrue(tables.contains(TableIdentifier.of(Namespace.of(consumer.config.iceberg().namespace()), "debeziumcdc_testc_inventory_customers")));
   }
 }

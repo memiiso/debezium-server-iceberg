@@ -41,11 +41,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   @Test
   public void testSimpleUpload() throws Exception {
-    assertEquals(config.temporalPrecisionMode(), TemporalPrecisionMode.CONNECT);
+    assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.CONNECT);
     String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
                        " c_id INTEGER ," +
                        " c_id2 INTEGER ," +
