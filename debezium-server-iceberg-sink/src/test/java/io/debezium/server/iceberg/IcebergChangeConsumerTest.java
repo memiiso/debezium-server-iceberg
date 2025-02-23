@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
+import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
@@ -79,8 +80,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "            c_timestamp TIMESTAMP,\n" +
         "            c_timestamptz TIMESTAMPTZ,\n" +
         "            c_float FLOAT,\n" +
-        "            c_decimal DECIMAL(18,4),\n" +
-        "            c_numeric NUMERIC(18,4),\n" +
+        "            c_decimal DECIMAL(18,6),\n" +
+        "            c_numeric NUMERIC(18,6),\n" +
         "            c_interval INTERVAL,\n" +
         "            c_boolean BOOLEAN,\n" +
         "            c_uuid UUID,\n" +
@@ -128,8 +129,13 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
         Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = to_date('2024-05-05', 'yyyy-MM-dd')").count());
+        Assertions.assertEquals(consumer.config.debezium().decimalHandlingMode(), RelationalDatabaseConnectorConfig.DecimalHandlingMode.DOUBLE);
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_float = CAST('1.23' AS DOUBLE)").count(), "c_float not matching");
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
         return true;
       } catch (Exception e) {
+        e.printStackTrace();
         return false;
       }
     });

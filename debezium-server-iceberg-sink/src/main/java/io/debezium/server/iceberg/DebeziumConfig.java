@@ -1,22 +1,23 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.jdbc.TemporalPrecisionMode;
+import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
-import io.smallrye.config.WithParentName;
 
 @ConfigRoot
 @ConfigMapping
 public interface DebeziumConfig {
 
-  @WithParentName
-  IcebergConfig sinkConfig();
-
   @WithName("debezium.source.time.precision.mode")
   @WithDefault("isostring")
   TemporalPrecisionMode temporalPrecisionMode();
+
+  @WithName("debezium.source.decimal.handling.mode")
+  @WithDefault("double")
+  RelationalDatabaseConnectorConfig.DecimalHandlingMode decimalHandlingMode();
 
   // Event format
   @WithName("debezium.format.value")
