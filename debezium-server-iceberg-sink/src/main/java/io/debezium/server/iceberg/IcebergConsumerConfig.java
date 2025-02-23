@@ -28,6 +28,7 @@ public interface IcebergConsumerConfig {
     public String cdcSourceTsMsField();
 
     @WithName(value = "debezium.source.time.precision.mode")
+    @WithDefault(value = "isostring")
     public TemporalPrecisionMode temporalPrecisionMode();
 
     @WithName(value = "debezium.format.value")
