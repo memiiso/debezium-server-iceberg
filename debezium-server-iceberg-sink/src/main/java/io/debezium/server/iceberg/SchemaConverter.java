@@ -190,14 +190,15 @@ public class SchemaConverter {
       case "int32": // int 4 bytes
         return switch (fieldTypeName) {
           case "io.debezium.time.Date", "org.apache.kafka.connect.data.Date" -> Types.DateType.get();
-          //"Represents the number of milliseconds"
-          case "io.debezium.time.Time" -> Types.TimeType.get();
-          //"Represents the time value in microseconds
-          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
-          //"Represents the time value in nanoseconds"
-          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
-          //"Represents the time value in microseconds"
-          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
+// NOTE: Time type is disable for the moment, it's not supported by spark
+//          //"Represents the number of milliseconds"
+//          case "io.debezium.time.Time" -> Types.TimeType.get();
+//          //"Represents the time value in microseconds
+//          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
+//          //"Represents the time value in nanoseconds"
+//          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
+//          //"Represents the time value in microseconds"
+//          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
           default -> Types.IntegerType.get();
         };
       case "int64": // long 8 bytes
@@ -212,14 +213,15 @@ public class SchemaConverter {
           case "io.debezium.time.MicroTimestamp" -> Types.TimestampType.withoutZone();
           case "io.debezium.time.NanoTimestamp" -> Types.TimestampType.withoutZone();
           case "org.apache.kafka.connect.data.Timestamp" -> Types.TimestampType.withoutZone();
-          //"Represents the number of milliseconds"
-          case "io.debezium.time.Time" -> Types.TimeType.get();
-          //"Represents the time value in microseconds
-          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
-          //"Represents the time value in nanoseconds"
-          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
-          //"Represents the time value in microseconds"
-          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
+// NOTE: Time type is disable for the moment, it's not supported by spark
+//          //"Represents the number of milliseconds"
+//          case "io.debezium.time.Time" -> Types.TimeType.get();
+//          //"Represents the time value in microseconds
+//          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
+//          //"Represents the time value in nanoseconds"
+//          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
+//          //"Represents the time value in microseconds"
+//          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
           default -> Types.LongType.get();
         };
       case "float8":
@@ -237,6 +239,7 @@ public class SchemaConverter {
           case "io.debezium.time.IsoDate" -> Types.DateType.get();
           case "io.debezium.time.IsoTimestamp" -> Types.TimestampType.withoutZone();
           case "io.debezium.time.ZonedTimestamp" -> Types.TimestampType.withZone();
+          // NOTE: Time type is disable for the moment, it's not supported by spark
           // case "io.debezium.time.IsoTime" -> Types.TimeType.get();
           // case "io.debezium.time.ZonedTime" -> Types.TimeType.get();
           default -> Types.StringType.get();
