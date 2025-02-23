@@ -17,6 +17,7 @@ import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
 import io.debezium.time.IsoTime;
 import io.debezium.time.IsoTimestamp;
+import io.debezium.time.ZonedTime;
 import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
@@ -226,8 +227,15 @@ public class RecordConverter {
 
       case TIME:
         if (node.isTextual()) {
-          // io.debezium.time.IsoTime
-          return LocalTime.parse(node.asText(), IsoTime.FORMATTER);
+          return switch (config.temporalPrecisionMode()) {
+            // io.debezium.time.IsoTime
+            case ISOSTRING -> LocalTime.parse(node.asText(), IsoTime.FORMATTER);
+            // io.debezium.time.ZonedTime
+            // A string representation of a time value with timezone information,
+            // Iceberg using LocalTime for time values
+            // default -> OffsetTime.parse(node.asText(), ZonedTime.FORMATTER);
+            default -> LocalTime.parse(node.asText(), ZonedTime.FORMATTER);
+          };
         }
         if (node.isNumber()) {
           return switch (config.temporalPrecisionMode()) {
@@ -237,8 +245,8 @@ public class RecordConverter {
             // io.debezium.time.NanoTime
             // Represents the time value in nanoseconds
             case NANOSECONDS -> LocalTime.ofNanoOfDay(node.asLong());
-            // org.apache.kafka.connect.data.Timestamp
-            // Represents the number of milliseconds since midnight
+            //org.apache.kafka.connect.data.Time
+            //Represents the number of milliseconds since midnight,
             case CONNECT -> LocalTime.ofNanoOfDay(node.asLong() * 1_000_000);
             default ->
                 throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
