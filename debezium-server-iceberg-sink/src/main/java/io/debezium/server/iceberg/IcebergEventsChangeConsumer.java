@@ -16,7 +16,7 @@ import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
-import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
+import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.PartitionedAppendWriter;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.Dependent;
@@ -25,7 +25,14 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.*;
+import org.apache.iceberg.AppendFiles;
+import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.NullOrder;
+import org.apache.iceberg.PartitionSpec;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -38,8 +45,6 @@ import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
-import org.eclipse.microprofile.config.ConfigProvider;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +54,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.apache.iceberg.types.Types.NestedField.optional;
@@ -97,8 +105,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
   @Inject
   @Any
-  Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
-  InterfaceBatchSizeWait batchSizeWait;
+  Instance<BatchSizeWait> batchSizeWaitInstances;
+  BatchSizeWait batchSizeWait;
   Catalog icebergCatalog;
   Table eventTable;
 

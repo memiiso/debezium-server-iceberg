@@ -15,7 +15,7 @@ import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
-import io.debezium.server.iceberg.batchsizewait.InterfaceBatchSizeWait;
+import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
@@ -68,8 +68,8 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   @Inject
   @Any
-  Instance<InterfaceBatchSizeWait> batchSizeWaitInstances;
-  InterfaceBatchSizeWait batchSizeWait;
+  Instance<BatchSizeWait> batchSizeWaitInstances;
+  BatchSizeWait batchSizeWait;
   Catalog icebergCatalog;
   @Inject
   IcebergTableOperator icebergTableOperator;
