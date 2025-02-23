@@ -18,6 +18,10 @@ public interface DebeziumConfig {
   @WithDefault("isostring")
   TemporalPrecisionMode temporalPrecisionMode();
 
+  @WithName("debezium.source.decimal.handling.mode")
+  @WithDefault("double")
+  TemporalPrecisionMode decimalHandlingMode();
+
   // Event format
   @WithName("debezium.format.value")
   @WithDefault("json")
