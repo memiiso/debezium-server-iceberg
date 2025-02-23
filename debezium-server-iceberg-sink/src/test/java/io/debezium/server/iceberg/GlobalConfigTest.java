@@ -9,10 +9,10 @@ import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_NAME;
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
 
 @QuarkusTest
-public class IcebergConsumerConfigTest {
+public class GlobalConfigTest {
 
   @Inject
-  IcebergConsumerConfig conf;
+  GlobalConfig conf;
 
   @Test
   void configLoadsCorrectly() {

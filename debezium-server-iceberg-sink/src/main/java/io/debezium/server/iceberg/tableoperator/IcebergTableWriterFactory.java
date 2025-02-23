@@ -1,6 +1,6 @@
 package io.debezium.server.iceberg.tableoperator;
 
-import io.debezium.server.iceberg.IcebergConsumerConfig;
+import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.IcebergUtil;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
@@ -27,7 +27,7 @@ import static org.apache.iceberg.TableProperties.WRITE_TARGET_FILE_SIZE_BYTES_DE
 public class IcebergTableWriterFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableWriterFactory.class);
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   public BaseTaskWriter<Record> create(Table icebergTable) {
 

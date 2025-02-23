@@ -6,7 +6,7 @@ import io.smallrye.config.WithParentName;
 
 @ConfigRoot
 @ConfigMapping
-public interface IcebergConsumerConfig {
+public interface GlobalConfig {
 
   @WithParentName
   IcebergConfig iceberg();

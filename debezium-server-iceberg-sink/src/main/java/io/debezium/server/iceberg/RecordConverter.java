@@ -59,9 +59,9 @@ public class RecordConverter {
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
-  private final IcebergConsumerConfig config;
+  private final GlobalConfig config;
 
-  public RecordConverter(String destination, byte[] valueData, byte[] keyData, IcebergConsumerConfig config) {
+  public RecordConverter(String destination, byte[] valueData, byte[] keyData, GlobalConfig config) {
     this.destination = destination;
     this.valueData = valueData;
     this.keyData = keyData;

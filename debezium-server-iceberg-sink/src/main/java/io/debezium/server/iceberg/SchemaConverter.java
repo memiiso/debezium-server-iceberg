@@ -12,9 +12,9 @@ import java.util.Objects;
 public class SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
-  private final IcebergConsumerConfig config;
+  private final GlobalConfig config;
 
-  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, IcebergConsumerConfig config) {
+  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, GlobalConfig config) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;

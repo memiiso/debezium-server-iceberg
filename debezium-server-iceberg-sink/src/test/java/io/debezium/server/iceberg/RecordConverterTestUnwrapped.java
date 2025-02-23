@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 class RecordConverterTestUnwrapped {
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {

@@ -11,7 +11,7 @@ package io.debezium.server.iceberg.tableoperator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.IcebergConsumerConfig;
+import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
@@ -48,7 +48,7 @@ public class IcebergTableOperator {
   @Inject
   IcebergTableWriterFactory writerFactory;
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   protected List<RecordConverter> deduplicateBatch(List<RecordConverter> events) {
 

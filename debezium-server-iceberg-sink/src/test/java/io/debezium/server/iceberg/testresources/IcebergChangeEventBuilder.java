@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.IcebergChangeConsumerTest;
-import io.debezium.server.iceberg.IcebergConsumerConfig;
 import io.debezium.server.iceberg.RecordConverter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -38,7 +38,7 @@ public class IcebergChangeEventBuilder {
   String destination = "test";
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   public IcebergChangeEventBuilder destination(String destination) {
     this.destination = destination;

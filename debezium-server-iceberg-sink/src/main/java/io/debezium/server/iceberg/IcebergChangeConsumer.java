@@ -74,7 +74,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   @Inject
   IcebergTableOperator icebergTableOperator;
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
 
   @PostConstruct

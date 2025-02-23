@@ -101,7 +101,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   final Configuration hadoopConf = new Configuration();
 
   @Inject
-  IcebergConsumerConfig config;
+  GlobalConfig config;
 
   @Inject
   @Any
