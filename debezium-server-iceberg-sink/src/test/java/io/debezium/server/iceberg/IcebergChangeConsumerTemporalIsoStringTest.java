@@ -56,7 +56,7 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         "VALUES \n" +
         "(1, null, null, null, null) \n" +
         ",(2, CURRENT_DATE , CURRENT_TIME, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP ) \n" +
-        ",(3, '2024-01-02'::DATE , CURRENT_TIME, '2023-10-11 10:30:00'::timestamp, '2023-11-12 10:30:00+02'::timestamptz ) ";
+        ",(3, '2024-01-02'::DATE , '18:04:00'::TIME, '2023-10-11 10:30:00'::timestamp, '2023-11-12 10:30:00+02'::timestamptz ) ";
 
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
@@ -76,6 +76,9 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_timestamp = to_timestamp('2023-10-11 10:30:00')").count());
         Assertions.assertEquals(DataTypes.TimestampType, getSchemaField(df, "c_timestamptz").dataType());
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_timestamptz = to_timestamp('2023-11-12 10:30:00+02')").count());
+        // time type is kept as string, because spark does not support time type
+        Assertions.assertEquals(DataTypes.StringType, getSchemaField(df, "c_time").dataType());
+        Assertions.assertEquals(1, df.filter("c_id = 3 AND c_time = '18:04:00Z'").count());
         return true;
       } catch (Exception e) {
 //        e.printStackTrace();
