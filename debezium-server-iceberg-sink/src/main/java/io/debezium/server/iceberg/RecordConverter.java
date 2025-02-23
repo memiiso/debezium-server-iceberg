@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -233,8 +234,7 @@ public class RecordConverter {
             // io.debezium.time.ZonedTime
             // A string representation of a time value with timezone information,
             // Iceberg using LocalTime for time values
-            // default -> OffsetTime.parse(node.asText(), ZonedTime.FORMATTER);
-            default -> LocalTime.parse(node.asText(), ZonedTime.FORMATTER);
+            default -> OffsetTime.parse(node.asText(), ZonedTime.FORMATTER).toLocalTime();
           };
         }
         if (node.isNumber()) {
