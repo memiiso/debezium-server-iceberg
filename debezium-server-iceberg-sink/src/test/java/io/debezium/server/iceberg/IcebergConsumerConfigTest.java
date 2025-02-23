@@ -7,9 +7,6 @@ import org.junit.jupiter.api.Test;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_NAME;
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
 public class IcebergConsumerConfigTest {
@@ -19,16 +16,16 @@ public class IcebergConsumerConfigTest {
 
   @Test
   void configLoadsCorrectly() {
-    Assertions.assertEquals(ICEBERG_CATALOG_NAME, conf.catalogName());
+    Assertions.assertEquals(ICEBERG_CATALOG_NAME, conf.iceberg().catalogName());
     // tests are running with false
-    Assertions.assertEquals(false, conf.upsert());
-    Assertions.assertEquals(ICEBERG_WAREHOUSE_S3A, conf.warehouseLocation());
+    Assertions.assertEquals(false, conf.iceberg().upsert());
+    Assertions.assertEquals(ICEBERG_WAREHOUSE_S3A, conf.iceberg().warehouseLocation());
 
-    Assertions.assertTrue(conf.icebergConfigs().containsKey("warehouse"));
-    Assertions.assertTrue(conf.icebergConfigs().containsValue(ICEBERG_WAREHOUSE_S3A));
-    Assertions.assertTrue(conf.icebergConfigs().containsKey("table-namespace"));
-    Assertions.assertTrue(conf.icebergConfigs().containsKey("catalog-name"));
-    Assertions.assertTrue(conf.icebergConfigs().containsValue(ICEBERG_CATALOG_NAME));
+    Assertions.assertTrue(conf.iceberg().icebergConfigs().containsKey("warehouse"));
+    Assertions.assertTrue(conf.iceberg().icebergConfigs().containsValue(ICEBERG_WAREHOUSE_S3A));
+    Assertions.assertTrue(conf.iceberg().icebergConfigs().containsKey("table-namespace"));
+    Assertions.assertTrue(conf.iceberg().icebergConfigs().containsKey("catalog-name"));
+    Assertions.assertTrue(conf.iceberg().icebergConfigs().containsValue(ICEBERG_CATALOG_NAME));
   }
 
 }
