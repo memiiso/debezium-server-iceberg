@@ -1,6 +1,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.jdbc.TemporalPrecisionMode;
+import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -20,7 +21,7 @@ public interface DebeziumConfig {
 
   @WithName("debezium.source.decimal.handling.mode")
   @WithDefault("double")
-  TemporalPrecisionMode decimalHandlingMode();
+  RelationalDatabaseConnectorConfig.DecimalHandlingMode decimalHandlingMode();
 
   // Event format
   @WithName("debezium.format.value")
