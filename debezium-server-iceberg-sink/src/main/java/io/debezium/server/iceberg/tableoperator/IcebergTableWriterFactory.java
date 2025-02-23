@@ -41,12 +41,12 @@ public class IcebergTableWriterFactory {
         PropertyUtil.propertyAsLong(
             icebergTable.properties(), WRITE_TARGET_FILE_SIZE_BYTES, WRITE_TARGET_FILE_SIZE_BYTES_DEFAULT);
 
-    if (!config.upsert()) {
+    if (!config.iceberg().upsert()) {
       // RUNNING APPEND MODE
       return appendWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
     } else if (icebergTable.schema().identifierFieldIds().isEmpty()) {
       // ITS UPSERT MODE BUT!!!!! TABLE DON'T HAVE identifierFieldIds(Primary Key)
-      if (config.upsert()) {
+      if (config.iceberg().upsert()) {
         LOGGER.info("Table don't have Pk defined upsert is not possible falling back to append!");
       }
       return appendWriter(icebergTable, format, appenderFactory, fileFactory, targetFileSize);
@@ -78,12 +78,12 @@ public class IcebergTableWriterFactory {
       // running with upsert mode + un partitioned table
       return new UnpartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, config.keepDeletes());
+          targetFileSize, icebergTable.schema(), identifierFieldIds, config.iceberg().keepDeletes());
     } else {
       // running with upsert mode + partitioned table
       return new PartitionedDeltaWriter(icebergTable.spec(), format, appenderFactory, fileFactory,
           icebergTable.io(),
-          targetFileSize, icebergTable.schema(), identifierFieldIds, config.keepDeletes());
+          targetFileSize, icebergTable.schema(), identifierFieldIds, config.iceberg().keepDeletes());
     }
   }
 }

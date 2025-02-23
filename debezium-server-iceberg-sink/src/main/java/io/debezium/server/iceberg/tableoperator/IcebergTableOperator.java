@@ -143,11 +143,11 @@ public class IcebergTableOperator {
   public void addToTable(Table icebergTable, List<RecordConverter> events) {
 
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
-    if (config.upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
+    if (config.iceberg().upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
       events = deduplicateBatch(events);
     }
 
-    if (!config.allowFieldAddition()) {
+    if (!config.iceberg().allowFieldAddition()) {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
@@ -178,7 +178,7 @@ public class IcebergTableOperator {
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
       for (RecordConverter e : events) {
-        final RecordWrapper record = (config.upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
+        final RecordWrapper record = (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
         writer.write(record);
       }
 

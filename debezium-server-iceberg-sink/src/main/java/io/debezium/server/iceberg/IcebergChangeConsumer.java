@@ -79,18 +79,18 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   @PostConstruct
   void connect() {
-    if (!config.valueFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.value={" + config.valueFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
+    if (!config.debezium().valueFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.value={" + config.debezium().valueFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
     }
-    if (!config.keyFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
-      throw new DebeziumException("debezium.format.key={" + config.valueFormat() + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
+    if (!config.debezium().keyFormat().equalsIgnoreCase(Json.class.getSimpleName().toLowerCase())) {
+      throw new DebeziumException("debezium.format.key={" + config.debezium().valueFormat() + "} not supported! Supported (debezium.format.key=*) formats are {json,}!");
     }
 
     // pass iceberg properties to iceberg and hadoop
-    config.icebergConfigs().forEach(this.hadoopConf::set);
+    config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.catalogName(), config.icebergConfigs(), hadoopConf);
-    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batchSizeWaitName());
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.iceberg().batchSizeWaitName());
     batchSizeWait.initizalize();
 
     // configure and set 
@@ -142,7 +142,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
    */
   public Table loadIcebergTable(TableIdentifier tableId, RecordConverter sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
-      if (!config.eventSchemaEnabled()) {
+      if (!config.debezium().eventSchemaEnabled()) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
       }
       try {
@@ -152,10 +152,10 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
         // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
         if (sampleEvent.isSchemaChangeEvent()) {
           LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-          return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.writeFormat());
+          return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.iceberg().writeFormat());
         }
 
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.writeFormat());
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.iceberg().writeFormat());
       } catch (Exception e) {
         throw new DebeziumException("Failed to create table from debezium event schema:" + tableId + " Error:" + e.getMessage(), e);
       }
@@ -179,15 +179,15 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   public TableIdentifier mapDestination(String destination) {
     final String tableName = destination
-        .replaceAll(config.destinationRegexp().orElse(""), config.destinationRegexpReplace().orElse(""))
+        .replaceAll(config.iceberg().destinationRegexp().orElse(""), config.iceberg().destinationRegexpReplace().orElse(""))
         .replace(".", "_");
 
-    if (config.destinationUppercaseTableNames()) {
-      return TableIdentifier.of(Namespace.of(config.namespace()), (config.tablePrefix().orElse("") + tableName).toUpperCase());
-    } else if (config.destinationLowercaseTableNames()) {
-      return TableIdentifier.of(Namespace.of(config.namespace()), (config.tablePrefix().orElse("") + tableName).toLowerCase());
+    if (config.iceberg().destinationUppercaseTableNames()) {
+      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toUpperCase());
+    } else if (config.iceberg().destinationLowercaseTableNames()) {
+      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toLowerCase());
     } else {
-      return TableIdentifier.of(Namespace.of(config.namespace()), config.tablePrefix().orElse("") + tableName);
+      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), config.iceberg().tablePrefix().orElse("") + tableName);
     }
   }
 }
