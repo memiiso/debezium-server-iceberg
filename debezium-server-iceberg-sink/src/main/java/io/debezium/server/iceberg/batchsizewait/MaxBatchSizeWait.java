@@ -9,12 +9,10 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 import io.debezium.DebeziumException;
-import io.debezium.config.CommonConnectorConfig;
 import io.debezium.server.DebeziumMetrics;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,21 +26,14 @@ import org.slf4j.LoggerFactory;
 public class MaxBatchSizeWait implements BatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MaxBatchSizeWait.class);
 
-  @ConfigProperty(name = "debezium.source.max.queue.size", defaultValue = CommonConnectorConfig.DEFAULT_MAX_QUEUE_SIZE + "")
-  int maxQueueSize;
-  @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE + "")
-  int maxBatchSize;
-  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait.max-wait-ms", defaultValue = "300000")
-  int maxWaitMs;
-  @ConfigProperty(name = "debezium.sink.batch.batch-size-wait.wait-interval-ms", defaultValue = "10000")
-  int waitIntervalMs;
-
+  @Inject
+  BatchSizeWaitConfig config;
   @Inject
   DebeziumMetrics dbzMetrics;
 
   @Override
   public void initizalize() throws DebeziumException {
-    assert waitIntervalMs < maxWaitMs : "`wait-interval-ms` cannot be bigger than `max-wait-ms`";
+    assert config.batchSizeWaitWaitIntervalMs() < config.batchSizeWaitMaxWaitMs() : "`wait-interval-ms` cannot be bigger than `max-wait-ms`";
   }
 
   @Override
@@ -56,22 +47,22 @@ public class MaxBatchSizeWait implements BatchSizeWait {
     LOGGER.debug("Processed {}, QueueCurrentSize:{}, QueueTotalCapacity:{}, SecondsBehindSource:{}, SnapshotCompleted:{}",
         numRecordsProcessed,
         dbzMetrics.streamingQueueCurrentSize(),
-        maxQueueSize,
+        config.sourceMaxQueueSize(),
         (int) (dbzMetrics.streamingMilliSecondsBehindSource() / 1000),
         dbzMetrics.snapshotCompleted()
     );
 
     int totalWaitMs = 0;
-    while (totalWaitMs < maxWaitMs && dbzMetrics.streamingQueueCurrentSize() < maxBatchSize) {
-      totalWaitMs += waitIntervalMs;
+    while (totalWaitMs < config.batchSizeWaitMaxWaitMs() && dbzMetrics.streamingQueueCurrentSize() < config.sourceMaxBatchSize()) {
+      totalWaitMs += config.batchSizeWaitWaitIntervalMs();
       LOGGER.debug("Sleeping {} Milliseconds, QueueCurrentSize:{} < maxBatchSize:{}",
-          waitIntervalMs, dbzMetrics.streamingQueueCurrentSize(), maxBatchSize);
+          config.batchSizeWaitWaitIntervalMs(), dbzMetrics.streamingQueueCurrentSize(), config.sourceMaxBatchSize());
 
-      Thread.sleep(waitIntervalMs);
+      Thread.sleep(config.batchSizeWaitWaitIntervalMs());
     }
 
     LOGGER.debug("Total wait {} Milliseconds, QueueCurrentSize:{} < maxBatchSize:{}",
-        totalWaitMs, dbzMetrics.streamingQueueCurrentSize(), maxBatchSize);
+        totalWaitMs, dbzMetrics.streamingQueueCurrentSize(), config.sourceMaxBatchSize());
 
   }
 
