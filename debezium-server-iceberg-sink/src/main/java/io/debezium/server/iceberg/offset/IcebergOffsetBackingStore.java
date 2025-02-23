@@ -16,7 +16,10 @@ import io.debezium.config.Configuration;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
-import org.apache.iceberg.*;
+import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
@@ -24,7 +27,11 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.expressions.Expressions;
-import org.apache.iceberg.io.*;
+import org.apache.iceberg.io.BaseTaskWriter;
+import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.io.OutputFileFactory;
+import org.apache.iceberg.io.UnpartitionedWriter;
+import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.runtime.WorkerConfig;
@@ -42,7 +49,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +75,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       )
   );
   protected static final ObjectMapper mapper = new ObjectMapper();
-  public static String CONFIGURATION_FIELD_PREFIX_STRING = "offset.storage.";
+  public static final String CONFIGURATION_FIELD_PREFIX_STRING = "offset.storage.";
   private static final Logger LOG = LoggerFactory.getLogger(IcebergOffsetBackingStore.class);
   protected Map<String, String> data = new HashMap<>();
   Catalog icebergCatalog;
@@ -232,7 +244,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
         LOG.debug("Loaded offset data {}", dataJsonString);
       }
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+//      e.printStackTrace();
       throw new DebeziumException("Failed recover offset data from iceberg", e);
     }
   }
