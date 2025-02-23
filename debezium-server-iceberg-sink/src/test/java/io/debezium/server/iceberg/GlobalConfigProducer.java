@@ -12,7 +12,7 @@ import org.mockito.Mockito;
  * allowing selective overriding of configuration values while preserving the original
  * configuration.
  */
-public class TestConfigProducer {
+public class GlobalConfigProducer {
   @Inject
   Config config;
 
