@@ -13,7 +13,7 @@ package io.debezium.server.iceberg.batchsizewait;
  *
  * @author Ismail Simsek
  */
-public interface InterfaceBatchSizeWait {
+public interface BatchSizeWait {
 
   default void initizalize() {
   }

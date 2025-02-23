@@ -11,7 +11,6 @@ package io.debezium.server.iceberg.batchsizewait;
 import io.debezium.DebeziumException;
 import io.debezium.config.CommonConnectorConfig;
 import io.debezium.server.DebeziumMetrics;
-
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -26,7 +25,7 @@ import org.slf4j.LoggerFactory;
  */
 @Dependent
 @Named("MaxBatchSizeWait")
-public class MaxBatchSizeWait implements InterfaceBatchSizeWait {
+public class MaxBatchSizeWait implements BatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MaxBatchSizeWait.class);
 
   @ConfigProperty(name = "debezium.source.max.queue.size", defaultValue = CommonConnectorConfig.DEFAULT_MAX_QUEUE_SIZE + "")
