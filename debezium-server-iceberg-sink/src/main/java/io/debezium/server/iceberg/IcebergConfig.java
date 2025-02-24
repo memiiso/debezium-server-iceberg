@@ -84,4 +84,8 @@ public interface IcebergConfig {
   @WithDefault("true")
   boolean allowFieldAddition();
 
+  @WithName("debezium.sink.iceberg.io-impl")
+  @WithDefault("org.apache.iceberg.io.ResolvingFileIO")
+  String ioImpl();
+
 }
