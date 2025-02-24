@@ -1,5 +1,5 @@
-FROM eclipse-temurin:21-jdk as builder
-RUN apt-get -qq update && apt-get -qq install maven unzip
+FROM maven:3.9.9-eclipse-temurin-21 as builder
+RUN apt-get -qq update && apt-get -qq install unzip
 COPY . /app
 WORKDIR /app
 RUN mvn clean package -Passembly -Dmaven.test.skip --quiet
