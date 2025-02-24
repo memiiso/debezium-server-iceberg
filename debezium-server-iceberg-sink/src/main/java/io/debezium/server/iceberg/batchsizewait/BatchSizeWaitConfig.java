@@ -25,4 +25,8 @@ public interface BatchSizeWaitConfig {
   @WithDefault("10000")
   int batchSizeWaitWaitIntervalMs();
 
+  @WithName("debezium.sink.batch.batch-size-wait")
+  @WithDefault("NoBatchSizeWait")
+  String batchSizeWaitName();
+
 }

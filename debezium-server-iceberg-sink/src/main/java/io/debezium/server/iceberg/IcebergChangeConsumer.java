@@ -90,7 +90,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
-    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.iceberg().batchSizeWaitName());
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
 
     // configure and set 

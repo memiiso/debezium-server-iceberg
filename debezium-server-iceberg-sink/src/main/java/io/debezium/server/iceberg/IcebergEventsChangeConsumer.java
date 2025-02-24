@@ -136,7 +136,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     // load table
     eventTable = icebergCatalog.loadTable(tableIdentifier);
 
-    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.iceberg().batchSizeWaitName());
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
 
     // configure and set 
