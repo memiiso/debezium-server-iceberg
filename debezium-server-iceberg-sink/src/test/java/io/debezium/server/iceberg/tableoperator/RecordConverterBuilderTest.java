@@ -8,12 +8,11 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
+import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
-import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.Assertions;
@@ -31,10 +30,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  */
 @QuarkusTest
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-class RecordConverterBuilderTest {
-
-  @Inject
-  IcebergChangeEventBuilder eventBuilder;
+class RecordConverterBuilderTest extends BaseTest {
 
   @Test
   public void testIcebergChangeEventBuilder() {

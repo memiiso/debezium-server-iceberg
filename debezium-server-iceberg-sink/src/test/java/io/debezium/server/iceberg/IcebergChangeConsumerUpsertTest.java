@@ -8,7 +8,6 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -17,7 +16,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
@@ -42,10 +40,6 @@ import java.util.Map;
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
-  @Inject
-  IcebergChangeConsumer consumer;
-  @Inject
-  TestChangeEventFactory eventFactory;
   final static Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
