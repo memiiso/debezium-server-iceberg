@@ -72,10 +72,6 @@ public interface IcebergConfig {
   @WithDefault("true")
   boolean createIdentifierFields();
 
-  @WithName("debezium.sink.batch.batch-size-wait")
-  @WithDefault("NoBatchSizeWait")
-  String batchSizeWaitName();
-
   @WithName("debezium.sink.iceberg." + DEFAULT_FILE_FORMAT)
   @WithDefault(DEFAULT_FILE_FORMAT_DEFAULT)
   String writeFormat();
