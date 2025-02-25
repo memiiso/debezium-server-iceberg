@@ -10,16 +10,13 @@ package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.Lists;
 import io.debezium.DebeziumException;
-import io.debezium.server.iceberg.IcebergChangeConsumer;
+import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.RecordConverter;
-import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
-import io.debezium.server.iceberg.testresources.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.junit.jupiter.api.Assertions;
@@ -42,18 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class IcebergTableOperatorTest extends BaseTest {
 
   static String testTable = "inventory.test_table_operator";
-  @Inject
-  IcebergTableOperator icebergTableOperator;
-
-  @Inject
-  IcebergChangeConsumer icebergConsumer;
-
-  @Inject
-  IcebergChangeEventBuilder eventBuilder;
 
   public Table createTable(RecordConverter sampleEvent) {
-    TableIdentifier tableId =  icebergConsumer.mapDestination(sampleEvent.destination());
-    return icebergConsumer.loadIcebergTable(tableId, sampleEvent);
+    TableIdentifier tableId = consumer.mapDestination(sampleEvent.destination());
+    return consumer.loadIcebergTable(tableId, sampleEvent);
   }
 
   @Test

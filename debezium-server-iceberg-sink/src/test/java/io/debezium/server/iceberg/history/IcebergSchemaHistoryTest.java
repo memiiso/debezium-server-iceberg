@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.history;
 
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
+import io.debezium.server.iceberg.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;

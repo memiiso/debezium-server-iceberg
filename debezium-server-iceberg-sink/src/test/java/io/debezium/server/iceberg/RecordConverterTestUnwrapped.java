@@ -12,7 +12,6 @@ import io.debezium.jdbc.TemporalPrecisionMode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
 import org.apache.iceberg.Schema;
 import org.junit.jupiter.api.Test;
 
@@ -31,10 +30,7 @@ import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @TestProfile(RecordConverterTestUnwrapped.TestProfile.class)
-class RecordConverterTestUnwrapped {
-
-  @Inject
-  GlobalConfig config;
+class RecordConverterTestUnwrapped extends BaseTest {
 
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {

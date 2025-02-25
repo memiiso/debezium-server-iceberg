@@ -10,7 +10,6 @@ package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
 import io.debezium.relational.RelationalDatabaseConnectorConfig;
-import io.debezium.server.iceberg.testresources.BaseSparkTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -18,7 +17,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
@@ -27,11 +25,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
 import org.awaitility.Awaitility;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -53,18 +48,6 @@ import static org.mockito.Mockito.when;
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerTest.TestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
-
-  protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
-  @ConfigProperty(name = "debezium.sink.type")
-  String sinkType;
-
-  @Inject
-  IcebergChangeConsumer icebergConsumer;
-  @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
-  String namespace;
-
-  @Inject
-  IcebergConfig icebergConfig;
 
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
@@ -352,20 +335,20 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
 
   @Test
   public void testMapDestination() {
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table1"));
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), icebergConsumer.mapDestination("table2"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), consumer.mapDestination("table1"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"), consumer.mapDestination("table2"));
     // test
     when(consumer.config.iceberg()).thenReturn(icebergConfig);
     when(icebergConfig.destinationUppercaseTableNames()).thenReturn(true);
     when(icebergConfig.destinationLowercaseTableNames()).thenReturn(false);
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("table_name"));
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("Table_Name"));
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), icebergConsumer.mapDestination("TABLE_NAME"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), consumer.mapDestination("table_name"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), consumer.mapDestination("Table_Name"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"), consumer.mapDestination("TABLE_NAME"));
     when(consumer.config.iceberg()).thenReturn(icebergConfig);
     when(icebergConfig.destinationUppercaseTableNames()).thenReturn(false);
     when(icebergConfig.destinationLowercaseTableNames()).thenReturn(true);
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("Table_Name"));
-    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), icebergConsumer.mapDestination("TABLE_NAME"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), consumer.mapDestination("Table_Name"));
+    assertEquals(TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table_name"), consumer.mapDestination("TABLE_NAME"));
   }
 
   public static class TestProfile implements QuarkusTestProfile {

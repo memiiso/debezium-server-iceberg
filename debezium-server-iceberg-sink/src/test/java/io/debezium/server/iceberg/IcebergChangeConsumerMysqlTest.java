@@ -10,7 +10,6 @@ package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
 import io.debezium.jdbc.TemporalPrecisionMode;
-import io.debezium.server.iceberg.testresources.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
@@ -18,7 +17,6 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import jakarta.inject.Inject;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
@@ -39,9 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
 public class IcebergChangeConsumerMysqlTest extends BaseTest {
-
-  @Inject
-  GlobalConfig config;
 
   @Test
   public void testSimpleUpload() throws Exception {

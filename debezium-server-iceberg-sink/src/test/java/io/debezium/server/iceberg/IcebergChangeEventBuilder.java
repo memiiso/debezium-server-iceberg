@@ -6,15 +6,12 @@
  *
  */
 
-package io.debezium.server.iceberg.testresources;
+package io.debezium.server.iceberg;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.IcebergChangeConsumerTest;
-import io.debezium.server.iceberg.RecordConverter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;

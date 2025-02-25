@@ -6,10 +6,11 @@
  *
  */
 
-package io.debezium.server.iceberg.testresources;
+package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.IcebergUtil;
-import io.debezium.server.iceberg.TestConfigSource;
+import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
+import io.debezium.server.iceberg.testresources.TestUtil;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -18,11 +19,9 @@ import org.apache.spark.sql.catalog.CatalogMetadata;
 import org.apache.spark.sql.catalog.Database;
 import org.apache.spark.sql.catalog.Table;
 import org.apache.spark.sql.types.StructField;
-import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.time.Duration;
 import java.util.Map;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
@@ -41,9 +40,8 @@ public class BaseSparkTest extends BaseTest {
   protected static SparkSession spark;
 
   @BeforeAll
-  static void setup() {
-    Awaitility.setDefaultTimeout(Duration.ofMinutes(3));
-    Awaitility.setDefaultPollInterval(Duration.ofSeconds(10));
+  public static void setupSpark() {
+    LOGGER.debug("Setup Spark Test");
     sparkconf
         .set("spark.ui.enabled", "false")
         .set("spark.eventLog.enabled", "false")

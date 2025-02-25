@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.offset;
 
 import com.google.common.collect.Lists;
-import io.debezium.server.iceberg.testresources.BaseTest;
+import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.quarkus.test.common.QuarkusTestResource;
