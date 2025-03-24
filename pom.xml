@@ -25,7 +25,7 @@
         <!-- NOTE: this is overriden by release process using CLI argument -->
         <revision>0.0.1-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
-        <version.debezium>3.1.0.Beta1</version.debezium>
+        <version.debezium>3.1.0.CR1</version.debezium>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
