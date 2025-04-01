@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -205,6 +207,16 @@ public class RecordConverter {
         return node.floatValue();
       case DOUBLE: // double is represented in 64 bits
         return node.asDouble();
+      case DECIMAL: {
+          BigDecimal decimalVal = null;
+          try {
+              int scale = ((Types.DecimalType) field.type()).scale();
+              decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
+          } catch (IOException e) {
+              throw new RuntimeException("Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+          }
+          return decimalVal;
+      }
       case BOOLEAN:
         return node.asBoolean();
       case UUID:
