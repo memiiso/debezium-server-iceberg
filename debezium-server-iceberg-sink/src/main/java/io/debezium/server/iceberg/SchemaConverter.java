@@ -96,7 +96,7 @@ public class SchemaConverter {
         return schemaData;
       default:
         // its primitive field
-        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType, fieldTypeName));
+        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType, fieldTypeName, fieldSchema));
         schemaData.fields().add(field);
         if (isPkField) schemaData.identifierFieldIds().add(field.fieldId());
         return schemaData;
@@ -182,7 +182,7 @@ public class SchemaConverter {
 
   }
 
-  private Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName) {
+  private Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName, JsonNode fieldSchema) {
     // Debezium Temporal types: https://debezium.io/documentation//reference/connectors/postgresql.html#postgresql-temporal-types
     switch (fieldType) {
       case "int8":
@@ -247,6 +247,16 @@ public class SchemaConverter {
       case "uuid":
         return Types.UUIDType.get();
       case "bytes":
+        // With `decimal.handling.mode` set to `precise` debezium relational source connector would encode decimals
+        // as byte arrays. We want to write them out as Iceberg decimals.
+        if (fieldTypeName.equals("org.apache.kafka.connect.data.Decimal")) {
+          JsonNode params = fieldSchema.get("parameters");
+          if (!params.isNull() && !params.isEmpty()) {
+            int precision = params.get("connect.decimal.precision").asInt();
+            int scale = params.get("scale").asInt();
+            return Types.DecimalType.of(precision, scale);
+          }
+        }
         return Types.BinaryType.get();
       default:
         // default to String type
