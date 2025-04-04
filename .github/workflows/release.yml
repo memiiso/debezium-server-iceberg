@@ -29,20 +29,20 @@ jobs:
           cache: 'maven'
 
       - name: Determine Release Name
-        id: set_release_name
+        id: set_release_version
         run: |
           if [[ "${{ github.ref_name }}" == "master" ]]; then
-            echo "RELEASE_NAME=latest" >> $GITHUB_ENV
+            echo "RELEASE_VERSION=latest" >> $GITHUB_ENV
           else
-            echo "RELEASE_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+            echo "RELEASE_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
         shell: bash # Explicitly set shell to bash
 
       - name: Build Project
-        run: mvn -B --no-transfer-progress clean package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_NAME }}
+        run: mvn -B --no-transfer-progress clean package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_VERSION }}
 
       - name: Delete Existing Release (if any)
-        run: gh release delete ${{ env.RELEASE_NAME }} --cleanup-tag --yes
+        run: gh release delete ${{ env.RELEASE_VERSION }} --cleanup-tag --yes
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,9 +53,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release ${{ env.RELEASE_NAME }}
-          tag_name: ${{ env.RELEASE_NAME }}
-          body: Release ${{ env.RELEASE_NAME }}
+          name: Release ${{ env.RELEASE_VERSION }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          body: Release ${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: true
       - name: Delete Maven Package from Github
@@ -63,24 +63,24 @@ jobs:
         with:
           type: maven
           name: io.debezium.debezium-server-iceberg
-          version: ${{ env.RELEASE_NAME }}
+          version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
       - name: Delete Maven Package Dist from Github
         uses: paulushcgcj/delete-github-package@1.0.0
         with:
           type: maven
           name: io.debezium.debezium-server-iceberg-dist
-          version: ${{ env.RELEASE_NAME }}
+          version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
       - name: Delete Maven Package Sink from Github
         uses: paulushcgcj/delete-github-package@1.0.0
         with:
           type: maven
           name: io.debezium.debezium-server-iceberg-sink
-          version: ${{ env.RELEASE_NAME }}
+          version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
-      - name: Publish ${{ env.RELEASE_NAME }} to GitHub Packages
-        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_NAME }} -Dmaven.test.skip=true
+      - name: Publish ${{ env.RELEASE_VERSION }} to GitHub Packages
+        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -97,7 +97,9 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:${{ env.RELEASE_NAME }}
+          build-args: |
+            RELEASE_VERSION=${{ env.RELEASE_VERSION }}
+          tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:${{ env.RELEASE_VERSION }}
 
       - name: Delete Untagged Docker Images
         uses: dylanratcliffe/delete-untagged-containers@main
