@@ -57,7 +57,7 @@ public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
       config.put("quarkus.profile", "mongodb");
       config.put("%mongodb.debezium.source.connector.class", "io.debezium.connector.mongodb.MongoDbConnector");
       config.put("%mongodb.debezium.transforms.unwrap.type", "io.debezium.connector.mongodb.transforms.ExtractNewDocumentState");
-      config.put("%mongodb.debezium.transforms.unwrap.add.fields", "op,source.ts_ms,db");
+      config.put("%mongodb.debezium.transforms.unwrap.add.fields", "op,source.ts_ns,db");
       config.put("%mongodb.debezium.sink.iceberg.allow-field-addition", "false");
       config.put("%mongodb.debezium.source.topic.prefix", "testc");
       config.put("%mongodb.debezium.source.database.include.list", "inventory"); // ok

@@ -86,7 +86,7 @@ debezium.source.topic.prefix=dbz_
 # do event flattening. unwrap message!
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
-debezium.transforms.unwrap.add.fields=op,table,source.ts_ms,db
+debezium.transforms.unwrap.add.fields=op,table,source.ts_ns,db
 debezium.transforms.unwrap.delete.handling.mode=rewrite
 debezium.transforms.unwrap.drop.tombstones=true
 
