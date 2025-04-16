@@ -33,7 +33,7 @@ public class TestChangeEventFactory {
         .addKeyField("id", id)
         .addField("first_name", name)
         .addField("__op", operation)
-        .addField("__source_ts_ms", epoch)
+        .addField("__source_ts_ns", epoch)
         .addField("__deleted", operation.equals("d"))
         .build();
 
@@ -55,7 +55,7 @@ public class TestChangeEventFactory {
         .addKeyField("id", id)
         .addKeyField("first_name", name)
         .addField("__op", operation)
-        .addField("__source_ts_ms", epoch)
+        .addField("__source_ts_ns", epoch)
         .addField("__deleted", operation.equals("d"))
         .build();
 
@@ -90,7 +90,7 @@ public class TestChangeEventFactory {
         .addField("id", id)
         .addField("first_name", name)
         .addField("__op", operation)
-        .addField("__source_ts_ms", epoch)
+        .addField("__source_ts_ns", epoch)
         .addField("__deleted", operation.equals("d"))
         .build();
 
