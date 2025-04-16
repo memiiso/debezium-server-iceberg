@@ -28,7 +28,6 @@ public interface IcebergConfig {
   @WithDefault("__source_ts_ns")
   String cdcSourceTsField();
 
-  //
   @WithName("debezium.sink.iceberg.upsert")
   @WithDefault("true")
   boolean upsert();
