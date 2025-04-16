@@ -65,7 +65,7 @@ public interface DebeziumConfig {
   String unwrapType();
 
   @WithName("debezium.transforms.unwrap.add.fields")
-  @WithDefault("op,table,source.ts_ns,db,ts_ms")
+  @WithDefault("op,table,source.ts_ms,source.ts_ns,db,ts_ms")
   String unwrapAddFields();
 
   @WithName("debezium.transforms.unwrap.delete.handling.mode")
