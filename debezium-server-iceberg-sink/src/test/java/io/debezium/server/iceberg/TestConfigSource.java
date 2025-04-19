@@ -65,7 +65,7 @@ public class TestConfigSource implements ConfigSource {
     // debezium unwrap message
     config.put("debezium.transforms", "unwrap");
     config.put("debezium.transforms.unwrap.type", "io.debezium.transforms.ExtractNewRecordState");
-    config.put("debezium.transforms.unwrap.add.fields", "op,table,source.ts_ms,db,ts_ms");
+    config.put("debezium.transforms.unwrap.add.fields", "op,table,source.ts_ns,db,ts_ms");
     config.put("debezium.transforms.unwrap.delete.handling.mode", "rewrite");
     config.put("debezium.transforms.unwrap.drop.tombstones", "true");
 

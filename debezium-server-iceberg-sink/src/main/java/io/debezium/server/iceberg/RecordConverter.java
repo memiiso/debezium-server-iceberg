@@ -82,15 +82,15 @@ public class RecordConverter {
 
   public Long cdcSourceTsMsValue() {
 
-    final JsonNode element = value().get(config.iceberg().cdcSourceTsMsField());
+    final JsonNode element = value().get(config.iceberg().cdcSourceTsField());
     if (element == null) {
-      throw new DebeziumException("Field '" + config.iceberg().cdcSourceTsMsField() + "' not found in JSON object: " + value());
+      throw new DebeziumException("Field '" + config.iceberg().cdcSourceTsField() + "' not found in JSON object: " + value());
     }
 
     try {
       return element.asLong();
     } catch (NumberFormatException e) {
-      throw new DebeziumException("Error converting field '" + config.iceberg().cdcSourceTsMsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
+      throw new DebeziumException("Error converting field '" + config.iceberg().cdcSourceTsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
     }
   }
 

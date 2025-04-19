@@ -102,31 +102,31 @@ class IcebergTableOperatorTest extends BaseTest {
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
-        .addField("__source_ts_ms", 1L)
+        .addField("__source_ts_ns", 1L)
         .build();
     RecordConverter e2 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
-        .addField("__source_ts_ms", 3L)
+        .addField("__source_ts_ns", 3L)
         .build();
 
     List<RecordConverter> records = List.of(e1, e2);
     List<RecordConverter> dedups = icebergTableOperator.deduplicateBatch(records);
     Assertions.assertEquals(1, dedups.size());
-    Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ms").asLong(0L));
+    Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ns").asLong(0L));
 
     RecordConverter e21 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "r")
-        .addField("__source_ts_ms", 1L)
+        .addField("__source_ts_ns", 1L)
         .build();
     RecordConverter e22 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "u")
-        .addField("__source_ts_ms", 1L)
+        .addField("__source_ts_ns", 1L)
         .build();
 
     List<RecordConverter> records2 = List.of(e21, e22);
@@ -139,13 +139,13 @@ class IcebergTableOperatorTest extends BaseTest {
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "r")
-        .addField("__source_ts_ms", 1L)
+        .addField("__source_ts_ns", 1L)
         .build();
     RecordConverter e32 = eventBuilder
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "u")
-        .addField("__source_ts_ms", 1L)
+        .addField("__source_ts_ns", 1L)
         .build();
 
     List<RecordConverter> records3 = List.of(e31, e32);
