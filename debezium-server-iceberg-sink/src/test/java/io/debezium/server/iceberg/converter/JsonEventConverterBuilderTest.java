@@ -6,10 +6,9 @@
  *
  */
 
-package io.debezium.server.iceberg.tableoperator;
+package io.debezium.server.iceberg.converter;
 
 import io.debezium.server.iceberg.BaseTest;
-import io.debezium.server.iceberg.RecordConverter;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -30,7 +29,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  */
 @QuarkusTest
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-class RecordConverterBuilderTest extends BaseTest {
+class JsonEventConverterBuilderTest extends BaseTest {
 
   @Test
   public void testIcebergChangeEventBuilder() {
@@ -46,7 +45,7 @@ class RecordConverterBuilderTest extends BaseTest {
         , Set.of(1)
     );
 
-    RecordConverter t = eventBuilder.
+    JsonEventConverter t = eventBuilder.
         addKeyField("id", 1)
         .addField("data", "testdatavalue")
         .addField("preferences", "feature1", true)
@@ -63,7 +62,7 @@ class RecordConverterBuilderTest extends BaseTest {
         ))
     );
 
-    RecordConverter t2 = eventBuilder.
+    JsonEventConverter t2 = eventBuilder.
         addField("id", 1)
         .addField("data", "testdatavalue")
         .addField("preferences", "feature1", true)

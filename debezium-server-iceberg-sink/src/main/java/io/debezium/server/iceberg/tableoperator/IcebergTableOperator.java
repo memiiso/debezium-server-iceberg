@@ -8,12 +8,11 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.RecordConverter;
-import io.debezium.server.iceberg.SchemaConverter;
+import io.debezium.server.iceberg.converter.EventConverter;
+import io.debezium.server.iceberg.converter.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import org.apache.iceberg.AppendFiles;
@@ -50,27 +49,27 @@ public class IcebergTableOperator {
   @Inject
   GlobalConfig config;
 
-  protected List<RecordConverter> deduplicateBatch(List<RecordConverter> events) {
+  protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
-    ConcurrentHashMap<JsonNode, RecordConverter> deduplicatedEvents = new ConcurrentHashMap<>();
+    ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
 
     events.forEach(e -> {
           if (!e.hasKeyData()) {
             throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
           }
 
-      try {
-        // deduplicate using key(PK)
-        deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-          if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
-            return newValue;
-          } else {
-            return oldValue;
+          try {
+            // deduplicate using key(PK)
+            deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+              if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
+                return newValue;
+              } else {
+                return oldValue;
+              }
+            });
+          } catch (Exception ex) {
+            throw new DebeziumException("Failed to deduplicate events", ex);
           }
-        });
-      } catch (Exception ex) {
-        throw new DebeziumException("Failed to deduplicate events", ex);
-      }
         }
     );
 
@@ -90,7 +89,7 @@ public class IcebergTableOperator {
    * @param rhs
    * @return
    */
-  private int compareByTsThenOp(RecordConverter lhs, RecordConverter rhs) {
+  private int compareByTsThenOp(EventConverter lhs, EventConverter rhs) {
 
     int result = Long.compare(lhs.cdcSourceTsValue(), rhs.cdcSourceTsValue());
 
@@ -140,7 +139,7 @@ public class IcebergTableOperator {
    * @param icebergTable
    * @param events
    */
-  public void addToTable(Table icebergTable, List<RecordConverter> events) {
+  public void addToTable(Table icebergTable, List<EventConverter> events) {
 
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
     if (config.iceberg().upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
@@ -151,12 +150,12 @@ public class IcebergTableOperator {
       // if field additions not enabled add set of events to table
       addToTablePerSchema(icebergTable, events);
     } else {
-      Map<SchemaConverter, List<RecordConverter>> eventsGroupedBySchema =
+      Map<SchemaConverter, List<EventConverter>> eventsGroupedBySchema =
           events.stream()
-              .collect(Collectors.groupingBy(RecordConverter::schemaConverter));
+              .collect(Collectors.groupingBy(EventConverter::schemaConverter));
       LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
 
-      for (Map.Entry<SchemaConverter, List<RecordConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
+      for (Map.Entry<SchemaConverter, List<EventConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
         // add set of events to table
@@ -172,12 +171,12 @@ public class IcebergTableOperator {
    * @param icebergTable
    * @param events
    */
-  private void addToTablePerSchema(Table icebergTable, List<RecordConverter> events) {
+  private void addToTablePerSchema(Table icebergTable, List<EventConverter> events) {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
-      for (RecordConverter e : events) {
+      for (EventConverter e : events) {
         final RecordWrapper record = (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
         writer.write(record);
       }

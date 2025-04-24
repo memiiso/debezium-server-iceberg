@@ -8,11 +8,14 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 
+import java.util.List;
 import java.util.Map;
 
 @ConfigRoot
 @ConfigMapping
 public interface DebeziumConfig {
+
+  public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
 
   @WithName("debezium.source.time.precision.mode")
   @WithDefault("isostring")

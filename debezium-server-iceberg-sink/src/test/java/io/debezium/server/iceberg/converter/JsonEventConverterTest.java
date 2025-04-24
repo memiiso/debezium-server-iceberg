@@ -6,10 +6,11 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
+import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.quarkus.test.junit.QuarkusTest;
 import org.apache.iceberg.Schema;
@@ -27,13 +28,15 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Set;
 
+import static io.debezium.server.iceberg.converter.JsonEventConverter.keySerde;
+import static io.debezium.server.iceberg.converter.JsonEventConverter.valSerde;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
-class RecordConverterTest extends BaseTest {
+class JsonEventConverterTest extends BaseTest {
   final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
   final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
   final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
@@ -41,18 +44,18 @@ class RecordConverterTest extends BaseTest {
   final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
 
-  RecordConverterTest() throws IOException {
+  JsonEventConverterTest() throws IOException {
   }
 
   @BeforeAll
   static void setup() {
     // configure and set
-    RecordConverter.initializeJsonSerde();
+    JsonEventConverter.initializeJsonSerde();
   }
 
   @Test
   public void testNestedJsonRecord() {
-    RecordConverter e = new RecordConverter("test", serdeWithSchema, null, config);
+    JsonEventConverter e = new JsonEventConverter("test", serdeWithSchema, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema.toString());
     assertEquals(schema.toString(), ("""
@@ -68,7 +71,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testUnwrapJsonRecord() {
-    RecordConverter e = new RecordConverter("test", unwrapWithSchema, null, config);
+    JsonEventConverter e = new JsonEventConverter("test", unwrapWithSchema, null, config);
     Schema schema = e.icebergSchema();
     RecordWrapper record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
@@ -92,7 +95,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedArrayJsonRecord() {
-    RecordConverter e = new RecordConverter("test", unwrapWithArraySchema, null, config);
+    JsonEventConverter e = new JsonEventConverter("test", unwrapWithArraySchema, null, config);
 
     Schema schema = e.icebergSchema();
     assertEquals(schema.toString(), """
@@ -116,7 +119,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedArray2JsonRecord() {
-    RecordConverter e = new RecordConverter("test", unwrapWithArraySchema2, null, config);
+    JsonEventConverter e = new JsonEventConverter("test", unwrapWithArraySchema2, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema);
     assertEquals(schema.toString(), """
@@ -132,7 +135,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedGeomJsonRecord() {
-    RecordConverter e = new RecordConverter("test", unwrapWithGeomSchema, null, config);
+    JsonEventConverter e = new JsonEventConverter("test", unwrapWithGeomSchema, null, config);
     Schema schema = e.icebergSchema();
     RecordWrapper record = e.convert(schema);
     assertEquals(schema.toString(), """
@@ -175,7 +178,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testIcebergSchemaConverterWithKey() {
-    final RecordConverter t1 = eventBuilder
+    final JsonEventConverter t1 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "name")

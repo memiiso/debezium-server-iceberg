@@ -1,20 +1,28 @@
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
+import io.debezium.server.iceberg.DebeziumConfig;
+import io.debezium.server.iceberg.GlobalConfig;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
-public class SchemaConverter {
+public class JsonSchemaConverter implements io.debezium.server.iceberg.converter.SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
   private final GlobalConfig config;
+  protected static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaConverter.class);
+  protected static final ObjectMapper mapper = new ObjectMapper();
 
-  public SchemaConverter(JsonNode valueSchema, JsonNode keySchema, GlobalConfig config) {
+
+  public JsonSchemaConverter(JsonNode valueSchema, JsonNode keySchema, GlobalConfig config) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;
@@ -112,7 +120,7 @@ public class SchemaConverter {
     if (node != null && !node.isNull() && node.has("fields") && node.get("fields").isArray()) {
       return node.get("fields");
     }
-    return RecordConverter.mapper.createObjectNode();
+    return mapper.createObjectNode();
   }
 
   private static JsonNode findNodeFieldByName(String fieldName, JsonNode node) {
@@ -131,7 +139,7 @@ public class SchemaConverter {
    * @return
    */
   private IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
-    RecordConverter.LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
+    LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
       JsonNode equivalentKeyFieldNode = findNodeFieldByName(fieldName, keySchemaNode);
@@ -141,6 +149,7 @@ public class SchemaConverter {
     return schemaData;
   }
 
+  @Override
   public Schema icebergSchema() {
 
     if (this.valueSchema.isNull()) {
@@ -150,10 +159,10 @@ public class SchemaConverter {
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
     final JsonNode keySchemaNode;
     if (!config.iceberg().createIdentifierFields()) {
-      RecordConverter.LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
+      LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
       keySchemaNode = null;
     } else if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
-      ObjectNode nestedKeySchema = RecordConverter.mapper.createObjectNode();
+      ObjectNode nestedKeySchema = mapper.createObjectNode();
       nestedKeySchema.put("type", "struct");
       nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
       keySchemaNode = nestedKeySchema;
@@ -202,7 +211,7 @@ public class SchemaConverter {
           default -> Types.IntegerType.get();
         };
       case "int64": // long 8 bytes
-        if (RecordConverter.TS_MS_FIELDS.contains(fieldName)) {
+        if (DebeziumConfig.TS_MS_FIELDS.contains(fieldName)) {
           return Types.TimestampType.withZone();
         }
         if (config.debezium().isAdaptiveTemporalMode()) {
@@ -269,7 +278,7 @@ public class SchemaConverter {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    SchemaConverter that = (SchemaConverter) o;
+    JsonSchemaConverter that = (JsonSchemaConverter) o;
     return Objects.equals(valueSchema, that.valueSchema) && Objects.equals(keySchema, that.keySchema);
   }
 
