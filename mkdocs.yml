@@ -11,7 +11,9 @@ theme:
 nav:
   - Home: index.md
   - User Guide: docs.md
+  - Python Runner: python-runner.md
   - Caveats: caveats.md
+  - Contributing: contributing.md
 
 markdown_extensions:
   - pymdownx.snippets:
