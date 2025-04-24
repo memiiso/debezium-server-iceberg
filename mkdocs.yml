@@ -1,5 +1,6 @@
 site_name: Debezium Server Iceberg Consumer
 site_url: http://memiiso.github.io/debezium-server-iceberg
+repo_url: https://github.com/memiiso/debezium-server-iceberg
 theme:
   name: material
   features:
@@ -9,6 +10,7 @@ theme:
     #    - navigation.expand
     - toc.integrate
     - content.code.copy
+    - content.tabs.link
 nav:
   - Home: index.md
   - User Guide: docs.md
