@@ -1,0 +1,19 @@
+site_name: Debezium Server Iceberg Consumer
+site_url: http://memiiso.github.io/debezium-server-iceberg
+theme:
+  name: material
+  features:
+    #    - navigation.instant
+    - navigation.indexes
+    - navigation.tabs
+    #    - navigation.expand
+    - toc.integrate
+nav:
+  - Home: index.md
+  - User Guide: docs.md
+  - Caveats: caveats.md
+
+markdown_extensions:
+  - pymdownx.snippets:
+      base_path: [ !relative $config_dir ]
+      check_paths: true

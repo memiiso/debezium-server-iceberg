@@ -16,7 +16,7 @@ For a full understanding of current limitations and recommended solutions, pleas
 
 ![Debezium Iceberg](docs/images/rdbms-debezium-iceberg_white.png)
 
-# Installation
+## Installation
 - Requirements:
   - JDK 21
   - Maven
@@ -39,7 +39,7 @@ mv conf/application.properties.example conf/application.properties
 bash run.sh
 ```
 
-# Python Runner for Debezium Server
+## Python Runner for Debezium Server
 
 It's possible to use python to run,operate debezium server
 
@@ -84,7 +84,7 @@ d.run()
 d.join()
 ```
 
-# Contributing
+## Contributing
 
 The Memiiso community welcomes anyone that wants to help out in any way, whether that includes reporting problems,
 helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features.
