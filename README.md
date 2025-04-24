@@ -27,7 +27,9 @@ the [caveats](https://memiiso.github.io/debezium-server-iceberg/caveats/).
 3. Create distribution package.
 4. Extract the contents of the server distribution package
 5. Enter into unzipped folder
-6. Create `application.properties` file. An example configuration file named [application.properties.example](debezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example) is provided for your reference.
+6. Create `application.properties` file. An example configuration file
+   named [application.properties.example](https://raw.githubusercontent.com/memiiso/debezium-server-iceberg/refs/heads/master/debezium-server-iceberg-dist/src/main/resources/distro/conf/application.properties.example)
+   is provided for your reference.
 7. Run the provided script: `bash run.sh` This script will launch the server using the configuration you defined in the application.properties file.
 
 ```bash
@@ -44,7 +46,7 @@ bash run.sh
 
 The Memiiso community welcomes anyone that wants to help out in any way, whether that includes reporting problems,
 helping with documentation, or contributing code changes to fix bugs, add tests, or implement new features.
-See [contributing document](CONTRIBUTING.md) for details.
+See [contributing document](docs/contributing.md) for details.
 
 ### Contributors
 
