@@ -1,0 +1,32 @@
+site_name: Debezium Server Iceberg Consumer
+site_url: http://memiiso.github.io/debezium-server-iceberg
+repo_url: https://github.com/memiiso/debezium-server-iceberg
+theme:
+  name: material
+  features:
+    #    - navigation.instant
+    - navigation.indexes
+    - navigation.tabs
+    #    - navigation.expand
+    - toc.integrate
+    - content.code.copy
+    - content.tabs.link
+nav:
+  - Home: index.md
+  - User Guide: docs.md
+  - Python Runner: python-runner.md
+  - Caveats: caveats.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - abbr
+  - pymdownx.snippets:
+      base_path: [ !relative $config_dir ]
+      check_paths: true

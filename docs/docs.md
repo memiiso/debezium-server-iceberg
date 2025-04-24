@@ -4,7 +4,7 @@ Directly replicates database Change Data Capture (CDC) events to Iceberg tables 
 
 ![Debezium Iceberg](images/debezium-iceberg.png)
 
-# `iceberg` Consumer
+## `iceberg` Consumer
 The Iceberg consumer replicates database Change Data Capture (CDC) events to target Iceberg tables. It supports both upsert and append modes for data replication.
 
 When event and key schema information is enabled (`debezium.format.value.schemas.enable=true` and `debezium.format.key.schemas.enable=true`), the destination Iceberg tables are automatically created upon the initial startup.
@@ -256,7 +256,7 @@ Method that will try to convert value of this node to a Java boolean. JSON boole
 If representation can not be converted to a boolean value (including structured types like Objects and Arrays), specified defaultValue will be returned; no exceptions are thrown.
 ```
 
-# `icebergevents` Consumer
+## `icebergevents` Consumer
 
 This consumer appends all Change Data Capture (CDC) events as JSON strings to a single Iceberg table. The table is
 partitioned by `event_destination` and `event_sink_timestamptz` for efficient data organization and query performance.
