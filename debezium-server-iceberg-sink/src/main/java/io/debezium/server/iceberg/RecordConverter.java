@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static io.debezium.server.iceberg.IcebergChangeConsumer.keyDeserializer;
+import static io.debezium.server.iceberg.IcebergChangeConsumer.valDeserializer;
 
 /**
  * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
@@ -69,7 +70,7 @@ public class RecordConverter {
     this.keyData = keyData;
     this.config = config;
     this.key = keyDeserializer.deserialize(destination, keyData);
-    this.value = keyDeserializer.deserialize(destination, valueData);
+    this.value = valDeserializer.deserialize(destination, valueData);
   }
 
   public JsonNode key() {
