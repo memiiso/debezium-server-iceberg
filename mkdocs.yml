@@ -8,6 +8,7 @@ theme:
     - navigation.tabs
     #    - navigation.expand
     - toc.integrate
+    - content.code.copy
 nav:
   - Home: index.md
   - User Guide: docs.md
@@ -16,6 +17,14 @@ nav:
   - Contributing: contributing.md
 
 markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - abbr
   - pymdownx.snippets:
       base_path: [ !relative $config_dir ]
       check_paths: true
