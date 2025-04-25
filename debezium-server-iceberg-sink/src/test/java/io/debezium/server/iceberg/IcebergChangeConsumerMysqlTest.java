@@ -40,6 +40,7 @@ public class IcebergChangeConsumerMysqlTest extends BaseTest {
 
   @Test
   public void testSimpleUpload() throws Exception {
+    assertEquals(config.debezium().isEventFlatteningEnabled(), true);
     assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.CONNECT);
     String sqlCreate = "CREATE TABLE IF NOT EXISTS inventory.test_delete_table (" +
                        " c_id INTEGER ," +

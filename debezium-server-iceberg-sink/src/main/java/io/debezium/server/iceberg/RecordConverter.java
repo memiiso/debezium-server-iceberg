@@ -56,7 +56,6 @@ public class RecordConverter {
   protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Logger LOGGER = LoggerFactory.getLogger(RecordConverter.class);
   public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
-  static final boolean eventsAreUnwrapped = IcebergUtil.configIncludesUnwrapSmt();
   protected final String destination;
   protected final byte[] valueData;
   protected final byte[] keyData;

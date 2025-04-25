@@ -1,11 +1,14 @@
 package io.debezium.server.iceberg;
 
+import io.debezium.DebeziumException;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
+
+import java.util.Map;
 
 @ConfigRoot
 @ConfigMapping
@@ -76,6 +79,9 @@ public interface DebeziumConfig {
   @WithDefault("true")
   String unwrapDeleteTombstoneHandlingMode();
 
+  @WithName("debezium.transforms")
+  Map<String, String> transformsConfigs();
+
   default boolean isIsoStringTemporalMode() {
     return temporalPrecisionMode() == TemporalPrecisionMode.ISOSTRING;
   }
@@ -83,5 +89,42 @@ public interface DebeziumConfig {
   default boolean isAdaptiveTemporalMode() {
     return temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE ||
         temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE_TIME_MICROSECONDS;
+  }
+
+  default boolean isJsonKeyValueChangeEventFormat() {
+    return this.valueFormat().equals("json") && this.keyFormat().equals("json");
+  }
+
+  default boolean isConnectKeyValueChangeEventFormat() {
+    return this.valueFormat().equals("connect") && this.keyFormat().equals("connect");
+  }
+
+
+  default String keyValueChangeEventFormat() {
+
+    if (!isJsonKeyValueChangeEventFormat() && !isConnectKeyValueChangeEventFormat()) {
+      throw new DebeziumException("debezium.format.value={" + this.valueFormat() + "} not supported! Supported (debezium.format.value,debezium.format.key) formats are {json,connect}!");
+    }
+
+    return this.valueFormat();
+  }
+
+
+  default boolean isEventFlatteningEnabled() {
+    if (transformsConfigs() == null || transformsConfigs().isEmpty()) {
+      return false;
+    }
+
+    final String regexVal = "^io\\.debezium\\..*transforms\\.ExtractNew.*State$";
+
+    String[] stmsList = transforms().split(",");
+    for (String stmName : stmsList) {
+      String stmVal = transformsConfigs().get(stmName + ".type");
+      if (stmVal != null && !stmVal.isEmpty() && stmVal.matches(regexVal)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

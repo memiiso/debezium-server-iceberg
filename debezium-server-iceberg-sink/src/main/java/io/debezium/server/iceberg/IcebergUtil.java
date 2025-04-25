@@ -68,33 +68,6 @@ public class IcebergUtil {
     return ret;
   }
 
-
-  public static boolean configIncludesUnwrapSmt() {
-    return configIncludesUnwrapSmt(ConfigProvider.getConfig());
-  }
-
-  //@TestingOnly
-  static boolean configIncludesUnwrapSmt(Config config) {
-    // first lets find the config value for debezium statements
-    ConfigValue stms = config.getConfigValue("debezium.transforms");
-    if (stms == null || stms.getValue() == null || stms.getValue().isEmpty() || stms.getValue().isBlank()) {
-      return false;
-    }
-
-    String[] stmsList = stms.getValue().split(",");
-    final String regexVal = "^io\\.debezium\\..*transforms\\.ExtractNew.*State$";
-    // we have debezium statements configured! let's check if we have event flattening config is set.
-    for (String stmName : stmsList) {
-      ConfigValue stmVal = config.getConfigValue("debezium.transforms." + stmName + ".type");
-      if (stmVal != null && stmVal.getValue() != null && !stmVal.getValue().isEmpty() && !stmVal.getValue().isBlank() && stmVal.getValue().matches(regexVal)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-
   public static <T> T selectInstance(Instance<T> instances, String name) {
 
     Instance<T> instance = instances.select(NamedLiteral.of(name));

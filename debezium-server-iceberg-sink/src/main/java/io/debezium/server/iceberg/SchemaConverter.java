@@ -152,7 +152,7 @@ public class SchemaConverter {
     if (!config.iceberg().createIdentifierFields()) {
       RecordConverter.LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
       keySchemaNode = null;
-    } else if (!RecordConverter.eventsAreUnwrapped && keySchema != null) {
+    } else if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
       ObjectNode nestedKeySchema = RecordConverter.mapper.createObjectNode();
       nestedKeySchema.put("type", "struct");
       nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
@@ -163,7 +163,7 @@ public class SchemaConverter {
 
     icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
 
-    if (!RecordConverter.eventsAreUnwrapped && !schemaData.identifierFieldIds().isEmpty()) {
+    if (!config.debezium().isEventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
       // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
       // due to inconsistency in the after and before fields.
       // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
