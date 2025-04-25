@@ -92,7 +92,7 @@ public class IcebergTableOperator {
    */
   private int compareByTsThenOp(RecordConverter lhs, RecordConverter rhs) {
 
-    int result = Long.compare(lhs.cdcSourceTsMsValue(), rhs.cdcSourceTsMsValue());
+    int result = Long.compare(lhs.cdcSourceTsValue(), rhs.cdcSourceTsValue());
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);

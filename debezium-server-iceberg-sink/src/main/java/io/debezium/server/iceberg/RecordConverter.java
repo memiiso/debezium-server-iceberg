@@ -80,7 +80,7 @@ public class RecordConverter {
     return value;
   }
 
-  public Long cdcSourceTsMsValue() {
+  public Long cdcSourceTsValue() {
 
     final JsonNode element = value().get(config.iceberg().cdcSourceTsField());
     if (element == null) {
