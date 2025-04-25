@@ -43,8 +43,7 @@ public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
   public void testSimpleUpload() throws Exception {
 
     // make sure its not unwrapped
-    assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(RecordConverter.eventsAreUnwrapped, false);
+    assertEquals(config.debezium().isEventFlatteningEnabled(), false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
@@ -82,8 +81,7 @@ public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
   public void testDeleteEvents() throws Exception {
 
     // make sure its not unwrapped
-    assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(RecordConverter.eventsAreUnwrapped, false);
+    assertEquals(config.debezium().isEventFlatteningEnabled(), false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {

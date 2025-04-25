@@ -30,6 +30,7 @@ import java.util.Map;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -43,12 +44,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @TestProfile(IcebergChangeConsumerTestUnwraapped.TestProfile.class)
 public class IcebergChangeConsumerTestUnwraapped extends BaseSparkTest {
 
+
+  @Test
+  public void testDebeziumConfig() {
+    assertTrue(config.debezium().transformsConfigs().containsKey("unwrap.type"));
+    assertEquals(debeziumConfig.transforms(), ",");
+    assertEquals(false, config.debezium().isEventFlatteningEnabled());
+
+    debeziumConfig.transformsConfigs().forEach( (k,v) -> {
+      LOGGER.error("{} ==> {}", k, v);
+    } );
+  }
+
   @Test
   public void testSimpleUpload() {
 
     // make sure its not unwrapped
-    assertEquals(IcebergUtil.configIncludesUnwrapSmt(), false);
-    assertEquals(RecordConverter.eventsAreUnwrapped, false);
+    assertEquals(config.debezium().isEventFlatteningEnabled(), false);
 
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {

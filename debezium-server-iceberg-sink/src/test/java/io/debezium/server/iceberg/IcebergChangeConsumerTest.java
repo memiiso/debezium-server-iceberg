@@ -35,6 +35,8 @@ import java.util.Objects;
 
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
@@ -281,6 +283,18 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
+  }
+
+  @Test
+  public void testDebeziumConfig() {
+    debeziumConfig.transformsConfigs().forEach( (k,v) -> {
+      LOGGER.error("{} ==> {}", k, v);
+    } );
+    LOGGER.error("transforms ==> {}", config.debezium().transforms());
+    assertTrue(config.debezium().transformsConfigs().containsKey("unwrap.type"));
+    assertEquals(debeziumConfig.transforms(), "unwrap");
+    assertEquals(config.debezium().isEventFlatteningEnabled(), true);
+
   }
 
   @Test

@@ -13,6 +13,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import org.apache.iceberg.Schema;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ class RecordConverterTestUnwrapped extends BaseTest {
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {
 
-    assertFalse(IcebergUtil.configIncludesUnwrapSmt());
+    Assertions.assertFalse(config.debezium().isEventFlatteningEnabled());
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
@@ -66,7 +67,7 @@ class RecordConverterTestUnwrapped extends BaseTest {
   @Test
   public void testIcebergSchemaConverterWithDelete() throws IOException {
 
-    assertFalse(IcebergUtil.configIncludesUnwrapSmt());
+    assertFalse(config.debezium().isEventFlatteningEnabled());
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
