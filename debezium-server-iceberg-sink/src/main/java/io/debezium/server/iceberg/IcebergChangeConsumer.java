@@ -8,12 +8,9 @@
 
 package io.debezium.server.iceberg;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.DebeziumException;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
-import io.debezium.engine.format.Json;
-import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
@@ -33,14 +30,11 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,11 +49,7 @@ import java.util.stream.Collectors;
 public class IcebergChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
-  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
-  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
-  static Deserializer<JsonNode> valDeserializer;
-  static Deserializer<JsonNode> keyDeserializer;
   protected final Clock clock = Clock.system();
   final Configuration hadoopConf = new Configuration();
   protected long consumerStart = clock.currentTimeInMillis();
@@ -82,19 +72,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     if (!config.debezium().isJsonKeyValueChangeEventFormat()) {
       throw new DebeziumException("debezium.format.value={" + config.debezium().keyValueChangeEventFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
     }
+
+    RecordConverter.initializeJsonSerde();
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
-
-    // configure and set 
-    valSerde.configure(Collections.emptyMap(), false);
-    valDeserializer = valSerde.deserializer();
-    // configure and set 
-    keySerde.configure(Collections.emptyMap(), true);
-    keyDeserializer = keySerde.deserializer();
   }
 
   @Override
@@ -106,10 +91,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
     Map<String, List<RecordConverter>> result =
         records.stream()
             .map((ChangeEvent<Object, Object> e)
-                -> new RecordConverter(e.destination(),
-                getBytes(e.value()),
-                e.key() == null ? null : getBytes(e.key())
-                , config))
+                -> new RecordConverter(e, config))
             .collect(Collectors.groupingBy(RecordConverter::destination));
 
     // consume list of events for each destination table
