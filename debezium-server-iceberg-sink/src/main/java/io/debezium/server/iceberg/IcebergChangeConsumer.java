@@ -79,6 +79,9 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
   @PostConstruct
   void connect() {
+    if (!config.debezium().isJsonKeyValueChangeEventFormat()) {
+      throw new DebeziumException("debezium.format.value={" + config.debezium().keyValueChangeEventFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
+    }
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
