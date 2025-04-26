@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *                             an `AtomicInteger` makes this class thread-safe.
  */
 
-record IcebergSchemaInfo(List<Types.NestedField> fields, Set<Integer> identifierFieldIds,
+public record IcebergSchemaInfo(List<Types.NestedField> fields, Set<Integer> identifierFieldIds,
                          AtomicInteger nextFieldId) {
 
   /**
@@ -42,7 +42,7 @@ record IcebergSchemaInfo(List<Types.NestedField> fields, Set<Integer> identifier
    * list and `identifierFieldIds` set to empty and sets the `nextFieldId` to 1.
    */
   public IcebergSchemaInfo() {
-    this(new ArrayList<>(), new HashSet<>(), new AtomicInteger(1));
+    this(1);
   }
 
   /**

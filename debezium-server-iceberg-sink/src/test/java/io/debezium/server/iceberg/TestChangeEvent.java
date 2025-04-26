@@ -29,14 +29,6 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
     this.destination = destination;
   }
 
-  public byte[] getKeyBytes() {
-    return this.key.toString().getBytes(StandardCharsets.UTF_8);
-  }
-
-  public byte[] getValueBytes() {
-    return this.value.toString().getBytes(StandardCharsets.UTF_8);
-  }
-
   @Override
   public K key() {
     return key;
@@ -67,7 +59,7 @@ public class TestChangeEvent<K, V> implements ChangeEvent<K, V>, RecordChangeEve
   }
 
   public RecordConverter toIcebergChangeEvent(GlobalConfig config) {
-    return new RecordConverter(this.destination(), this.getValueBytes(), this.getKeyBytes(), config);
+    return new RecordConverter(this.destination(), this.value().toString(), this.key().toString(), config);
   }
 
 }

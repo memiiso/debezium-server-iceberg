@@ -47,17 +47,12 @@ class RecordConverterTest extends BaseTest {
   @BeforeAll
   static void setup() {
     // configure and set
-    IcebergChangeConsumer.valSerde.configure(Collections.emptyMap(), false);
-    IcebergChangeConsumer.valDeserializer = IcebergChangeConsumer.valSerde.deserializer();
-    // configure and set
-    IcebergChangeConsumer.keySerde.configure(Collections.emptyMap(), true);
-    IcebergChangeConsumer.keyDeserializer = IcebergChangeConsumer.keySerde.deserializer();
+    RecordConverter.initializeJsonSerde();
   }
 
   @Test
   public void testNestedJsonRecord() {
-    RecordConverter e = new RecordConverter("test",
-        serdeWithSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    RecordConverter e = new RecordConverter("test", serdeWithSchema, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema.toString());
     assertEquals(schema.toString(), ("""
@@ -73,8 +68,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testUnwrapJsonRecord() {
-    RecordConverter e = new RecordConverter("test",
-        unwrapWithSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    RecordConverter e = new RecordConverter("test", unwrapWithSchema, null, config);
     Schema schema = e.icebergSchema();
     RecordWrapper record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
@@ -98,8 +92,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedArrayJsonRecord() {
-    RecordConverter e = new RecordConverter("test",
-        unwrapWithArraySchema.getBytes(StandardCharsets.UTF_8), null, config);
+    RecordConverter e = new RecordConverter("test", unwrapWithArraySchema, null, config);
 
     Schema schema = e.icebergSchema();
     assertEquals(schema.toString(), """
@@ -123,8 +116,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedArray2JsonRecord() {
-    RecordConverter e = new RecordConverter("test",
-        unwrapWithArraySchema2.getBytes(StandardCharsets.UTF_8), null, config);
+    RecordConverter e = new RecordConverter("test", unwrapWithArraySchema2, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema);
     assertEquals(schema.toString(), """
@@ -140,8 +132,7 @@ class RecordConverterTest extends BaseTest {
 
   @Test
   public void testNestedGeomJsonRecord() {
-    RecordConverter e = new RecordConverter("test",
-        unwrapWithGeomSchema.getBytes(StandardCharsets.UTF_8), null, config);
+    RecordConverter e = new RecordConverter("test", unwrapWithGeomSchema, null, config);
     Schema schema = e.icebergSchema();
     RecordWrapper record = e.convert(schema);
     assertEquals(schema.toString(), """
