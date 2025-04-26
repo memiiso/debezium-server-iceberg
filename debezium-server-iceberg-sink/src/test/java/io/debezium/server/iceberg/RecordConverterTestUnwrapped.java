@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -40,15 +41,15 @@ class RecordConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
-    TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
+    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      dbzEvent.toIcebergChangeEvent(config).icebergSchema();
+      TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
     when(config.iceberg().createIdentifierFields()).thenReturn(false);
-    Schema schema = dbzEvent.toIcebergChangeEvent(config).icebergSchema();
+    Schema schema = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
@@ -71,8 +72,8 @@ class RecordConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
-    TestChangeEvent<String, String> dbzEvent = new TestChangeEvent<>(key, val, "test");
-    RecordConverter ie = dbzEvent.toIcebergChangeEvent(config);
+    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
+    RecordConverter ie = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema();

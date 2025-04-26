@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.server.BaseChangeConsumer;
@@ -46,7 +47,7 @@ import java.util.stream.Collectors;
  */
 @Named("iceberg")
 @Dependent
-public class IcebergChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
+public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
@@ -83,14 +84,14 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
   }
 
   @Override
-  public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
+  public void handleBatch(List<EmbeddedEngineChangeEvent> records, DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
       throws InterruptedException {
     Instant start = Instant.now();
 
     //group events by destination (per iceberg table)
     Map<String, List<RecordConverter>> result =
         records.stream()
-            .map((ChangeEvent<Object, Object> e)
+            .map((EmbeddedEngineChangeEvent e)
                 -> new RecordConverter(e, config))
             .collect(Collectors.groupingBy(RecordConverter::destination));
 
@@ -102,7 +103,7 @@ public class IcebergChangeConsumer extends BaseChangeConsumer implements Debeziu
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed per event
     // even it's should be saved to file periodically
-    for (ChangeEvent<Object, Object> record : records) {
+    for (EmbeddedEngineChangeEvent record : records) {
       LOGGER.trace("Processed event '{}'", record);
       committer.markProcessed(record);
     }

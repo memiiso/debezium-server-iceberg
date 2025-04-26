@@ -11,6 +11,7 @@ package io.debezium.server.iceberg;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.serde.DebeziumSerdes;
@@ -80,7 +81,7 @@ public class RecordConverter {
     keyDeserializer = keySerde.deserializer();
   }
 
-  public RecordConverter(ChangeEvent<Object, Object> e, GlobalConfig config) {
+  public RecordConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
   }
 
