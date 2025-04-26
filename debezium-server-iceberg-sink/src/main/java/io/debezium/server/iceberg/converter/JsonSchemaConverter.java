@@ -73,7 +73,8 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
           debeziumFieldToIcebergField(subFieldSchema, subFieldName, subSchemaData, equivalentNestedKeyField);
         }
         // create it as struct, nested type
-        final Types.NestedField structField = Types.NestedField.of(rootStructId, !isPkField, fieldName, Types.StructType.of(subSchemaData.fields()));
+        final Types.StructType structType = Types.StructType.of(subSchemaData.fields());
+        final Types.NestedField structField = Types.NestedField.of(rootStructId, !isPkField, fieldName, structType);
         schemaData.fields().add(structField);
         return schemaData;
       case "map":
@@ -269,6 +270,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         return Types.BinaryType.get();
       default:
         // default to String type
+        LOGGER.warn("Unsupported schema type '{}' for field '{}'. Defaulting to String.", fieldType, fieldName);
         return Types.StringType.get();
       //throw new RuntimeException("'" + fieldName + "' has "+fieldType+" type, "+fieldType+" not supported!");
     }

@@ -22,6 +22,7 @@ import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -39,6 +40,7 @@ import java.util.Map;
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   final static Long TEST_EPOCH_MS = 1577840461000L;

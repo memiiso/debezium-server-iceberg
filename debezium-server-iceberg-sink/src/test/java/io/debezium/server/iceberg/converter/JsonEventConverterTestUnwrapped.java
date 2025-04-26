@@ -17,6 +17,7 @@ import io.quarkus.test.junit.TestProfile;
 import org.apache.iceberg.Schema;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @TestProfile(JsonEventConverterTestUnwrapped.TestProfile.class)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterTestUnwrapped extends BaseTest {
 
   @Test

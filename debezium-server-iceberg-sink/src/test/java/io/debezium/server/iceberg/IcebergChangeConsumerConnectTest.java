@@ -18,8 +18,8 @@ import io.quarkus.test.junit.TestProfile;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -36,30 +36,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerDecimalTest.TestProfile.class)
-public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerConnectTest.TestProfile.class)
+@EnabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
+public class IcebergChangeConsumerConnectTest extends BaseSparkTest {
 
   @Test
-  public void testConsumingNumerics() throws Exception {
-    assertEquals(sinkType, "iceberg");
-    String sql = "\n" +
-        "        DROP TABLE IF EXISTS inventory.data_types;\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
-        "            c_id INTEGER ,\n" +
-        "            c_decimal DECIMAL(18,6)\n" +
-        "          );";
-    SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.data_types (c_id, c_decimal) " +
-        "VALUES (1, '1234566.34456'::decimal)";
-    SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(false);
+  public void testSimpleUpload() {
+    assertEquals("connect", config.debezium().keyValueChangeEventFormat());
 
-        Assertions.assertEquals(1, df.count());
-        Assertions.assertEquals(1, df.filter("c_id = 1 AND c_decimal = CAST('1234566.344560' AS DECIMAL(18,6))").count(), "c_decimal not matching");
-        return true;
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+      try {
+        Dataset<Row> ds = getTableData("testc.inventory.customers");
+        ds.show(false);
+        return ds.count() >= 3;
       } catch (Exception e) {
         e.printStackTrace();
         return false;
@@ -71,8 +60,8 @@ public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
-      config.put("debezium.sink.iceberg.destination-regexp", "\\d");
-      config.put("debezium.source.decimal.handling.mode", "precise");
+      config.put("debezium.format.value", "connect");
+      config.put("debezium.format.key", "connect");
       return config;
     }
   }
