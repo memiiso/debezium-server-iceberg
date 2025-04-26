@@ -6,15 +6,16 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.engine.ChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.serde.DebeziumSerdes;
+import io.debezium.server.iceberg.DebeziumConfig;
+import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
@@ -46,7 +47,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -56,11 +56,10 @@ import java.util.UUID;
  *
  * @author Ismail Simsek
  */
-public class RecordConverter {
+public class JsonEventConverter implements EventConverter {
 
   protected static final ObjectMapper mapper = new ObjectMapper();
-  protected static final Logger LOGGER = LoggerFactory.getLogger(RecordConverter.class);
-  public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
+  protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
   static Deserializer<JsonNode> valDeserializer;
   static Deserializer<JsonNode> keyDeserializer;
   protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
@@ -81,12 +80,12 @@ public class RecordConverter {
     keyDeserializer = keySerde.deserializer();
   }
 
-  public RecordConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+  public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
   }
 
   // Testing only
-  public RecordConverter(String destination, Object valueData, Object keyData, GlobalConfig config) {
+  public JsonEventConverter(String destination, Object valueData, Object keyData, GlobalConfig config) {
     this.destination = destination;
     this.valueData = getBytes(valueData);
     this.keyData = getBytes(keyData);
@@ -112,18 +111,22 @@ public class RecordConverter {
     return "Unexpected data type '" + type + "'";
   }
 
+  @Override
   public JsonNode key() {
     return key;
   }
 
+  @Override
   public boolean hasKeyData() {
     return this.key() != null && !this.key().isNull();
   }
 
+  @Override
   public JsonNode value() {
     return value;
   }
 
+  @Override
   public Long cdcSourceTsValue() {
 
     final JsonNode element = value().get(config.iceberg().cdcSourceTsField());
@@ -138,6 +141,7 @@ public class RecordConverter {
     }
   }
 
+  @Override
   public Operation cdcOpValue() {
     if (!value().has(config.iceberg().cdcOpField())) {
       throw new DebeziumException("The value for field `" + config.iceberg().cdcOpField() + "` is missing. " +
@@ -158,9 +162,10 @@ public class RecordConverter {
     };
   }
 
-  public SchemaConverter schemaConverter() {
+  @Override
+  public JsonSchemaConverter schemaConverter() {
     try {
-      return new SchemaConverter(
+      return new JsonSchemaConverter(
           mapper.readTree(valueData).get("schema"),
           keyData == null ? null : mapper.readTree(keyData).get("schema"),
           config
@@ -177,6 +182,7 @@ public class RecordConverter {
    *
    * @return True if it's a schema change event, false otherwise.
    */
+  @Override
   public boolean isSchemaChangeEvent() {
     return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
   }
@@ -187,19 +193,23 @@ public class RecordConverter {
    *
    * @return The Iceberg schema.
    */
+  @Override
   public Schema icebergSchema() {
     return schemaConverter().icebergSchema();
   }
 
+  @Override
   public String destination() {
     return destination;
   }
 
+  @Override
   public RecordWrapper convertAsAppend(Schema schema) {
     GenericRecord row = convert(schema.asStruct(), value());
     return new RecordWrapper(row, Operation.INSERT);
   }
 
+  @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convert(schema.asStruct(), value());
     Operation op = cdcOpValue();
@@ -252,14 +262,14 @@ public class RecordConverter {
       case DOUBLE: // double is represented in 64 bits
         return node.asDouble();
       case DECIMAL: {
-          BigDecimal decimalVal = null;
-          try {
-              int scale = ((Types.DecimalType) field.type()).scale();
-              decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
-          } catch (IOException e) {
-              throw new RuntimeException("Failed to convert decimal value to iceberg value, field: " + field.name(), e);
-          }
-          return decimalVal;
+        BigDecimal decimalVal = null;
+        try {
+          int scale = ((Types.DecimalType) field.type()).scale();
+          decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
+        } catch (IOException e) {
+          throw new RuntimeException("Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+        }
+        return decimalVal;
       }
       case BOOLEAN:
         return node.asBoolean();
@@ -310,7 +320,7 @@ public class RecordConverter {
         }
         throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
-        if (node.isNumber() && TS_MS_FIELDS.contains(field.name())) {
+        if (node.isNumber() && DebeziumConfig.TS_MS_FIELDS.contains(field.name())) {
           return timestamptzFromMillis(node.asLong());
         }
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();

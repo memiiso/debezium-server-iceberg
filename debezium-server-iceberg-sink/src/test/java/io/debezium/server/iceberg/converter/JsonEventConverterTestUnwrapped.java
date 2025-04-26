@@ -6,10 +6,11 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
+import io.debezium.server.iceberg.BaseTest;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -31,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
-@TestProfile(RecordConverterTestUnwrapped.TestProfile.class)
-class RecordConverterTestUnwrapped extends BaseTest {
+@TestProfile(JsonEventConverterTestUnwrapped.TestProfile.class)
+class JsonEventConverterTestUnwrapped extends BaseTest {
 
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {
@@ -73,7 +74,7 @@ class RecordConverterTestUnwrapped extends BaseTest {
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
     EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
-    RecordConverter ie = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config);
+    JsonEventConverter ie = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema();

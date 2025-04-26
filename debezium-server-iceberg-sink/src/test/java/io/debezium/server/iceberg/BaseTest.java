@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.server.iceberg.converter.TestChangeEventFactory;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;

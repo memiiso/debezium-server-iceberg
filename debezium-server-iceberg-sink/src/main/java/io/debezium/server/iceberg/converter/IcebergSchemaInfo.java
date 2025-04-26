@@ -1,4 +1,4 @@
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import org.apache.iceberg.types.Types;
 

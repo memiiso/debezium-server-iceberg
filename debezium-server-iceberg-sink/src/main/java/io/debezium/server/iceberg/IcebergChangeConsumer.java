@@ -10,10 +10,10 @@ package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
-import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
+import io.debezium.server.iceberg.converter.EventConverter;
+import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
@@ -56,6 +56,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   protected long consumerStart = clock.currentTimeInMillis();
   protected long numConsumedEvents = 0;
   protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
+  protected static String keyValueChangeEventFormat;
 
   @Inject
   @Any
@@ -67,14 +68,10 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Inject
   GlobalConfig config;
 
-
   @PostConstruct
   void connect() {
-    if (!config.debezium().isJsonKeyValueChangeEventFormat()) {
-      throw new DebeziumException("debezium.format.value={" + config.debezium().keyValueChangeEventFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
-    }
-
-    RecordConverter.initializeJsonSerde();
+    JsonEventConverter.initializeJsonSerde();
+    keyValueChangeEventFormat = this.config.debezium().keyValueChangeEventFormat();
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
@@ -89,14 +86,21 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     Instant start = Instant.now();
 
     //group events by destination (per iceberg table)
-    Map<String, List<RecordConverter>> result =
+    Map<String, List<EventConverter>> result =
         records.stream()
             .map((EmbeddedEngineChangeEvent e)
-                -> new RecordConverter(e, config))
-            .collect(Collectors.groupingBy(RecordConverter::destination));
+                    -> {
+                  return switch (keyValueChangeEventFormat) {
+                    case "json" -> new JsonEventConverter(e, config);
+                    default ->
+                        throw new DebeziumException("Unsupported format:" + config.debezium().keyValueChangeEventFormat());
+                  };
+                }
+            )
+            .collect(Collectors.groupingBy(EventConverter::destination));
 
     // consume list of events for each destination table
-    for (Map.Entry<String, List<RecordConverter>> tableEvents : result.entrySet()) {
+    for (Map.Entry<String, List<EventConverter>> tableEvents : result.entrySet()) {
       Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
@@ -119,7 +123,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
    * @param sampleEvent sample debezium event. event schema used to create iceberg table when table not found
    * @return iceberg table, throws RuntimeException when table not found, and it's not possible to create it
    */
-  public Table loadIcebergTable(TableIdentifier tableId, RecordConverter sampleEvent) {
+  public Table loadIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> {
       if (!config.debezium().eventSchemaEnabled()) {
         throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");

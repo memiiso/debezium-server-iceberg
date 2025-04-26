@@ -8,10 +8,12 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.BaseTest;
-import io.debezium.server.iceberg.RecordConverter;
+import io.debezium.server.iceberg.converter.JsonEventConverter;
+import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -40,7 +42,7 @@ class IcebergTableOperatorTest extends BaseTest {
 
   static String testTable = "inventory.test_table_operator";
 
-  public Table createTable(RecordConverter sampleEvent) {
+  public Table createTable(JsonEventConverter sampleEvent) {
     TableIdentifier tableId = consumer.mapDestination(sampleEvent.destination());
     return consumer.loadIcebergTable(tableId, sampleEvent);
   }
@@ -48,7 +50,7 @@ class IcebergTableOperatorTest extends BaseTest {
   @Test
   public void testIcebergTableOperator() throws Exception {
     // setup
-    List<RecordConverter> events = new ArrayList<>();
+    List<EventConverter> events = new ArrayList<>();
     Table icebergTable = this.createTable(
         eventBuilder
             .destination(testTable)
@@ -98,57 +100,57 @@ class IcebergTableOperatorTest extends BaseTest {
 
   @Test
   public void testDeduplicateBatch() throws Exception {
-    RecordConverter e1 = eventBuilder
+    JsonEventConverter e1 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
         .addField("__source_ts_ns", 1L)
         .build();
-    RecordConverter e2 = eventBuilder
+    JsonEventConverter e2 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
         .addField("__source_ts_ns", 3L)
         .build();
 
-    List<RecordConverter> records = List.of(e1, e2);
-    List<RecordConverter> dedups = icebergTableOperator.deduplicateBatch(records);
+    List<EventConverter> records = List.of(e1, e2);
+    List<EventConverter> dedups = icebergTableOperator.deduplicateBatch(records);
     Assertions.assertEquals(1, dedups.size());
-    Assertions.assertEquals(3L, dedups.get(0).value().get("__source_ts_ns").asLong(0L));
+    Assertions.assertEquals(3L, ((JsonNode)dedups.get(0).value()).get("__source_ts_ns").asLong(0L));
 
-    RecordConverter e21 = eventBuilder
+    EventConverter e21 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "r")
         .addField("__source_ts_ns", 1L)
         .build();
-    RecordConverter e22 = eventBuilder
+    EventConverter e22 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addField("__op", "u")
         .addField("__source_ts_ns", 1L)
         .build();
 
-    List<RecordConverter> records2 = List.of(e21, e22);
-    List<RecordConverter> dedups2 = icebergTableOperator.deduplicateBatch(records2);
+    List<EventConverter> records2 = List.of(e21, e22);
+    List<EventConverter> dedups2 = icebergTableOperator.deduplicateBatch(records2);
     Assertions.assertEquals(1, dedups2.size());
-    Assertions.assertEquals("u", dedups2.get(0).value().get("__op").asText("x"));
+    Assertions.assertEquals("u", ((JsonNode)dedups2.get(0).value()).get("__op").asText("x"));
 
     // deduplicating wth null key should fail!
-    RecordConverter e31 = eventBuilder
+    EventConverter e31 = eventBuilder
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "r")
         .addField("__source_ts_ns", 1L)
         .build();
-    RecordConverter e32 = eventBuilder
+    JsonEventConverter e32 = eventBuilder
         .destination("destination")
         .addField("id", 3)
         .addField("__op", "u")
         .addField("__source_ts_ns", 1L)
         .build();
 
-    List<RecordConverter> records3 = List.of(e31, e32);
+    List<EventConverter> records3 = List.of(e31, e32);
     DebeziumException thrown = assertThrows(DebeziumException.class,
         () -> {
           icebergTableOperator.deduplicateBatch(records3);

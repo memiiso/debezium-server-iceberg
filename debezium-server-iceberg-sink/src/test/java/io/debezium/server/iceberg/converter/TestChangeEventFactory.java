@@ -6,10 +6,12 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
+import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.TestUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -38,13 +40,13 @@ public class TestChangeEventFactory {
     return mockRecord;
   }
 
-  public static RecordConverter toIcebergChangeEvent(EmbeddedEngineChangeEvent e, GlobalConfig config) {
-    return new RecordConverter(e.destination(), e.value().toString(), e.key().toString(), config);
+  public static JsonEventConverter toIcebergChangeEvent(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+    return new JsonEventConverter(e.destination(), e.value().toString(), e.key().toString(), config);
   }
 
   public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation, String name,
                                               Long epoch) {
-    final RecordConverter t = builder
+    final JsonEventConverter t = builder
         .destination(destination)
         .addKeyField("id", id)
         .addField("first_name", name)
@@ -66,7 +68,7 @@ public class TestChangeEventFactory {
 
   public EmbeddedEngineChangeEvent ofCompositeKey(String destination, Integer id, String operation, String name,
                                                           Long epoch) {
-    final RecordConverter t = builder
+    final JsonEventConverter t = builder
         .destination(destination)
         .addKeyField("id", id)
         .addKeyField("first_name", name)
@@ -101,7 +103,7 @@ public class TestChangeEventFactory {
 
   public EmbeddedEngineChangeEvent ofNoKey(String destination, Integer id, String operation, String name,
                                                    Long epoch) {
-    final RecordConverter t = builder
+    final JsonEventConverter t = builder
         .destination(destination)
         .addField("id", id)
         .addField("first_name", name)
