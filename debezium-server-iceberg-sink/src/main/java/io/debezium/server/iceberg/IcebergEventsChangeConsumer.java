@@ -11,6 +11,7 @@ package io.debezium.server.iceberg;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.format.Json;
@@ -70,7 +71,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  */
 @Named("icebergevents")
 @Dependent
-public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<ChangeEvent<Object, Object>> {
+public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
 
   protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
   protected static final ObjectMapper mapper = new ObjectMapper();
@@ -146,7 +147,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
 
-  public GenericRecord getIcebergRecord(ChangeEvent<Object, Object> record, OffsetDateTime batchTime) {
+  public GenericRecord getIcebergRecord(EmbeddedEngineChangeEvent record, OffsetDateTime batchTime) {
 
     try {
       // deserialize
@@ -171,7 +172,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   }
 
   @Override
-  public void handleBatch(List<ChangeEvent<Object, Object>> records, DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> committer)
+  public void handleBatch(List<EmbeddedEngineChangeEvent> records, DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
       throws InterruptedException {
     Instant start = Instant.now();
 
@@ -183,7 +184,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed
     // even it's should be saved to file periodically
-    for (ChangeEvent<Object, Object> record : records) {
+    for (EmbeddedEngineChangeEvent record : records) {
       LOGGER.trace("Processed event '{}'", record);
       committer.markProcessed(record);
     }

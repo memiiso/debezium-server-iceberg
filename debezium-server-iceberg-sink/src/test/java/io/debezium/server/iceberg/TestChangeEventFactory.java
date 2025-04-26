@@ -9,11 +9,15 @@
 package io.debezium.server.iceberg;
 
 
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.server.iceberg.testresources.TestUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.mockito.Mockito;
 
 import java.time.Instant;
+
+import static org.mockito.Mockito.when;
 
 /**
  * helper class used to generate test debezium change events
@@ -26,8 +30,20 @@ public class TestChangeEventFactory {
   @Inject
   IcebergChangeEventBuilder builder;
 
-  public TestChangeEvent<Object, Object> of(String destination, Integer id, String operation, String name,
-                                                   Long epoch) {
+  public static EmbeddedEngineChangeEvent getEECE(Object key, Object value, String destination){
+    EmbeddedEngineChangeEvent mockRecord = Mockito.mock(EmbeddedEngineChangeEvent.class);
+    when(mockRecord.key()).thenReturn(key);
+    when(mockRecord.value()).thenReturn(value);
+    when(mockRecord.destination()).thenReturn(destination); // Assuming destination maps
+    return mockRecord;
+  }
+
+  public static RecordConverter toIcebergChangeEvent(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+    return new RecordConverter(e.destination(), e.value().toString(), e.key().toString(), config);
+  }
+
+  public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation, String name,
+                                              Long epoch) {
     final RecordConverter t = builder
         .destination(destination)
         .addKeyField("id", id)
@@ -45,11 +61,11 @@ public class TestChangeEventFactory {
         "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
-    return new TestChangeEvent<>(key, val, destination);
+    return getEECE(key, val, destination);
   }
 
-  public TestChangeEvent<Object, Object> ofCompositeKey(String destination, Integer id, String operation, String name,
-                                                               Long epoch) {
+  public EmbeddedEngineChangeEvent ofCompositeKey(String destination, Integer id, String operation, String name,
+                                                          Long epoch) {
     final RecordConverter t = builder
         .destination(destination)
         .addKeyField("id", id)
@@ -68,23 +84,23 @@ public class TestChangeEventFactory {
         "\"payload\":" + t.value() +
         "} ";
 
-    return new TestChangeEvent<>(key, val, destination);
+    return getEECE(key, val, destination);
   }
 
-  public TestChangeEvent<Object, Object> of(String destination, Integer id, String operation) {
+  public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation) {
     return of(destination, id, operation, TestUtil.randomString(12), Instant.now().toEpochMilli());
   }
 
-  public TestChangeEvent<Object, Object> of(String destination, Integer id, String operation, String name) {
+  public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation, String name) {
     return of(destination, id, operation, name, Instant.now().toEpochMilli());
   }
 
-  public TestChangeEvent<Object, Object> of(String destination, Integer id, String operation, Long epoch) {
+  public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation, Long epoch) {
     return of(destination, id, operation, TestUtil.randomString(12), epoch);
   }
 
-  public TestChangeEvent<Object, Object> ofNoKey(String destination, Integer id, String operation, String name,
-                                                        Long epoch) {
+  public EmbeddedEngineChangeEvent ofNoKey(String destination, Integer id, String operation, String name,
+                                                   Long epoch) {
     final RecordConverter t = builder
         .destination(destination)
         .addField("id", id)
@@ -98,10 +114,10 @@ public class TestChangeEventFactory {
         "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
-    return new TestChangeEvent<>(null, val, destination);
+    return getEECE(null, val, destination);
   }
 
-  public TestChangeEvent<String, String> of(String key, String val) {
-    return new TestChangeEvent<>(key, val, "test");
+  public EmbeddedEngineChangeEvent of(String key, String val) {
+    return getEECE(key, val, "test");
   }
 }

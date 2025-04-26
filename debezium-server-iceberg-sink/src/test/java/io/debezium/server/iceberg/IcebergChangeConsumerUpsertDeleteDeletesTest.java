@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.TestUtil;
@@ -41,7 +42,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
   public void testSimpleUpsert() throws Exception {
 
     String dest = "testc.inventory.customers_upsert";
-    List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
+    List<EmbeddedEngineChangeEvent> records = new ArrayList<>();
     records.add(eventFactory.of(dest, 1, "c"));
     records.add(eventFactory.of(dest, 2, "c"));
     records.add(eventFactory.of(dest, 3, "c"));
@@ -120,7 +121,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
   public void testSimpleUpsertCompositeKey() throws Exception {
     String dest = "testc.inventory.customers_upsert_compositekey";
     // test simple inserts
-    List<io.debezium.engine.ChangeEvent<Object, Object>> records = new ArrayList<>();
+    List<EmbeddedEngineChangeEvent> records = new ArrayList<>();
     records.add(eventFactory.ofCompositeKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofCompositeKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));

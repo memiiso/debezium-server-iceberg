@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg.testresources;
 
-import io.debezium.engine.ChangeEvent;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.DebeziumEngine;
 
 import java.security.SecureRandom;
@@ -31,7 +31,7 @@ public class TestUtil {
     return sb.toString();
   }
 
-  public static DebeziumEngine.RecordCommitter<ChangeEvent<Object, Object>> getCommitter() {
+  public static DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> getCommitter() {
     return new DebeziumEngine.RecordCommitter() {
       public synchronized void markProcessed(SourceRecord record) {
       }
