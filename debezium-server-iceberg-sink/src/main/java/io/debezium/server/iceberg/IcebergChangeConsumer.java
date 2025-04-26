@@ -71,7 +71,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @PostConstruct
   void connect() {
     JsonEventConverter.initializeJsonSerde();
-    keyValueChangeEventFormat = this.config.debezium().keyValueChangeEventFormat();
+    keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
@@ -92,8 +92,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
                     -> {
                   return switch (keyValueChangeEventFormat) {
                     case "json" -> new JsonEventConverter(e, config);
-                    default ->
-                        throw new DebeziumException("Unsupported format:" + config.debezium().keyValueChangeEventFormat());
+//                    case "connect" -> new JsonEventConverter(e, config);
+                    default -> throw new DebeziumException("Unsupported format:" + keyValueChangeEventFormat);
                   };
                 }
             )
