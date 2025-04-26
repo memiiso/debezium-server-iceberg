@@ -56,6 +56,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   protected long consumerStart = clock.currentTimeInMillis();
   protected long numConsumedEvents = 0;
   protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
+  protected static String keyValueChangeEventFormat;
 
   @Inject
   @Any
@@ -65,10 +66,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Inject
   IcebergTableOperator icebergTableOperator;
   @Inject
-  public GlobalConfig config;
-
-  @Inject
-  public static String keyValueChangeEventFormat;
+  GlobalConfig config;
 
   @PostConstruct
   void connect() {
