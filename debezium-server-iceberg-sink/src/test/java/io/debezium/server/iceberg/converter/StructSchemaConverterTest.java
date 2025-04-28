@@ -12,9 +12,9 @@ import io.debezium.time.MicroTimestamp;
 import io.debezium.time.NanoTime;
 import io.debezium.time.NanoTimestamp;
 import io.debezium.time.ZonedTimestamp;
-import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,22 +57,22 @@ class StructSchemaConverterTest {
     // 1. Define the Value Schema
     org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
         .name("SimpleRecord")
-        .field("pk_id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA) // PK field, required by definition in Connect schema
-        .field("data_field", org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA)
-        .field("timestamp_field", org.apache.kafka.connect.data.Schema.OPTIONAL_INT64_SCHEMA)
+        .field("pk_id", Schema.INT32_SCHEMA) // PK field, required by definition in Connect schema
+        .field("data_field", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("timestamp_field", Schema.OPTIONAL_INT64_SCHEMA)
         .build();
 
     // 2. Define the Key Schema
     org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
         .name("SimpleRecordKey")
-        .field("pk_id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA) // The PK field
+        .field("pk_id", Schema.INT32_SCHEMA) // The PK field
         .build();
 
     // 3. Instantiate the Converter
     StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
 
     // 4. Convert to Iceberg Schema
-    Schema icebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
     LOGGER.error("{}", icebergSchema);
 
     // 5. Assertions
@@ -109,24 +109,24 @@ class StructSchemaConverterTest {
     // 1. Define Nested Struct Schema
     org.apache.kafka.connect.data.Schema nestedStructSchema = SchemaBuilder.struct()
         .name("NestedRecord")
-        .field("nested_id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA)
-        .field("nested_data", org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA)
+        .field("nested_id", Schema.INT32_SCHEMA)
+        .field("nested_data", Schema.OPTIONAL_STRING_SCHEMA)
         .build();
 
     // 2. Define the main Value Schema including all types
     org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
         .name("ComplexRecord")
         // Primitives
-        .field("id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA) // PK field
-        .field("int8_field", org.apache.kafka.connect.data.Schema.OPTIONAL_INT8_SCHEMA)
-        .field("int16_field", org.apache.kafka.connect.data.Schema.OPTIONAL_INT16_SCHEMA)
-        .field("int32_field", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
-        .field("int64_field", org.apache.kafka.connect.data.Schema.OPTIONAL_INT64_SCHEMA)
-        .field("float32_field", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
-        .field("float64_field", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT64_SCHEMA)
-        .field("boolean_field", org.apache.kafka.connect.data.Schema.OPTIONAL_BOOLEAN_SCHEMA)
-        .field("string_field", org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA)
-        .field("bytes_field", org.apache.kafka.connect.data.Schema.OPTIONAL_BYTES_SCHEMA)
+        .field("id", Schema.INT32_SCHEMA) // PK field
+        .field("int8_field", Schema.OPTIONAL_INT8_SCHEMA)
+        .field("int16_field", Schema.OPTIONAL_INT16_SCHEMA)
+        .field("int32_field", Schema.OPTIONAL_INT32_SCHEMA)
+        .field("int64_field", Schema.OPTIONAL_INT64_SCHEMA)
+        .field("float32_field", Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("float64_field", Schema.OPTIONAL_FLOAT64_SCHEMA)
+        .field("boolean_field", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+        .field("string_field", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("bytes_field", Schema.OPTIONAL_BYTES_SCHEMA)
         // Logical Types
         .field("date_field", Date.builder().optional().build()) // Days since epoch (INT32)
         .field("time_micros_field", MicroTime.builder().optional().build()) // Micros since midnight (INT64)
@@ -139,24 +139,24 @@ class StructSchemaConverterTest {
         .field("iso_date_field", IsoDate.builder().optional().build()) // String ISO Date (STRING)
         .field("iso_timestamp_field", IsoTimestamp.builder().optional().build()) // String ISO Timestamp (no zone) (STRING)
         // Special Debezium Field
-        .field("__ts_ms", org.apache.kafka.connect.data.Schema.OPTIONAL_INT64_SCHEMA) // Should map to TimestampTZ
+        .field("__ts_ms", Schema.OPTIONAL_INT64_SCHEMA) // Should map to TimestampTZ
         // Nested Struct
         .field("nested_record", nestedStructSchema)
         // Collections
-        .field("array_of_strings", SchemaBuilder.array(org.apache.kafka.connect.data.Schema.STRING_SCHEMA).optional().build())
+        .field("array_of_strings", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
         .field("map_string_int", SchemaBuilder.map(
-            org.apache.kafka.connect.data.Schema.STRING_SCHEMA,
-            org.apache.kafka.connect.data.Schema.INT32_SCHEMA).optional().build())
+            Schema.STRING_SCHEMA,
+            Schema.INT32_SCHEMA).optional().build())
         .field("array_of_structs", SchemaBuilder.array(nestedStructSchema).optional().build())
         .field("map_string_struct", SchemaBuilder.map(
-            org.apache.kafka.connect.data.Schema.STRING_SCHEMA,
+            Schema.STRING_SCHEMA,
             nestedStructSchema).optional().build())
         .build();
 
     // 3. Define the Key Schema
     org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
         .name("ComplexRecordKey")
-        .field("id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA) // The PK field
+        .field("id", Schema.INT32_SCHEMA) // The PK field
         .build();
 
     // 4. Instantiate the Converter
@@ -165,7 +165,7 @@ class StructSchemaConverterTest {
     LOGGER.error("{}", valueSchema.toString());
 
     // 5. Convert to Iceberg Schema
-    Schema icebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
 
     // 6. Assertions
     assertNotNull(icebergSchema);
@@ -260,7 +260,7 @@ class StructSchemaConverterTest {
   }
 
   // Helper assertion method
-  private Types.NestedField assertField(Schema schema, String name, int expectedId, boolean expectedOptional, org.apache.iceberg.types.Type expectedType) {
+  private Types.NestedField assertField(org.apache.iceberg.Schema schema, String name, int expectedId, boolean expectedOptional, org.apache.iceberg.types.Type expectedType) {
     Types.NestedField field = schema.findField(name);
     assertNotNull(field, "Field '" + name + "' not found");
     assertEquals(expectedId, field.fieldId(), "Field ID mismatch for '" + name + "'");
