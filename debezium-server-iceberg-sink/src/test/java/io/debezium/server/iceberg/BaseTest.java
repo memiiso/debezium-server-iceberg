@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.server.iceberg.converter.EventFactory;
+import io.debezium.server.iceberg.converter.JsonBuilder;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
@@ -45,7 +46,7 @@ public class BaseTest {
   @Inject
   public GlobalConfig config;
   @Inject
-  public IcebergChangeEventBuilder eventBuilder;
+  public JsonBuilder eventBuilder;
   @Inject
   public EventFactory eventFactory;
   @Inject

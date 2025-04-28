@@ -6,19 +6,19 @@
  *
  */
 
-package io.debezium.server.iceberg;
+package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.debezium.server.iceberg.converter.JsonEventConverter;
+import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.IcebergChangeConsumerTest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -28,7 +28,7 @@ import java.util.Map;
  * @author Ismail Simsek
  */
 @ApplicationScoped
-public class IcebergChangeEventBuilder {
+public class JsonBuilder {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
   ObjectNode payload = JsonNodeFactory.instance.objectNode();
@@ -38,26 +38,26 @@ public class IcebergChangeEventBuilder {
   @Inject
   GlobalConfig config;
 
-  public IcebergChangeEventBuilder destination(String destination) {
+  public JsonBuilder destination(String destination) {
     this.destination = destination;
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String parentFieldName, String name, String val) {
+  public JsonBuilder addField(String parentFieldName, String name, String val) {
     ObjectNode nestedField = JsonNodeFactory.instance.objectNode();
     nestedField.put(name, val);
     this.payload.set(parentFieldName, nestedField);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String parentFieldName, String name, int val) {
+  public JsonBuilder addField(String parentFieldName, String name, int val) {
     ObjectNode nestedField = JsonNodeFactory.instance.objectNode();
     nestedField.put(name, val);
     this.payload.set(parentFieldName, nestedField);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String parentFieldName, String name, boolean val) {
+  public JsonBuilder addField(String parentFieldName, String name, boolean val) {
 
     ObjectNode nestedField = JsonNodeFactory.instance.objectNode();
     if (this.payload.has(parentFieldName)) {
@@ -68,38 +68,38 @@ public class IcebergChangeEventBuilder {
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String name, int val) {
+  public JsonBuilder addField(String name, int val) {
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String name, String val) {
+  public JsonBuilder addField(String name, String val) {
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String name, long val) {
+  public JsonBuilder addField(String name, long val) {
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String name, double val) {
+  public JsonBuilder addField(String name, double val) {
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addField(String name, boolean val) {
+  public JsonBuilder addField(String name, boolean val) {
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addKeyField(String name, int val) {
+  public JsonBuilder addKeyField(String name, int val) {
     keyPayload.put(name, val);
     payload.put(name, val);
     return this;
   }
 
-  public IcebergChangeEventBuilder addKeyField(String name, String val) {
+  public JsonBuilder addKeyField(String name, String val) {
     keyPayload.put(name, val);
     payload.put(name, val);
     return this;
@@ -178,6 +178,24 @@ public class IcebergChangeEventBuilder {
     }
 
     return fields;
+  }
+
+  public static String ofNoKey(String destination, Integer id, String operation, String name,
+                               Long epoch) {
+    final JsonEventConverter t = new JsonBuilder()
+        .destination(destination)
+        .addField("id", id)
+        .addField("first_name", name)
+        .addField("__op", operation)
+        .addField("__source_ts_ns", epoch)
+        .addField("__deleted", operation.equals("d"))
+        .build();
+
+    final String val = "{" +
+        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
+        "\"payload\":" + t.value() +
+        "} ";
+    return val;
   }
 
 
