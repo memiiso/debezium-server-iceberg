@@ -191,12 +191,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     }
 
     for (Types.NestedField icebergField : icebergStructSchema.fields()) {
+
       Field field = connectStruct.schema().field(icebergField.name());
       if (field == null) {
         record.setField(icebergField.name(), null);
         continue;
       }
-
       Object connectValue = connectStruct.get(field);
 
       if (connectValue == null) {
@@ -204,7 +204,8 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         continue;
       }
 
-      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name());
+      String connectLogicalTypeName = field.schema().name();
+      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name(), connectLogicalTypeName);
       record.setField(icebergField.name(), icebergValue);
     }
 
@@ -219,7 +220,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
    * @param icebergType  The target Iceberg type.
    * @return The converted value compatible with Iceberg.
    */
-  private Object convertValue(Object connectValue, Type icebergType, String icebergFieldName) {
+  private Object convertValue(Object connectValue, Type icebergType, String icebergFieldName, String connectLogicalTypeName) {
+    // @TODO use connectLogicalTypeName to do precise value handling
+    // @TODO example org.apache.kafka.connect.data.Time etc..
     if (connectValue == null) {
       return null;
     }
@@ -276,7 +279,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   protected List<Object> convertListValue(List<?> list, Types.ListType listType) {
     Type elementType = listType.elementType();
     return list.stream()
-        .map(element -> convertValue(element, elementType, null))
+        .map(element -> convertValue(element, elementType, null, null))
         .collect(Collectors.toList());
   }
 
@@ -284,7 +287,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     Type keyType = mapType.keyType();
     Type valueType = mapType.valueType();
     Map<Object, Object> result = new HashMap<>();
-    map.forEach((k, v) -> result.put(convertValue(k, keyType, null), convertValue(v, valueType, null)));
+    map.forEach((k, v) -> result.put(convertValue(k, keyType, null, null), convertValue(v, valueType, null, null)));
     return result;
   }
 

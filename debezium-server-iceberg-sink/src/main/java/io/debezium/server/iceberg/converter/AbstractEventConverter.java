@@ -276,7 +276,7 @@ public class AbstractEventConverter {
         case MICROSECONDS -> DateTimeUtil.timeFromMicros(longValue);
         case NANOSECONDS -> LocalTime.ofNanoOfDay(longValue);
         case CONNECT -> LocalTime.ofNanoOfDay(longValue * 1_000_000L); // Millisecond
-        default -> LocalTime.ofNanoOfDay(longValue * 1_000_000L); // Millisecond
+        default -> LocalTime.ofNanoOfDay(longValue * 1_000L);
       };
     } else if (value instanceof String) {
       return switch (config.debezium().temporalPrecisionMode()) {
