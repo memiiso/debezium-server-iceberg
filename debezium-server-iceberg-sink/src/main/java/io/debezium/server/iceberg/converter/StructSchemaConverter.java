@@ -3,10 +3,10 @@ package io.debezium.server.iceberg.converter;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
-import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,22 +24,25 @@ import java.util.Objects;
 public class StructSchemaConverter implements SchemaConverter {
   protected static final Logger LOGGER = LoggerFactory.getLogger(StructSchemaConverter.class);
 
-  private final org.apache.kafka.connect.data.Schema valueSchema;
-  private final org.apache.kafka.connect.data.Schema keySchema;
+  private final Schema valueSchema;
+  private final Schema keySchema;
   private final GlobalConfig config;
 
-  public StructSchemaConverter(org.apache.kafka.connect.data.Schema valueSchema, org.apache.kafka.connect.data.Schema keySchema, GlobalConfig config) {
+  public StructSchemaConverter(Schema valueSchema, Schema keySchema, GlobalConfig config) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;
   }
 
-  public org.apache.kafka.connect.data.Schema valueSchema() {
-    return valueSchema;
+  private static List<Field> getSchemaFields(Schema schema) {
+    if (schema != null && schema.type() == Schema.Type.STRUCT) {
+      return schema.fields();
+    }
+    return Collections.emptyList();
   }
 
-  public org.apache.kafka.connect.data.Schema keySchema() {
-    return keySchema;
+  public Schema valueSchema() {
+    return valueSchema;
   }
 
 
@@ -50,11 +53,8 @@ public class StructSchemaConverter implements SchemaConverter {
     return getSchemaFields(field.schema());
   }
 
-  private static List<Field> getSchemaFields(org.apache.kafka.connect.data.Schema schema) {
-    if (schema != null && schema.type() == org.apache.kafka.connect.data.Schema.Type.STRUCT) {
-      return schema.fields();
-    }
-    return Collections.emptyList();
+  public Schema keySchema() {
+    return keySchema;
   }
 
   /**
@@ -67,10 +67,10 @@ public class StructSchemaConverter implements SchemaConverter {
    * @param connectKeyField  Equivalent field in the Key schema
    */
   private void debeziumFieldToIcebergField(Field connectField, IcebergSchemaInfo schemaData, Field connectKeyField) {
-    final org.apache.kafka.connect.data.Schema connectSchema = connectField.schema();
+    final Schema connectSchema = connectField.schema();
     final String fieldName = connectField.name();
     final String fieldTypeName = connectSchema.name();
-    final org.apache.kafka.connect.data.Schema.Type fieldType = connectSchema.type();
+    final Schema.Type fieldType = connectSchema.type();
 
     if (fieldType == null) {
       throw new DebeziumException("Unexpected schema field, field type is null or empty, fieldSchema:" + connectSchema + " fieldName:" + fieldName);
@@ -160,7 +160,7 @@ public class StructSchemaConverter implements SchemaConverter {
   /**
    * Converts the fields of a Connect schema to Iceberg fields.
    */
-  private IcebergSchemaInfo icebergSchemaFields(org.apache.kafka.connect.data.Schema valueSchema, org.apache.kafka.connect.data.Schema keySchema, IcebergSchemaInfo schemaData) {
+  private IcebergSchemaInfo icebergSchemaFields(Schema valueSchema, Schema keySchema, IcebergSchemaInfo schemaData) {
     LOGGER.debug("Converting Connect schema fields to Iceberg fields for schema: {}", valueSchema);
     for (Field field : getSchemaFields(valueSchema)) {
       String fieldName = field.name();
@@ -169,7 +169,7 @@ public class StructSchemaConverter implements SchemaConverter {
     return schemaData;
   }
 
-  public Field equivalentKeyField(org.apache.kafka.connect.data.Schema keySchema, String fieldName) {
+  public Field equivalentKeyField(Schema keySchema, String fieldName) {
     // Find the matching Field object from the keyFields list, if it exists
     List<Field> keyFields = getSchemaFields(keySchema);
     return keyFields.stream()
@@ -193,13 +193,13 @@ public class StructSchemaConverter implements SchemaConverter {
    * @return The corresponding Iceberg Schema.
    */
   @Override
-  public Schema icebergSchema() {
-    if (this.valueSchema == null || this.valueSchema.type() != org.apache.kafka.connect.data.Schema.Type.STRUCT) {
+  public org.apache.iceberg.Schema icebergSchema() {
+    if (this.valueSchema == null || this.valueSchema.type() != Schema.Type.STRUCT) {
       throw new DebeziumException("Failed to get schema from Debezium event, value schema is null or not a Struct: " + valueSchema);
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    org.apache.kafka.connect.data.Schema keyFieldSchema = null;
+    Schema keyFieldSchema = null;
 
     if (!config.iceberg().createIdentifierFields()) {
       LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
@@ -233,7 +233,7 @@ public class StructSchemaConverter implements SchemaConverter {
     }
 
     // @TODO validate key fields are correctly set!?
-    return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
+    return new org.apache.iceberg.Schema(schemaData.fields(), schemaData.identifierFieldIds());
   }
 
   /**
@@ -244,9 +244,9 @@ public class StructSchemaConverter implements SchemaConverter {
    * @param connectSchema The Kafka Connect schema for the primitive or logical type.
    * @return The corresponding Iceberg PrimitiveType.
    */
-  private Type.PrimitiveType icebergPrimitiveField(String fieldName, org.apache.kafka.connect.data.Schema connectSchema) {
+  private Type.PrimitiveType icebergPrimitiveField(String fieldName, Schema connectSchema) {
     String logicalTypeName = connectSchema.name();
-    org.apache.kafka.connect.data.Schema.Type fieldType = connectSchema.type();
+    Schema.Type fieldType = connectSchema.type();
 
     // Debezium Temporal types: https://debezium.io/documentation//reference/connectors/postgresql.html#postgresql-temporal-types
     switch (fieldType) {

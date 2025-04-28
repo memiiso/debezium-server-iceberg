@@ -13,10 +13,10 @@ import io.debezium.time.Date;
 import io.debezium.time.MicroTime;
 import io.debezium.time.MicroTimestamp;
 import io.debezium.time.ZonedTimestamp;
-import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -96,7 +96,7 @@ class StructEventConverterTest {
   private org.apache.kafka.connect.data.Schema nestedConnectSchema;
   private org.apache.kafka.connect.data.Schema valueConnectSchema;
   private org.apache.kafka.connect.data.Schema keyConnectSchema;
-  private Schema icebergSchema;
+  private org.apache.iceberg.Schema icebergSchema;
   private Types.StructType nestedIcebergStructType;
 
   @BeforeEach
@@ -112,36 +112,36 @@ class StructEventConverterTest {
 
     // Define Nested Connect Schema
     nestedConnectSchema = SchemaBuilder.struct().name("Nested")
-        .field("nested_str", org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
-        .field("nested_long", org.apache.kafka.connect.data.Schema.INT64_SCHEMA)
+        .field("nested_str", Schema.STRING_SCHEMA)
+        .field("nested_long", Schema.INT64_SCHEMA)
         .build();
 
     // Define Value Connect Schema
     valueConnectSchema = SchemaBuilder.struct().name("Value")
-        .field("id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA) // Part of key
-        .field("col_int", org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA)
-        .field("col_long", org.apache.kafka.connect.data.Schema.OPTIONAL_INT64_SCHEMA)
-        .field("col_float", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT32_SCHEMA)
-        .field("col_double", org.apache.kafka.connect.data.Schema.OPTIONAL_FLOAT64_SCHEMA)
-        .field("col_bool", org.apache.kafka.connect.data.Schema.OPTIONAL_BOOLEAN_SCHEMA)
-        .field("col_string", org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA)
-        .field("col_bytes", org.apache.kafka.connect.data.Schema.OPTIONAL_BYTES_SCHEMA)
+        .field("id", Schema.INT32_SCHEMA) // Part of key
+        .field("col_int", Schema.OPTIONAL_INT32_SCHEMA)
+        .field("col_long", Schema.OPTIONAL_INT64_SCHEMA)
+        .field("col_float", Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("col_double", Schema.OPTIONAL_FLOAT64_SCHEMA)
+        .field("col_bool", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+        .field("col_string", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("col_bytes", Schema.OPTIONAL_BYTES_SCHEMA)
         .field("col_decimal", Decimal.builder(TEST_DECIMAL_SCALE).optional().build())
         .field("col_uuid", Uuid.builder().optional().build())
         .field("col_date", Date.builder().optional().build()) // Debezium Date (int)
         .field("col_time_micros", MicroTime.builder().optional().build()) // Debezium MicroTime (long)
         .field("col_ts_micros", MicroTimestamp.builder().optional().build()) // Debezium MicroTimestamp (long) - maps to LocalDateTime
         .field("col_ts_zoned", ZonedTimestamp.builder().optional().build()) // Debezium ZonedTimestamp (string) - maps to OffsetDateTime
-        .field("col_list", SchemaBuilder.array(org.apache.kafka.connect.data.Schema.STRING_SCHEMA).optional().build())
-        .field("col_map", SchemaBuilder.map(org.apache.kafka.connect.data.Schema.STRING_SCHEMA, org.apache.kafka.connect.data.Schema.INT32_SCHEMA).optional().build())
+        .field("col_list", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+        .field("col_map", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).optional().build())
         .field("col_struct", nestedConnectSchema)
-        .field(CDC_OP_FIELD, org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
-        .field(CDC_TS_MS_FIELD, org.apache.kafka.connect.data.Schema.INT64_SCHEMA)
+        .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
+        .field(CDC_TS_MS_FIELD, Schema.INT64_SCHEMA)
         .build();
 
     // Define Key Connect Schema
     keyConnectSchema = SchemaBuilder.struct().name("Key")
-        .field("id", org.apache.kafka.connect.data.Schema.INT32_SCHEMA)
+        .field("id", Schema.INT32_SCHEMA)
         .build();
 
     // Define Nested Iceberg Schema
@@ -151,7 +151,7 @@ class StructEventConverterTest {
     );
 
     // Define Iceberg Schema (field IDs need to be unique and sequential)
-    icebergSchema = new Schema(
+    icebergSchema = new org.apache.iceberg.Schema(
         Types.NestedField.required(1, "id", Types.IntegerType.get()), // Key field
         Types.NestedField.optional(2, "col_int", Types.IntegerType.get()),
         Types.NestedField.optional(3, "col_long", Types.LongType.get()),
@@ -237,7 +237,7 @@ class StructEventConverterTest {
     StructEventConverter converter = new StructEventConverter(event, config);
 
     // Use the schema derived by the converter itself for conversion
-    Schema derivedIcebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema();
     // For assertion, we use the manually defined one to ensure correctness
     // In a real scenario, you might trust the derived schema or compare them first.
     // @TODO FIX
@@ -286,7 +286,7 @@ class StructEventConverterTest {
     EmbeddedEngineChangeEvent event = createMockChangeEvent(keyStruct, valueStruct);
 
     StructEventConverter converter = new StructEventConverter(event, config);
-    Schema derivedIcebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema();
     RecordWrapper recordWrapper = converter.convert(derivedIcebergSchema);
 
     assertEquals(Operation.UPDATE, recordWrapper.op());
@@ -299,7 +299,7 @@ class StructEventConverterTest {
     Struct valueStruct = createTestValueStruct("d");
     EmbeddedEngineChangeEvent event = createMockChangeEvent(keyStruct, valueStruct);
     StructEventConverter converter = new StructEventConverter(event, config);
-    Schema derivedIcebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema();
     RecordWrapper recordWrapper = converter.convert(derivedIcebergSchema);
 
     assertEquals(Operation.DELETE, recordWrapper.op());
@@ -313,7 +313,7 @@ class StructEventConverterTest {
     EmbeddedEngineChangeEvent event = createMockChangeEvent(keyStruct, valueStruct);
 
     StructEventConverter converter = new StructEventConverter(event, config);
-    Schema derivedIcebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema();
     RecordWrapper recordWrapper = converter.convertAsAppend(derivedIcebergSchema); // Use convertAsAppend
 
     assertEquals(Operation.INSERT, recordWrapper.op()); // Should always be INSERT
@@ -335,7 +335,7 @@ class StructEventConverterTest {
 
     EmbeddedEngineChangeEvent event = createMockChangeEvent(keyStruct, valueStruct);
     StructEventConverter converter = new StructEventConverter(event, config);
-    Schema derivedIcebergSchema = converter.icebergSchema();
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema();
     RecordWrapper icebergRecord = converter.convert(derivedIcebergSchema);
 
     assertNotNull(icebergRecord);
@@ -382,7 +382,7 @@ class StructEventConverterTest {
 
     StructEventConverter converter = new StructEventConverter(mockEvent, config);
 
-    Schema derivedIcebergSchema = converter.icebergSchema(); // Schema derivation should still work
+    org.apache.iceberg.Schema derivedIcebergSchema = converter.icebergSchema(); // Schema derivation should still work
 
     // convert() should fail because it needs the value struct to get CDC fields etc.
     assertThrows(DebeziumException.class, () -> {
@@ -402,13 +402,13 @@ class StructEventConverterTest {
     int connectScale = 3;
     org.apache.kafka.connect.data.Schema decimalConnectSchema = Decimal.builder(connectScale).build();
 
-    Schema decimalIcebergSchema = new Schema(
+    org.apache.iceberg.Schema decimalIcebergSchema = new org.apache.iceberg.Schema(
         Types.NestedField.required(1, "dec_field", Types.DecimalType.of(5, 2)) // precision 5, scale 2
     );
     Types.StructType icebergStruct = decimalIcebergSchema.asStruct();
 
     Struct valueStruct = new Struct(SchemaBuilder.struct().field("dec_field", decimalConnectSchema)
-        .field(CDC_OP_FIELD, org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
+        .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
         .build())
         .put("dec_field", connectDecimal)
         .put(CDC_OP_FIELD, "c");
