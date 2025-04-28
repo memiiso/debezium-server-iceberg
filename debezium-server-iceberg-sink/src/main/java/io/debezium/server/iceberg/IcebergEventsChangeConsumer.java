@@ -12,9 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.engine.ChangeEvent;
 import io.debezium.engine.DebeziumEngine;
-import io.debezium.engine.format.Json;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
@@ -113,10 +111,6 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
   @PostConstruct
   void connect() {
-    if (!config.debezium().isJsonKeyValueChangeEventFormat()) {
-      throw new DebeziumException("debezium.format.value={" + config.debezium().keyValueChangeEventFormat() + "} not supported! Supported (debezium.format.value=*) formats are {json,}!");
-    }
-
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 

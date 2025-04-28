@@ -24,6 +24,7 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 public class IcebergOffsetBackingStoreTest extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();

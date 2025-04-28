@@ -21,6 +21,7 @@ import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;

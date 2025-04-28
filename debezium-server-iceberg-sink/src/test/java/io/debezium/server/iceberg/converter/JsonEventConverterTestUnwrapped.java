@@ -17,6 +17,7 @@ import io.quarkus.test.junit.TestProfile;
 import org.apache.iceberg.Schema;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @TestProfile(JsonEventConverterTestUnwrapped.TestProfile.class)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterTestUnwrapped extends BaseTest {
 
   @Test
@@ -42,15 +44,15 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
-    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
+    EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
+      EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
     when(config.iceberg().createIdentifierFields()).thenReturn(false);
-    Schema schema = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
+    Schema schema = EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
@@ -73,8 +75,8 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
-    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
-    JsonEventConverter ie = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config);
+    EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
+    JsonEventConverter ie = EventFactory.toIcebergChangeEvent(dbzEvent,config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema();

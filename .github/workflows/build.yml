@@ -37,22 +37,22 @@ jobs:
         run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1
 
 
-#  build-java-project-connect-format:
-#    name: Build-Test (Connect Format)
-#    runs-on: ubuntu-latest
-#    needs: build-java-project-json-format
-#    env:
-#      DEBEZIUM_FORMAT_VALUE: connect
-#      DEBEZIUM_FORMAT_KEY: connect
-#    steps:
-#      - name: Checkout Repository
-#        uses: actions/checkout@v4
-#
-#      - name: Set up Java
-#        uses: actions/setup-java@v4
-#        with:
-#          distribution: 'temurin'
-#          java-version: 21
-#          cache: 'maven'
-#      - name: Build with Maven (Connect Format)
-#        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1
+  build-java-project-connect-format:
+    name: Build-Test (Connect Format)
+    runs-on: ubuntu-latest
+    needs: build-java-project-json-format
+    env:
+      DEBEZIUM_FORMAT_VALUE: connect
+      DEBEZIUM_FORMAT_KEY: connect
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: 'maven'
+      - name: Build with Maven (Connect Format)
+        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1

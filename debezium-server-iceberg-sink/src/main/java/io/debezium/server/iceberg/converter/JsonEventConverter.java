@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
@@ -20,14 +19,11 @@ import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
 import io.debezium.time.IsoTime;
-import io.debezium.time.IsoTimestamp;
 import io.debezium.time.ZonedTime;
-import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
-import org.apache.iceberg.util.DateTimeUtil;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
@@ -39,11 +35,8 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.time.OffsetTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -56,7 +49,7 @@ import java.util.UUID;
  *
  * @author Ismail Simsek
  */
-public class JsonEventConverter implements EventConverter {
+public class JsonEventConverter extends AbstractEventConverter implements EventConverter {
 
   protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
@@ -69,7 +62,6 @@ public class JsonEventConverter implements EventConverter {
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
-  private final GlobalConfig config;
 
   public static void initializeJsonSerde() {
     // configure and set
@@ -86,10 +78,10 @@ public class JsonEventConverter implements EventConverter {
 
   // Testing only
   public JsonEventConverter(String destination, Object valueData, Object keyData, GlobalConfig config) {
+    super(config);
     this.destination = destination;
     this.valueData = getBytes(valueData);
     this.keyData = getBytes(keyData);
-    this.config = config;
     this.key = keyDeserializer.deserialize(destination, this.keyData);
     this.value = valDeserializer.deserialize(destination, this.valueData);
   }
@@ -102,13 +94,9 @@ public class JsonEventConverter implements EventConverter {
     } else if (object == null) {
       return null;
     } else {
-      throw new DebeziumException(this.unsupportedTypeMessage(object));
+      String type = object == null ? "null" : object.getClass().getName();
+      throw new DebeziumException("Unexpected data type '" + type + "'");
     }
-  }
-
-  protected String unsupportedTypeMessage(Object object) {
-    String type = object == null ? "null" : object.getClass().getName();
-    return "Unexpected data type '" + type + "'";
   }
 
   @Override
@@ -205,6 +193,9 @@ public class JsonEventConverter implements EventConverter {
 
   @Override
   public RecordWrapper convertAsAppend(Schema schema) {
+    if (value == null) {
+      throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
+    }
     GenericRecord row = convert(schema.asStruct(), value());
     return new RecordWrapper(row, Operation.INSERT);
   }
@@ -216,20 +207,8 @@ public class JsonEventConverter implements EventConverter {
     return new RecordWrapper(row, op);
   }
 
-  private static LocalDateTime timestampFromMillis(long millisFromEpoch) {
-    return ChronoUnit.MILLIS.addTo(DateTimeUtil.EPOCH, millisFromEpoch).toLocalDateTime();
-  }
-
-  private static OffsetDateTime timestamptzFromNanos(long nanosFromEpoch) {
-    return ChronoUnit.NANOS.addTo(DateTimeUtil.EPOCH, nanosFromEpoch);
-  }
-
-  private static OffsetDateTime timestamptzFromMillis(long millisFromEpoch) {
-    return ChronoUnit.MILLIS.addTo(DateTimeUtil.EPOCH, millisFromEpoch);
-  }
 
   private GenericRecord convert(Types.StructType tableFields, JsonNode data) {
-    LOGGER.debug("Processing nested field:{}", tableFields);
     GenericRecord record = GenericRecord.create(tableFields);
 
     for (Types.NestedField field : tableFields.fields()) {
@@ -320,14 +299,22 @@ public class JsonEventConverter implements EventConverter {
         }
         throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
-        if (node.isNumber() && DebeziumConfig.TS_MS_FIELDS.contains(field.name())) {
-          return timestamptzFromMillis(node.asLong());
-        }
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
-        if (isTsWithZone) {
-          return convertOffsetDateTimeValue(field, node, config.debezium().temporalPrecisionMode());
+        if (node.isNumber()) {
+          if (isTsWithZone) {
+            return convertOffsetDateTime(node.numberValue());
+          }
+          if (DebeziumConfig.TS_MS_FIELDS.contains(field.name())) {
+            return timestamptzFromMillis(node.asLong());
+          }
+          return convertLocalDateTime(node.numberValue());
         }
-        return convertLocalDateTimeValue(field, node, config.debezium().temporalPrecisionMode());
+        if (node.isTextual()) {
+          if (isTsWithZone) {
+            return convertOffsetDateTime(node.asText());
+          }
+          return convertLocalDateTime(node.asText());
+        }
       case BINARY:
         try {
           return ByteBuffer.wrap(node.binaryValue());
@@ -371,49 +358,6 @@ public class JsonEventConverter implements EventConverter {
         // if the node is not a value node (method isValueNode returns false), convert it to string.
         return node.isValueNode() ? node.textValue() : node.toString();
     }
-  }
-
-  private LocalDateTime convertLocalDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
-
-    final String eexMessage = "Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode;
-    if (node.isNumber()) {
-      return switch (temporalPrecisionMode) {
-        case MICROSECONDS -> DateTimeUtil.timestampFromMicros(node.asLong());
-        case NANOSECONDS -> DateTimeUtil.timestampFromNanos(node.asLong());
-        case CONNECT -> timestampFromMillis(node.asLong());
-        default -> throw new RuntimeException(eexMessage);
-      };
-    }
-
-    if (node.isTextual()) {
-      return switch (temporalPrecisionMode) {
-        case ISOSTRING -> LocalDateTime.parse(node.asText(), IsoTimestamp.FORMATTER);
-        default -> throw new RuntimeException(eexMessage);
-      };
-    }
-    throw new RuntimeException(eexMessage);
-  }
-
-  private OffsetDateTime convertOffsetDateTimeValue(Types.NestedField field, JsonNode node, TemporalPrecisionMode temporalPrecisionMode) {
-    final String eexMessage = "Failed to convert timestamp value, field: " + field.name() + " value: " + node + " temporalPrecisionMode: " + temporalPrecisionMode;
-
-    if (node.isNumber()) {
-      // non Timezone
-      return switch (temporalPrecisionMode) {
-        case MICROSECONDS -> DateTimeUtil.timestamptzFromMicros(node.asLong());
-        case NANOSECONDS -> timestamptzFromNanos(node.asLong());
-        case CONNECT -> timestamptzFromMillis(node.asLong());
-        default -> throw new RuntimeException(eexMessage);
-      };
-    }
-
-    if (node.isTextual()) {
-      return switch (temporalPrecisionMode) {
-        default -> OffsetDateTime.parse(node.asText(), ZonedTimestamp.FORMATTER);
-      };
-    }
-
-    throw new RuntimeException(eexMessage);
   }
 
 }

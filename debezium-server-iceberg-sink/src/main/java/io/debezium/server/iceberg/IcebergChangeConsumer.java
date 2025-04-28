@@ -14,6 +14,7 @@ import io.debezium.engine.DebeziumEngine;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
+import io.debezium.server.iceberg.converter.StructEventConverter;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
@@ -92,7 +93,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
                     -> {
                   return switch (keyValueChangeEventFormat) {
                     case "json" -> new JsonEventConverter(e, config);
-//                    case "connect" -> new JsonEventConverter(e, config);
+                    case "connect" -> new StructEventConverter(e, config);
                     default -> throw new DebeziumException("Unsupported format:" + keyValueChangeEventFormat);
                   };
                 }
@@ -140,7 +141,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
 
         return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.iceberg().writeFormat());
       } catch (Exception e) {
-        throw new DebeziumException("Failed to create table from debezium event schema:" + tableId + " Error:" + e.getMessage(), e);
+        throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
       }
     });
   }

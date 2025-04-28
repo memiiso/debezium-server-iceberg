@@ -15,10 +15,13 @@ import io.debezium.server.iceberg.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.TestUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.mockito.Mockito;
 
 import java.time.Instant;
 
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -27,17 +30,34 @@ import static org.mockito.Mockito.when;
  * @author Ismail Simsek
  */
 @ApplicationScoped
-public class TestChangeEventFactory {
+public class EventFactory {
 
   @Inject
   IcebergChangeEventBuilder builder;
 
-  public static EmbeddedEngineChangeEvent getEECE(Object key, Object value, String destination){
-    EmbeddedEngineChangeEvent mockRecord = Mockito.mock(EmbeddedEngineChangeEvent.class);
-    when(mockRecord.key()).thenReturn(key);
-    when(mockRecord.value()).thenReturn(value);
-    when(mockRecord.destination()).thenReturn(destination); // Assuming destination maps
-    return mockRecord;
+  public static EmbeddedEngineChangeEvent createMockChangeEvent(Object key, Object value){
+    return createMockChangeEvent(key, value, "test-destination");
+  }
+
+
+  public static EmbeddedEngineChangeEvent createMockChangeEvent(Object key, Object value, String destination) {
+
+    EmbeddedEngineChangeEvent mockEvent = Mockito.mock(EmbeddedEngineChangeEvent.class);
+    lenient().when(mockEvent.key()).thenReturn(key);
+    lenient().when(mockEvent.value()).thenReturn(value);
+    lenient().when(mockEvent.destination()).thenReturn(destination); // Assuming destination maps
+
+    if (key instanceof Struct ||  value instanceof Struct){
+      SourceRecord mockSourceRecord = Mockito.mock(SourceRecord.class);
+      when(mockSourceRecord.key()).thenReturn(key);
+      when(mockSourceRecord.value()).thenReturn(value);
+      when(mockSourceRecord.keySchema()).thenReturn(key != null ? ((Struct)key).schema() : null);
+      lenient().when(mockSourceRecord.valueSchema()).thenReturn(value != null ? ((Struct)value).schema() : null);
+      lenient().when(mockSourceRecord.topic()).thenReturn(destination);
+      lenient().when(mockEvent.sourceRecord()).thenReturn(mockSourceRecord);
+    }
+
+    return mockEvent;
   }
 
   public static JsonEventConverter toIcebergChangeEvent(EmbeddedEngineChangeEvent e, GlobalConfig config) {
@@ -63,7 +83,7 @@ public class TestChangeEventFactory {
         "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
-    return getEECE(key, val, destination);
+    return createMockChangeEvent(key, val, destination);
   }
 
   public EmbeddedEngineChangeEvent ofCompositeKey(String destination, Integer id, String operation, String name,
@@ -86,7 +106,7 @@ public class TestChangeEventFactory {
         "\"payload\":" + t.value() +
         "} ";
 
-    return getEECE(key, val, destination);
+    return createMockChangeEvent(key, val, destination);
   }
 
   public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation) {
@@ -116,10 +136,10 @@ public class TestChangeEventFactory {
         "\"schema\":" + t.schemaConverter().valueSchema() + "," +
         "\"payload\":" + t.value() +
         "} ";
-    return getEECE(null, val, destination);
+    return createMockChangeEvent(null, val, destination);
   }
 
   public EmbeddedEngineChangeEvent of(String key, String val) {
-    return getEECE(key, val, "test");
+    return createMockChangeEvent(key, val, "test");
   }
 }

@@ -7,6 +7,7 @@
  */
 
 package io.debezium.server.iceberg;
+
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.CatalogRest;
 import io.debezium.server.iceberg.testresources.S3Minio;

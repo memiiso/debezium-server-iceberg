@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.BaseTest;
-import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.EventConverter;
+import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -23,6 +23,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class IcebergTableOperatorTest extends BaseTest {
 
   static String testTable = "inventory.test_table_operator";

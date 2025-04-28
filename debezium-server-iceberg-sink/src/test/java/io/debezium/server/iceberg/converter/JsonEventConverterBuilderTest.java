@@ -16,6 +16,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.util.List;
 import java.util.Set;
@@ -29,6 +30,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  */
 @QuarkusTest
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterBuilderTest extends BaseTest {
 
   @Test

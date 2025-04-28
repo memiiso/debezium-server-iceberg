@@ -19,23 +19,22 @@ import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Set;
 
-import static io.debezium.server.iceberg.converter.JsonEventConverter.keySerde;
-import static io.debezium.server.iceberg.converter.JsonEventConverter.valSerde;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
+@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterTest extends BaseTest {
   final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
   final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
