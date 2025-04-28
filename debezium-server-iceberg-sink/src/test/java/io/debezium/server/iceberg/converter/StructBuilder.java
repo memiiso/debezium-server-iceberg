@@ -5,8 +5,6 @@ import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +23,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.when;
 
 /**
  * A builder class to conveniently create Kafka Connect Struct objects
@@ -143,7 +138,7 @@ public class StructBuilder {
 
   public EmbeddedEngineChangeEvent buildChangeEvent(Struct key) {
     Struct value = build();
-    return EventFactory.createMockChangeEvent(null, value);
+    return EventFactory.createMockChangeEvent(key, value, "test-destionation");
   }
 
   /**
@@ -288,41 +283,8 @@ public class StructBuilder {
     return value; // Return original value if no specific conversion needed
   }
 
-  // --- Example Usage (similar to previous builder's example) ---
-    /*
-    public static void main(String[] args) {
-        String CDC_OP_FIELD = "__op";
-        String CDC_TS_MS_FIELD = "__ts_ms";
-        long TEST_TS_MS = System.currentTimeMillis();
-        BigDecimal TEST_DECIMAL_VAL = new BigDecimal("98.76");
-
-        Struct inferredStruct = InferringStructBuilder.create("my.inferred.RecordValue")
-                .field("id", 123) // -> INT32
-                .field("name", "Infer Test") // -> STRING
-                .field("amount", 45.67) // -> FLOAT64 (Double)
-                .field("active", true) // -> BOOLEAN
-                .field("codes", List.of("A", "B", null, "C")) // -> ARRAY(STRING)
-                .field("properties", Map.of("key1", 100L, "key2", 200L)) // -> MAP(STRING, INT64)
-                .field("precise_val", TEST_DECIMAL_VAL) // -> DECIMAL(scale=2)
-                .field("timestamp", Instant.now()) // -> Timestamp (logical)
-                .field("event_uuid", UUID.randomUUID()) // -> STRING
-                .field("nullable_field", null) // -> STRING (with warning)
-                .field("raw_data", new byte[]{1, 0, 1}) // -> BYTES
-                .field(CDC_OP_FIELD, "u") // -> STRING
-                .field(CDC_TS_MS_FIELD, TEST_TS_MS) // -> INT64
-                .build();
-
-        System.out.println("--- Inferred Schema ---");
-        System.out.println(inferredStruct.schema().toString());
-        System.out.println("\n--- Built Struct ---");
-        System.out.println(inferredStruct);
-
-        try {
-            inferredStruct.validate(); // Should pass if inference worked
-            System.out.println("\nStruct validation successful.");
-        } catch (org.apache.kafka.connect.errors.DataException e) {
-            System.err.println("\nStruct validation failed: " + e.getMessage());
-        }
-    }
-    */
+  public EmbeddedEngineChangeEvent buildChangeEvent(Struct key, String destination) {
+    Struct value = build();
+    return EventFactory.createMockChangeEvent(key, value, destination);
+  }
 }

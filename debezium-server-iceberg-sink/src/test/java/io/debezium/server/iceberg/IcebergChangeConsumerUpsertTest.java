@@ -22,7 +22,6 @@ import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.sql.SQLException;
 import java.time.Duration;
@@ -40,7 +39,6 @@ import java.util.Map;
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
-@DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   final static Long TEST_EPOCH_MS = 1577840461000L;
@@ -151,6 +149,12 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpsertNoKey() throws Exception {
+    String debeziumFormatValue = System.getenv("DEBEZIUM_FORMAT_VALUE");
+    if (debeziumFormatValue != null) {
+      Assertions.assertEquals(debeziumFormatValue, config.debezium().keyValueChangeEventFormat());
+    }
+    LOGGER.warn("DEBEZIUM_FORMAT_VALUE is set to:" + config.debezium().keyValueChangeEventFormat());
+
     String dest = "testc.inventory.customers_upsert_nokey";
     // when there is no PK it should fall back to append mode
     List<EmbeddedEngineChangeEvent> records = new ArrayList<>();

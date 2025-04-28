@@ -10,8 +10,8 @@ package io.debezium.server.iceberg.converter;
 
 
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
+import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.IcebergChangeEventBuilder;
 import io.debezium.server.iceberg.testresources.TestUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -20,6 +20,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.mockito.Mockito;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -33,9 +34,11 @@ import static org.mockito.Mockito.when;
 public class EventFactory {
 
   @Inject
-  IcebergChangeEventBuilder builder;
+  JsonBuilder builder;
+  @Inject
+  public DebeziumConfig debeziumConfig;
 
-  public static EmbeddedEngineChangeEvent createMockChangeEvent(Object key, Object value){
+  public static EmbeddedEngineChangeEvent createMockChangeEvent(Object key, Object value) {
     return createMockChangeEvent(key, value, "test-destination");
   }
 
@@ -47,12 +50,12 @@ public class EventFactory {
     lenient().when(mockEvent.value()).thenReturn(value);
     lenient().when(mockEvent.destination()).thenReturn(destination); // Assuming destination maps
 
-    if (key instanceof Struct ||  value instanceof Struct){
+    if (key instanceof Struct || value instanceof Struct) {
       SourceRecord mockSourceRecord = Mockito.mock(SourceRecord.class);
       when(mockSourceRecord.key()).thenReturn(key);
       when(mockSourceRecord.value()).thenReturn(value);
-      when(mockSourceRecord.keySchema()).thenReturn(key != null ? ((Struct)key).schema() : null);
-      lenient().when(mockSourceRecord.valueSchema()).thenReturn(value != null ? ((Struct)value).schema() : null);
+      when(mockSourceRecord.keySchema()).thenReturn(key != null ? ((Struct) key).schema() : null);
+      lenient().when(mockSourceRecord.valueSchema()).thenReturn(value != null ? ((Struct) value).schema() : null);
       lenient().when(mockSourceRecord.topic()).thenReturn(destination);
       lenient().when(mockEvent.sourceRecord()).thenReturn(mockSourceRecord);
     }
@@ -65,46 +68,82 @@ public class EventFactory {
   }
 
   public EmbeddedEngineChangeEvent of(String destination, Integer id, String operation, String name,
-                                              Long epoch) {
-    final JsonEventConverter t = builder
-        .destination(destination)
-        .addKeyField("id", id)
-        .addField("first_name", name)
-        .addField("__op", operation)
-        .addField("__source_ts_ns", epoch)
-        .addField("__deleted", operation.equals("d"))
-        .build();
+                                      Long epoch) {
+    Object key = null;
+    Object val = null;
 
-    final String key = "{" +
-        "\"schema\":" + t.schemaConverter().keySchema() + "," +
-        "\"payload\":" + t.key() +
-        "} ";
-    final String val = "{" +
-        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
-        "\"payload\":" + t.value() +
-        "} ";
+    if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "json")) {
+      final JsonEventConverter t = builder
+          .destination(destination)
+          .addKeyField("id", id)
+          .addField("first_name", name)
+          .addField("__op", operation)
+          .addField("__source_ts_ns", epoch)
+          .addField("__deleted", operation.equals("d"))
+          .build();
+
+      key = "{" +
+          "\"schema\":" + t.schemaConverter().keySchema() + "," +
+          "\"payload\":" + t.key() +
+          "} ";
+      val = "{" +
+          "\"schema\":" + t.schemaConverter().valueSchema() + "," +
+          "\"payload\":" + t.value() +
+          "} ";
+    } else if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "connect")) {
+      key = StructBuilder.create("keySchema")
+          .field("id", id)
+          .build();
+
+      val = StructBuilder.create("valSchema")
+          .field("id", id)
+          .field("first_name", name)
+          .field("__op", operation)
+          .field("__source_ts_ns", epoch)
+          .field("__deleted", operation.equals("d"))
+          .build();
+    }
     return createMockChangeEvent(key, val, destination);
   }
 
   public EmbeddedEngineChangeEvent ofCompositeKey(String destination, Integer id, String operation, String name,
-                                                          Long epoch) {
-    final JsonEventConverter t = builder
-        .destination(destination)
-        .addKeyField("id", id)
-        .addKeyField("first_name", name)
-        .addField("__op", operation)
-        .addField("__source_ts_ns", epoch)
-        .addField("__deleted", operation.equals("d"))
-        .build();
+                                                  Long epoch) {
+    Object key = null;
+    Object val = null;
 
-    final String key = "{" +
-        "\"schema\":" + t.schemaConverter().keySchema() + "," +
-        "\"payload\":" + t.key() +
-        "} ";
-    final String val = "{" +
-        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
-        "\"payload\":" + t.value() +
-        "} ";
+    if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "json")) {
+      final JsonEventConverter t = builder
+          .destination(destination)
+          .addKeyField("id", id)
+          .addKeyField("first_name", name)
+          .addField("__op", operation)
+          .addField("__source_ts_ns", epoch)
+          .addField("__deleted", operation.equals("d"))
+          .build();
+
+      key = "{" +
+          "\"schema\":" + t.schemaConverter().keySchema() + "," +
+          "\"payload\":" + t.key() +
+          "} ";
+      val = "{" +
+          "\"schema\":" + t.schemaConverter().valueSchema() + "," +
+          "\"payload\":" + t.value() +
+          "} ";
+    } else if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "connect")) {
+
+      key = StructBuilder.create("keySchema")
+          .field("id", id)
+          .field("first_name", name)
+          .build();
+
+      val = StructBuilder.create("valSchema")
+          .field("id", id)
+          .field("first_name", name)
+          .field("__op", operation)
+          .field("__source_ts_ns", epoch)
+          .field("__deleted", operation.equals("d"))
+          .build();
+    }
 
     return createMockChangeEvent(key, val, destination);
   }
@@ -122,20 +161,30 @@ public class EventFactory {
   }
 
   public EmbeddedEngineChangeEvent ofNoKey(String destination, Integer id, String operation, String name,
-                                                   Long epoch) {
-    final JsonEventConverter t = builder
-        .destination(destination)
-        .addField("id", id)
-        .addField("first_name", name)
-        .addField("__op", operation)
-        .addField("__source_ts_ns", epoch)
-        .addField("__deleted", operation.equals("d"))
-        .build();
-
-    final String val = "{" +
-        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
-        "\"payload\":" + t.value() +
-        "} ";
+                                           Long epoch) {
+    Object val = null;
+    if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "json")) {
+      final JsonEventConverter t = new JsonBuilder()
+          .destination(destination)
+          .addField("id", id)
+          .addField("first_name", name)
+          .addField("__op", operation)
+          .addField("__source_ts_ns", epoch)
+          .addField("__deleted", operation.equals("d"))
+          .build();
+      val = "{" +
+          "\"schema\":" + t.schemaConverter().valueSchema() + "," +
+          "\"payload\":" + t.value() +
+          "} ";
+    } else if (Objects.equals(debeziumConfig.keyValueChangeEventFormat(), "connect")) {
+      val = StructBuilder.create("decimalConnectSchema")
+          .field("id", id)
+          .field("first_name", name)
+          .field("__op", operation)
+          .field("__source_ts_ns", epoch)
+          .field("__deleted", operation.equals("d"))
+          .build();
+    }
     return createMockChangeEvent(null, val, destination);
   }
 
