@@ -44,15 +44,15 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
-    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
+    EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
-      TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
+      EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     });
     assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
     when(config.iceberg().createIdentifierFields()).thenReturn(false);
-    Schema schema = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
+    Schema schema = EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
     assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
     assertEquals("""
         table {
@@ -75,8 +75,8 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
     String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
-    EmbeddedEngineChangeEvent dbzEvent = TestChangeEventFactory.getEECE(key, val, "test");
-    JsonEventConverter ie = TestChangeEventFactory.toIcebergChangeEvent(dbzEvent,config);
+    EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
+    JsonEventConverter ie = EventFactory.toIcebergChangeEvent(dbzEvent,config);
 
     Exception exception = assertThrows(RuntimeException.class, () -> {
       ie.icebergSchema();

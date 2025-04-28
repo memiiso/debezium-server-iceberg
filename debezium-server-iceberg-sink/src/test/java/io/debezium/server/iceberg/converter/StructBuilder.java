@@ -64,23 +64,6 @@ public class StructBuilder {
     return new StructBuilder(schemaName);
   }
 
-  public static EmbeddedEngineChangeEvent createMockChangeEvent(Struct key, Struct value) {
-    SourceRecord mockSourceRecord = Mockito.mock(SourceRecord.class);
-    when(mockSourceRecord.key()).thenReturn(key);
-    when(mockSourceRecord.value()).thenReturn(value);
-    when(mockSourceRecord.keySchema()).thenReturn(key != null ? key.schema() : null);
-    lenient().when(mockSourceRecord.valueSchema()).thenReturn(value != null ? value.schema() : null);
-    lenient().when(mockSourceRecord.topic()).thenReturn("test-destination");
-
-    EmbeddedEngineChangeEvent mockEvent = Mockito.mock(EmbeddedEngineChangeEvent.class);
-    lenient().when(mockEvent.key()).thenReturn(key);
-    lenient().when(mockEvent.value()).thenReturn(value);
-    when(mockEvent.sourceRecord()).thenReturn(mockSourceRecord);
-    lenient().when(mockEvent.destination()).thenReturn("test-destination");
-
-    return mockEvent;
-  }
-
   /**
    * Adds a field and its value. The schema type will be inferred from the value
    * during the build() phase.
@@ -160,7 +143,7 @@ public class StructBuilder {
 
   public EmbeddedEngineChangeEvent buildChangeEvent(Struct key) {
     Struct value = build();
-    return createMockChangeEvent(null, value);
+    return EventFactory.createMockChangeEvent(null, value);
   }
 
   /**

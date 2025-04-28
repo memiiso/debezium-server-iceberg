@@ -213,7 +213,7 @@ class StructEventConverterTypeTest {
   // Helper to get the converted Iceberg record
   // Changed return type to GenericRecord as RecordWrapper is not needed for assertions
   private RecordWrapper getConvertedIcebergRecord(Struct key, Struct value) {
-    EmbeddedEngineChangeEvent event = StructBuilder.createMockChangeEvent(key, value);
+    EmbeddedEngineChangeEvent event = EventFactory.createMockChangeEvent(key, value);
     StructEventConverter converter = new StructEventConverter(event, config);
     // Use the manually defined schema for conversion consistency in tests
     RecordWrapper wrapper = converter.convert(icebergSchema);
@@ -322,7 +322,7 @@ class StructEventConverterTypeTest {
         .put(CDC_TS_MS_FIELD, TEST_TS_MS);
 
     // Convert
-    EmbeddedEngineChangeEvent event = StructBuilder.createMockChangeEvent(key, value);
+    EmbeddedEngineChangeEvent event = EventFactory.createMockChangeEvent(key, value);
     StructEventConverter converter = new StructEventConverter(event, config);
     RecordWrapper record = converter.convert(listIcebergSchema); // Use specific schema
     assertNotNull(record, "Converted record should not be null");
@@ -380,7 +380,7 @@ class StructEventConverterTypeTest {
         .put(CDC_TS_MS_FIELD, TEST_TS_MS);
 
     // Convert
-    EmbeddedEngineChangeEvent event = StructBuilder.createMockChangeEvent(key, value);
+    EmbeddedEngineChangeEvent event = EventFactory.createMockChangeEvent(key, value);
     StructEventConverter converter = new StructEventConverter(event, config);
     RecordWrapper record = converter.convert(mapIcebergSchema); // Use specific schema
     assertNotNull(record, "Converted record should not be null");

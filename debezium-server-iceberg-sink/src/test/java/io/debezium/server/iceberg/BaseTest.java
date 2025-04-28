@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.converter.TestChangeEventFactory;
+import io.debezium.server.iceberg.converter.EventFactory;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import jakarta.inject.Inject;
 import org.apache.iceberg.Table;
@@ -47,7 +47,7 @@ public class BaseTest {
   @Inject
   public IcebergChangeEventBuilder eventBuilder;
   @Inject
-  public TestChangeEventFactory eventFactory;
+  public EventFactory eventFactory;
   @Inject
   public IcebergTableOperator icebergTableOperator;
   @ConfigProperty(name = "debezium.sink.type")
