@@ -204,8 +204,8 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         continue;
       }
 
-      String connectLogicalTypeName = field.schema().name();
-      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name(), connectLogicalTypeName);
+      String logicalTypeName = field.schema().name();
+      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name(), logicalTypeName);
       record.setField(icebergField.name(), icebergValue);
     }
 
@@ -220,9 +220,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
    * @param icebergType  The target Iceberg type.
    * @return The converted value compatible with Iceberg.
    */
-  private Object convertValue(Object connectValue, Type icebergType, String icebergFieldName, String connectLogicalTypeName) {
-    // @TODO use connectLogicalTypeName to do precise value handling
-    // @TODO example org.apache.kafka.connect.data.Time etc..
+  private Object convertValue(Object connectValue, Type icebergType, String icebergFieldName, String logicalTypeName) {
     if (connectValue == null) {
       return null;
     }
@@ -238,12 +236,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case LIST:
         Preconditions.checkArgument(connectValue instanceof List,
             "Cannot convert to List: value is not a List: %s", connectValue.getClass().getName());
-        return convertListValue((List<?>) connectValue, icebergType.asListType());
+        return convertListValue((List<?>) connectValue, icebergType.asListType(), logicalTypeName);
 
       case MAP:
         Preconditions.checkArgument(connectValue instanceof Map,
             "Cannot convert to Map: value is not a Map: %s", connectValue.getClass().getName());
-        return convertMapValue((Map<?, ?>) connectValue, icebergType.asMapType());
+        return convertMapValue((Map<?, ?>) connectValue, icebergType.asMapType(), logicalTypeName);
 
       case INTEGER: // int32
         return convertInt(connectValue);
@@ -252,9 +250,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case FLOAT: // float32
         return convertFloat(connectValue);
       case DOUBLE: // float64
-        return convertDouble(connectValue);
+        return convertDouble(connectValue, logicalTypeName);
       case DECIMAL:
-        return convertDecimal(connectValue, (Types.DecimalType) icebergType);
+        return convertDecimal(connectValue, (Types.DecimalType) icebergType, logicalTypeName);
       case BOOLEAN:
         return convertBoolean(connectValue);
       case STRING:
@@ -263,27 +261,27 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         return convertUUID(connectValue);
       case BINARY: // raw bytes
       case FIXED: // fixed length bytes
-        return convertBinary(connectValue);
+        return convertBinary(connectValue, logicalTypeName);
       case DATE:
-        return convertDateValue(connectValue);
+        return convertDateValue(connectValue, logicalTypeName);
       case TIME:
-        return convertTimeValue(connectValue);
+        return convertTimeValue(connectValue, logicalTypeName);
       case TIMESTAMP:
-        return convertTimestampValue(connectValue, (Types.TimestampType) icebergType, icebergFieldName);
+        return convertTimestampValue(connectValue, (Types.TimestampType) icebergType, icebergFieldName, logicalTypeName);
       default:
         throw new UnsupportedOperationException("Unsupported Iceberg type: " + icebergType);
     }
   }
 
 
-  protected List<Object> convertListValue(List<?> list, Types.ListType listType) {
+  protected List<Object> convertListValue(List<?> list, Types.ListType listType, String logicalTypeName) {
     Type elementType = listType.elementType();
     return list.stream()
         .map(element -> convertValue(element, elementType, null, null))
         .collect(Collectors.toList());
   }
 
-  protected Map<Object, Object> convertMapValue(Map<?, ?> map, Types.MapType mapType) {
+  protected Map<Object, Object> convertMapValue(Map<?, ?> map, Types.MapType mapType, String logicalTypeName) {
     Type keyType = mapType.keyType();
     Type valueType = mapType.valueType();
     Map<Object, Object> result = new HashMap<>();

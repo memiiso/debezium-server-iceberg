@@ -302,18 +302,18 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
         if (node.isNumber()) {
           if (isTsWithZone) {
-            return convertOffsetDateTime(node.numberValue());
+            return convertOffsetDateTime(node.numberValue(), null);
           }
           if (DebeziumConfig.TS_MS_FIELDS.contains(field.name())) {
-            return timestamptzFromMillis(node.asLong());
+            return DateTimeUtils.timestamptzFromMillis(node.asLong());
           }
-          return convertLocalDateTime(node.numberValue());
+          return convertLocalDateTime(node.numberValue(), null);
         }
         if (node.isTextual()) {
           if (isTsWithZone) {
-            return convertOffsetDateTime(node.asText());
+            return convertOffsetDateTime(node.asText(), null);
           }
-          return convertLocalDateTime(node.asText());
+          return convertLocalDateTime(node.asText(), null);
         }
       case BINARY:
         try {
