@@ -56,7 +56,7 @@ public class AbstractEventConverter {
     return ChronoUnit.MILLIS.addTo(DateTimeUtil.EPOCH, millisFromEpoch);
   }
 
-  protected BigDecimal convertDecimal(Object value, Types.DecimalType decimalType) {
+  protected BigDecimal convertDecimal(Object value, Types.DecimalType decimalType, String logicalTypeName) {
     BigDecimal bd;
     if (value instanceof BigDecimal) {
       bd = (BigDecimal) value;
@@ -86,8 +86,7 @@ public class AbstractEventConverter {
         case CONNECT -> timestampFromMillis(longVal);
         default -> DateTimeUtil.timestampFromMicros(longVal);
       };
-    }
-    else if (value instanceof String) {
+    } else if (value instanceof String) {
       return switch (config.debezium().temporalPrecisionMode()) {
         case ISOSTRING -> LocalDateTime.parse((String) value, IsoTimestamp.FORMATTER);
         default -> {
@@ -104,14 +103,11 @@ public class AbstractEventConverter {
           }
         }
       };
-    }
-    else if (value instanceof LocalDateTime) {
+    } else if (value instanceof LocalDateTime) {
       return (LocalDateTime) value;
-    }
-    else if (value instanceof Date) { // Connect Timestamp (millis)
+    } else if (value instanceof Date) { // Connect Timestamp (millis)
       return DateTimeUtil.timestampFromMicros(((Date) value).getTime() * 1000);
-    }
-    else if (value instanceof OffsetDateTime) { // Handle OffsetDateTime by converting
+    } else if (value instanceof OffsetDateTime) { // Handle OffsetDateTime by converting
       return ((OffsetDateTime) value).toLocalDateTime();
     }
     throw new IllegalArgumentException("Cannot convert to timestamp (LocalDateTime): " + value.getClass().getName());
@@ -126,8 +122,7 @@ public class AbstractEventConverter {
         case CONNECT -> timestamptzFromMillis((Long) value);
         default -> DateTimeUtil.timestamptzFromMicros((Long) value);
       };
-    }
-    else if (value instanceof String) { // Debezium ZonedTimestamp
+    } else if (value instanceof String) { // Debezium ZonedTimestamp
       try {
         return OffsetDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
       } catch (java.time.format.DateTimeParseException e) {
@@ -139,13 +134,11 @@ public class AbstractEventConverter {
       } catch (java.time.format.DateTimeParseException e2) {
         throw new IllegalArgumentException("Cannot parse timestamp string: " + value);
       }
-    }
-    else if (value instanceof OffsetDateTime) {
+    } else if (value instanceof OffsetDateTime) {
       return (OffsetDateTime) value;
     } else if (value instanceof Date) {
       return DateTimeUtil.timestamptzFromMicros(((Date) value).getTime() * 1000);
-    }
-    else if (value instanceof LocalDateTime) { // Handle LocalDateTime by assuming UTC
+    } else if (value instanceof LocalDateTime) { // Handle LocalDateTime by assuming UTC
       return ((LocalDateTime) value).atOffset(ZoneOffset.UTC);
     }
     throw new IllegalArgumentException("Cannot convert to timestamptz (OffsetDateTime): " + value.getClass().getName());
@@ -240,21 +233,28 @@ public class AbstractEventConverter {
   }
 
   @SuppressWarnings("JavaUtilDate")
-  protected LocalDate convertDateValue(Object value) {
+  protected LocalDate convertDateValue(Object value, String logicalTypeName) {
+    if (logicalTypeName != null) {
+      switch (logicalTypeName) {
+        case IsoDate.SCHEMA_NAME -> {
+          return LocalDate.parse((String) value, IsoDate.FORMATTER);
+        }
+        case io.debezium.time.Date.SCHEMA_NAME, org.apache.kafka.connect.data.Date.LOGICAL_NAME -> {
+          return DateTimeUtil.dateFromDays((Integer) value);
+        }
+      }
+    }
+
     if (value instanceof Integer) { // Correct handling for Debezium Date
       return DateTimeUtil.dateFromDays((Integer) value);
-    }
-    else if (value instanceof Number) { // Fallback for other numeric types
+    } else if (value instanceof Number) { // Fallback for other numeric types
       return DateTimeUtil.dateFromDays(((Number) value).intValue());
-    }
-    else if (value instanceof LocalDate) {
+    } else if (value instanceof LocalDate) {
       return (LocalDate) value;
-    }
-    else if (value instanceof Date) {
+    } else if (value instanceof Date) {
       int days = (int) (((Date) value).getTime() / 1000 / 60 / 60 / 24);
       return DateTimeUtil.dateFromDays(days);
-    }
-    else if (value instanceof String) { // Handle ISO date string
+    } else if (value instanceof String) { // Handle ISO date string
       try {
         return switch (config.debezium().temporalPrecisionMode()) {
           case ISOSTRING -> LocalDate.parse((String) value, IsoDate.FORMATTER);
@@ -268,7 +268,7 @@ public class AbstractEventConverter {
   }
 
   @SuppressWarnings("JavaUtilDate")
-  protected LocalTime convertTimeValue(Object value) {
+  protected LocalTime convertTimeValue(Object value, String logicalTypeName) {
     // TODO: Refine based on actual Debezium logical type name if available
     if (value instanceof Number) {
       long longValue = ((Number) value).longValue();
@@ -283,7 +283,7 @@ public class AbstractEventConverter {
         case ISOSTRING -> LocalTime.parse((String) value, IsoTime.FORMATTER);
         default -> {
           try {
-            yield  LocalTime.parse((String) value);
+            yield LocalTime.parse((String) value);
           } catch (java.time.format.DateTimeParseException e) {
             throw new IllegalArgumentException("Cannot parse time string: " + value, e);
           }
@@ -298,11 +298,10 @@ public class AbstractEventConverter {
     throw new ConnectException("Cannot convert time (LocalTime): " + value);
   }
 
-  protected Temporal convertTimestampValue(Object value, Types.TimestampType timestampType, String icebergFieldName) {
+  protected Temporal convertTimestampValue(Object value, Types.TimestampType timestampType, String icebergFieldName, String logicalTypeName) {
     if (DebeziumConfig.TS_MS_FIELDS.contains(icebergFieldName)) {
       return timestamptzFromMillis((Long) value);
-    }
-    else if (timestampType.shouldAdjustToUTC()) {
+    } else if (timestampType.shouldAdjustToUTC()) {
       return convertOffsetDateTime(value); // Timestamp with timezone
     } else {
       return convertLocalDateTime(value); // Timestamp without timezone
