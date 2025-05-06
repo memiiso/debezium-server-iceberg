@@ -53,7 +53,7 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     when(config.iceberg().createIdentifierFields()).thenReturn(false);
     Schema schema = EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
-    assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ADAPTIVE);
+    assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ISOSTRING);
     assertEquals("""
         table {
           1: before: optional struct<2: order_number: optional int, 3: order_date: optional date, 4: purchaser: optional int, 5: quantity: optional int, 6: product_id: optional int>

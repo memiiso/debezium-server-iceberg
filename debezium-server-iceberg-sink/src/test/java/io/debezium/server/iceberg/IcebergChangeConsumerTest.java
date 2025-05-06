@@ -53,76 +53,124 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
     assertEquals(sinkType, "iceberg");
-    String sql = "\n" +
-        "        DROP TABLE IF EXISTS inventory.data_types;\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
-        "            c_id INTEGER ,\n" +
-        "            c_text TEXT,\n" +
-        "            c_varchar VARCHAR,\n" +
-        "            c_int INTEGER,\n" +
-        "            c_date DATE,\n" +
-        "            c_timestamp TIMESTAMP,\n" +
-        "            c_timestamp2 TIMESTAMP(2),\n" +
-        "            c_timestamptz TIMESTAMPTZ,\n" +
-        "            c_float FLOAT,\n" +
-        "            c_decimal DECIMAL(18,6),\n" +
-        "            c_numeric NUMERIC(18,6),\n" +
-        "            c_interval INTERVAL,\n" +
-        "            c_boolean BOOLEAN,\n" +
-        "            c_uuid UUID,\n" +
-        "            c_bytea BYTEA,\n" +
-        "            c_json JSON,\n" +
-        "            c_jsonb JSONB,\n" +
-        "            c_hstore_keyval hstore,\n" +
-        "            c_last_field VARCHAR\n" +
-        "          );";
+    String sql = """
+        DROP TABLE IF EXISTS inventory.data_types;
+        CREATE TABLE IF NOT EXISTS inventory.data_types (
+            c_id INTEGER ,
+            c_text TEXT,
+            c_varchar VARCHAR,
+            c_int INTEGER,
+            --- time fields
+            c_date DATE,
+            c_timestamp TIMESTAMP,
+            c_timestamp0 TIMESTAMP(0),
+            c_timestamp1 TIMESTAMP(1),
+            c_timestamp2 TIMESTAMP(2),
+            c_timestamp3 TIMESTAMP(3),
+            c_timestamp4 TIMESTAMP(4),
+            c_timestamp5 TIMESTAMP(5),
+            c_timestamp6 TIMESTAMP(6),
+            c_timestamptz TIMESTAMPTZ,
+            c_timestamptz0 TIMESTAMPTZ(0),
+            c_timestamptz1 TIMESTAMPTZ(1),
+            c_timestamptz2 TIMESTAMPTZ(2),
+            c_timestamptz3 TIMESTAMPTZ(3),
+            c_timestamptz4 TIMESTAMPTZ(4),
+            c_timestamptz5 TIMESTAMPTZ(5),
+            c_timestamptz6 TIMESTAMPTZ(6),
+            c_time_tz TIME WITH TIME ZONE,
+            c_time_without_tz TIME WITHOUT TIME ZONE,
+            ---
+            c_float FLOAT,
+            c_decimal DECIMAL(18,6),
+            c_numeric NUMERIC(18,6),
+            c_interval INTERVAL,
+            c_boolean BOOLEAN,
+            c_uuid UUID,
+            c_bytea BYTEA,
+            c_json JSON,
+            c_jsonb JSONB,
+            c_hstore_keyval hstore,
+            c_last_field VARCHAR
+          );
+        """;
     SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.data_types (" +
-        "c_id, " +
-        "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamp2, c_timestamptz, " +
-        "c_float, c_decimal,c_numeric,c_interval,c_boolean,c_uuid,c_bytea,  " +
-        "c_json, c_jsonb, c_hstore_keyval, c_last_field) " +
-        "VALUES (1, null, null, null,null,null,null, null," +
-        "null,null,null,null,null,null,null," +
-        "null,null, null, null)," +
-        "(2, 'val_text', 'A', 123, '2024-05-05'::DATE , current_timestamp, current_timestamp, current_timestamp," +
-        "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
-        "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea," +
-        "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb, " +
-        "'mapkey1=>1, mapkey2=>2'::hstore, " +
-        "'stringvalue' " +
-        ")";
-    SourcePostgresqlDB.runSQL(sql);
+    SourcePostgresqlDB.runSQL("""
+        INSERT INTO inventory.data_types (c_id)
+        VALUES (1)
+        """);
+
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
+        Dataset<Row> df = getTableData("testc.inventory.data_types").filter("c_id = 1");
+        Assertions.assertEquals(1, df.count());
         df.show(false);
         return df.where("c_text is null AND c_varchar is null AND c_int is null " +
-            "AND c_date is null AND c_timestamp is null AND c_timestamptz is null " +
+            "AND c_date is null AND c_timestamp is null AND c_timestamp2 is null AND c_timestamptz is null " +
             "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
             "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
       } catch (Exception e) {
         return false;
       }
     });
+
+    sql = """
+        INSERT INTO inventory.data_types (
+        c_id,\s
+        c_text, c_varchar, c_int,
+        -- >>>> time fields <<<<
+        c_date,
+        c_timestamp, c_timestamp0, c_timestamp1, c_timestamp2, c_timestamp3, c_timestamp4, c_timestamp5, c_timestamp6,
+        c_timestamptz, c_timestamptz0, c_timestamptz1, c_timestamptz2, c_timestamptz3, c_timestamptz4, c_timestamptz5, c_timestamptz6,
+        c_time_tz, c_time_without_tz,
+        -- >>>> end time fields <<<<
+        c_float, c_decimal,c_numeric,c_interval,c_boolean,c_uuid,c_bytea, \s
+        c_json, c_jsonb, c_hstore_keyval, c_last_field)\s
+        VALUES (2, 'val_text', 'A', 123,
+        -- >>>> time field values <<<<
+        '2024-05-05'::DATE ,
+        '2019-07-09 02:28:57.123456+01' , '2019-07-09 02:28:57.123456+01' , '2019-07-09 02:28:57.123456+01' , '2019-07-09 02:28:57.123456+01' , '2019-07-09 02:28:57.123456+01' , '2019-07-09 02:28:57.123456+01','2019-07-09 02:28:57.123456+01','2019-07-09 02:28:57.123456+01',
+        '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01', '2019-07-09 02:28:10.123456+01',
+        '04:05:11 PST', '04:05:11.789',
+        -- >>>> end time field values <<<<
+        '1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false,
+        '3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea,
+        '{"reading": 1123}'::json, '{"reading": 1123}'::jsonb,\s
+        'mapkey1=>1, mapkey2=>2'::hstore,\s
+        'stringvalue'\s
+        )
+        """
+    ;
+    SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
+        Dataset<Row> df = getTableData("testc.inventory.data_types").filter("c_id = 2");
         df.show(false);
 
-        Assertions.assertEquals(2, df.count());
-
+        Assertions.assertEquals(1, df.count());
+        // date
         Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = to_date('2024-05-05', 'yyyy-MM-dd')").count());
+        Assertions.assertEquals(1, df.filter("c_date = to_date('2024-05-05', 'yyyy-MM-dd')").count());
+        // number fields
         Assertions.assertEquals(consumer.config.debezium().decimalHandlingMode(), RelationalDatabaseConnectorConfig.DecimalHandlingMode.DOUBLE);
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_float = CAST('1.23' AS DOUBLE)").count(), "c_float not matching");
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
-        // Validate c_timestamp, c_timestamp2, and c_timestamptz casted to date are equal to today
-          // connect mode supports timestamp formats
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp AS DATE) = CURRENT_DATE()").count(), "c_timestamp not matching");
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp2 AS DATE) = CURRENT_DATE()").count(), "c_timestamp2 not matching");
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamptz AS DATE) = CURRENT_DATE()").count(), "c_timestamptz not matching");
+        Assertions.assertEquals(1, df.filter("c_float = CAST('1.23' AS DOUBLE)").count(), "c_float not matching");
+        Assertions.assertEquals(1, df.filter("c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
+        Assertions.assertEquals(1, df.filter("c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
+        // temporal fields
+        Assertions.assertEquals(DataTypes.TimestampNTZType, getSchemaField(df, "c_timestamp").dataType());
+        Assertions.assertEquals(DataTypes.TimestampNTZType, getSchemaField(df, "c_timestamp0").dataType());
+        Assertions.assertEquals(DataTypes.TimestampNTZType, getSchemaField(df, "c_timestamp6").dataType());
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamp AS STRING) = '2019-07-09 02:28:57.123456'").count(), "c_timestamp not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamp0 AS STRING) = '2019-07-09 02:28:57'").count(), "c_timestamp2 not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamp2 AS STRING) = '2019-07-09 02:28:57.12'").count(), "c_timestamp2 not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamp6 AS STRING) = '2019-07-09 02:28:57.123456'").count(), "c_timestamp2 not matching");
+        Assertions.assertEquals(DataTypes.TimestampType, getSchemaField(df, "c_timestamptz").dataType());
+        Assertions.assertEquals(DataTypes.TimestampType, getSchemaField(df, "c_timestamptz0").dataType());
+        Assertions.assertEquals(DataTypes.TimestampType, getSchemaField(df, "c_timestamptz6").dataType());
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamptz AS STRING) = '2019-07-09 03:28:10.123456'").count(), "c_timestamptz not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamptz0 AS STRING) = '2019-07-09 03:28:10'").count(), "c_timestamptz not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamptz2 AS STRING) = '2019-07-09 03:28:10.12'").count(), "c_timestamptz not matching");
+        Assertions.assertEquals(1, df.filter("CAST(c_timestamptz6 AS STRING) = '2019-07-09 03:28:10.123456'").count(), "c_timestamptz not matching");
         return true;
       } catch (Exception e) {
         e.printStackTrace();
