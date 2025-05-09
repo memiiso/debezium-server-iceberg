@@ -6,6 +6,7 @@ import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 import org.apache.iceberg.CatalogProperties;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -78,6 +79,9 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg.allow-field-addition")
   @WithDefault("true")
   boolean allowFieldAddition();
+
+  @WithName("debezium.sink.iceberg.excluded-columns")
+  Optional<List<String>> excludedColumns();
 
   @WithName("debezium.sink.iceberg.io-impl")
   @WithDefault("org.apache.iceberg.io.ResolvingFileIO")

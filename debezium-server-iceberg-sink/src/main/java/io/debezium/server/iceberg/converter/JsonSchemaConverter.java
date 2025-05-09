@@ -12,6 +12,8 @@ import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class JsonSchemaConverter implements io.debezium.server.iceberg.converter.SchemaConverter {
@@ -141,8 +143,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
    */
   private IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
     LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
+    List<String> excludedColumns = this.config.iceberg()
+          .excludedColumns()
+          .orElse(Collections.emptyList());
+
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
+        if(excludedColumns.contains(fieldName)) {
+            continue;
+        }
+
       JsonNode equivalentKeyFieldNode = findNodeFieldByName(fieldName, keySchemaNode);
       debeziumFieldToIcebergField(field, fieldName, schemaData, equivalentKeyFieldNode);
     }

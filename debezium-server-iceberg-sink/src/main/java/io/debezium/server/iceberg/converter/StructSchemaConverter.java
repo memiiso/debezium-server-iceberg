@@ -162,8 +162,17 @@ public class StructSchemaConverter implements SchemaConverter {
    */
   private IcebergSchemaInfo icebergSchemaFields(Schema valueSchema, Schema keySchema, IcebergSchemaInfo schemaData) {
     LOGGER.debug("Converting Connect schema fields to Iceberg fields for schema: {}", valueSchema);
+
+    List<String> excludedColumns = this.config.iceberg()
+            .excludedColumns()
+            .orElse(Collections.emptyList());
+
     for (Field field : getSchemaFields(valueSchema)) {
       String fieldName = field.name();
+      if(excludedColumns.contains(fieldName)) {
+        continue;
+      }
+
       debeziumFieldToIcebergField(field, schemaData, equivalentKeyField(keySchema, fieldName));
     }
     return schemaData;
