@@ -22,8 +22,8 @@
     <packaging>pom</packaging>
 
     <properties>
-        <!-- NOTE: this is overriden by release process using CLI argument -->
-        <revision>0.0.1-SNAPSHOT</revision>
+        <!-- NOTE: this is overridden by release process using CLI argument -->
+        <revision>1.0.0-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
         <version.debezium>3.1.1.Final</version.debezium>
 
