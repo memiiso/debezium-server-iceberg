@@ -77,6 +77,7 @@ public class StructSchemaConverter implements SchemaConverter {
     }
 
     boolean isPkField = connectKeyField != null;
+    boolean isOptional = config.iceberg().preserveRequiredProperty() ? connectField.schema().isOptional() : !isPkField;
     LOGGER.trace("Converting field: '{}', Type: '{}', LogicalType: '{}', PK: {}", fieldName, fieldType, fieldTypeName, isPkField);
 
     switch (fieldType) {
@@ -88,7 +89,7 @@ public class StructSchemaConverter implements SchemaConverter {
         }
         // Create it as struct, nested type
         final Types.StructType structType = Types.StructType.of(subSchemaData.fields());
-        final Types.NestedField structField = Types.NestedField.of(rootStructId, !isPkField, fieldName, structType, connectSchema.doc());
+        final Types.NestedField structField = Types.NestedField.of(rootStructId, isOptional, fieldName, structType, connectSchema.doc());
         schemaData.fields().add(structField);
         // Add struct field ID to PK list if the struct itself is a PK (though generally disallowed)
         if (isPkField) {
@@ -125,7 +126,7 @@ public class StructSchemaConverter implements SchemaConverter {
         Type valueType = valSchemaData.fields().get(0).type(); // Assuming the recursive call adds one field
 
         final Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keyType, valueType);
-        schemaData.fields().add(Types.NestedField.optional(rootMapId, fieldName, mapField, connectSchema.doc()));
+        schemaData.fields().add(Types.NestedField.of(rootMapId, isOptional, fieldName, mapField, connectSchema.doc()));
         break; // Added break
 
       case ARRAY:
@@ -143,14 +144,14 @@ public class StructSchemaConverter implements SchemaConverter {
         Type elementType = arraySchemaData.fields().get(0).type(); // Assuming the recursive call adds one field
 
         final Types.ListType listField = Types.ListType.ofOptional(elementFieldId, elementType);
-        schemaData.fields().add(Types.NestedField.optional(rootArrayId, fieldName, listField, connectSchema.doc()));
+        schemaData.fields().add(Types.NestedField.of(rootArrayId, isOptional, fieldName, listField, connectSchema.doc()));
         break; // Added break
 
       default:
         // It's a primitive field
         int primitiveFieldId = schemaData.nextFieldId().getAndIncrement();
         final Type.PrimitiveType primitiveType = icebergPrimitiveField(fieldName, connectSchema);
-        final Types.NestedField field = Types.NestedField.of(primitiveFieldId, !isPkField, fieldName, primitiveType, connectSchema.doc());
+        final Types.NestedField field = Types.NestedField.of(primitiveFieldId, isOptional, fieldName, primitiveType, connectSchema.doc());
         schemaData.fields().add(field);
         if (isPkField) schemaData.identifierFieldIds().add(field.fieldId());
         break; // Added break

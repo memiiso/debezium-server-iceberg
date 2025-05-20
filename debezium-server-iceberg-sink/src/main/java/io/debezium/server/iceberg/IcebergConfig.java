@@ -87,4 +87,8 @@ public interface IcebergConfig {
   @WithDefault("org.apache.iceberg.io.ResolvingFileIO")
   String ioImpl();
 
+  @WithName("debezium.sink.iceberg.preserve-required-property")
+  @WithDefault("false")
+  boolean preserveRequiredProperty();
+
 }
