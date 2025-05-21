@@ -50,6 +50,7 @@ class StructSchemaConverterTest {
     when(config.debezium()).thenReturn(debeziumConfig);
     when(icebergConfig.createIdentifierFields()).thenReturn(true);
     when(debeziumConfig.isEventFlatteningEnabled()).thenReturn(true);
+    when(icebergConfig.preserveRequiredProperty()).thenReturn(false);
   }
 
   @Test
