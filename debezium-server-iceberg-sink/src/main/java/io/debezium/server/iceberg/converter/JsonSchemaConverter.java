@@ -47,6 +47,14 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     return nameNode.textValue();
   }
 
+  private static boolean getFieldIsOptional(JsonNode fieldSchema) {
+    JsonNode nameNode = fieldSchema.get("optional");
+    if (nameNode == null || nameNode.isNull()) {
+      return true;
+    }
+
+    return nameNode.booleanValue();
+  }
 
   /***
    * converts given debezium filed to iceberg field equivalent. does recursion in case of complex/nested types.
@@ -59,12 +67,14 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   private IcebergSchemaInfo debeziumFieldToIcebergField(JsonNode fieldSchema, String fieldName, IcebergSchemaInfo schemaData, JsonNode keySchemaNode) {
     String fieldType = fieldSchema.get("type").textValue();
     String fieldTypeName = getFieldName(fieldSchema);
+    boolean fieldIsOptional = getFieldIsOptional(fieldSchema);
 
     if (fieldType == null || fieldType.isBlank()) {
       throw new DebeziumException("Unexpected schema field, field type is null or empty, fieldSchema:" + fieldSchema + " fieldName:" + fieldName);
     }
 
     boolean isPkField = !(keySchemaNode == null || keySchemaNode.isNull());
+    boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
         int rootStructId = schemaData.nextFieldId().getAndIncrement();
@@ -76,7 +86,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         }
         // create it as struct, nested type
         final Types.StructType structType = Types.StructType.of(subSchemaData.fields());
-        final Types.NestedField structField = Types.NestedField.of(rootStructId, !isPkField, fieldName, structType);
+        final Types.NestedField structField = Types.NestedField.of(rootStructId, isOptional, fieldName, structType);
         schemaData.fields().add(structField);
         return schemaData;
       case "map":
@@ -92,7 +102,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         final IcebergSchemaInfo valSchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("values"), fieldName + "_val", valSchemaData, null);
         final Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keySchemaData.fields().get(0).type(), valSchemaData.fields().get(0).type());
-        schemaData.fields().add(Types.NestedField.optional(rootMapId, fieldName, mapField));
+        schemaData.fields().add(Types.NestedField.of(rootMapId, isOptional, fieldName, mapField));
         return schemaData;
 
       case "array":
@@ -103,11 +113,11 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         final IcebergSchemaInfo arraySchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("items"), fieldName + "_items", arraySchemaData, null);
         final Types.ListType listField = Types.ListType.ofOptional(schemaData.nextFieldId().getAndIncrement(), arraySchemaData.fields().get(0).type());
-        schemaData.fields().add(Types.NestedField.optional(rootArrayId, fieldName, listField));
+        schemaData.fields().add(Types.NestedField.of(rootArrayId, isOptional, fieldName, listField));
         return schemaData;
       default:
         // its primitive field
-        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), !isPkField, fieldName, icebergPrimitiveField(fieldName, fieldType, fieldTypeName, fieldSchema));
+        final Types.NestedField field = Types.NestedField.of(schemaData.nextFieldId().getAndIncrement(), isOptional, fieldName, icebergPrimitiveField(fieldName, fieldType, fieldTypeName, fieldSchema));
         schemaData.fields().add(field);
         if (isPkField) schemaData.identifierFieldIds().add(field.fieldId());
         return schemaData;

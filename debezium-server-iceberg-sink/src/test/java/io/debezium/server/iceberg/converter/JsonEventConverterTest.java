@@ -18,6 +18,7 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.common.serialization.Serde;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 @QuarkusTest
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
@@ -50,6 +52,11 @@ class JsonEventConverterTest extends BaseTest {
   static void setup() {
     // configure and set
     JsonEventConverter.initializeJsonSerde();
+  }
+
+  @BeforeEach
+  void setUpBeforeEach() {
+    when(icebergConfig.preserveRequiredProperty()).thenReturn(false);
   }
 
   @Test
@@ -88,6 +95,34 @@ class JsonEventConverterTest extends BaseTest {
           9: __source_ts_ms: optional timestamptz
           10: __deleted: optional string
         }""");
+
+    assertEquals(schema.identifierFieldIds(), Set.of());
+  }
+
+  @Test
+  public void testPreserveRequiredProperty() {
+    // Preserve required fields as required in Iceberg schema
+    when(icebergConfig.preserveRequiredProperty()).thenReturn(true);
+
+    JsonEventConverter e = new JsonEventConverter("test", unwrapWithSchema, null, config);
+    Schema schema = e.icebergSchema();
+    RecordWrapper record = e.convert(schema);
+    assertEquals("orders", record.getField("__table").toString());
+    assertEquals(LocalDate.parse("2016-02-19"), record.getField("order_date"));
+    assertEquals("""
+        table {
+          1: id: required int
+          2: order_date: required date
+          3: purchaser: required int
+          4: quantity: required int
+          5: product_id: required int
+          6: __op: optional string
+          7: __table: optional string
+          8: __lsn: optional long
+          9: __source_ts_ms: optional timestamptz
+          10: __deleted: optional string
+        }""",
+        schema.toString());
 
     assertEquals(schema.identifierFieldIds(), Set.of());
   }

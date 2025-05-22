@@ -50,6 +50,7 @@ class StructSchemaConverterTest {
     when(config.debezium()).thenReturn(debeziumConfig);
     when(icebergConfig.createIdentifierFields()).thenReturn(true);
     when(debeziumConfig.isEventFlatteningEnabled()).thenReturn(true);
+    when(icebergConfig.preserveRequiredProperty()).thenReturn(false);
   }
 
   @Test
@@ -257,6 +258,78 @@ class StructSchemaConverterTest {
 
     // Print schema for manual verification if needed
     System.out.println(icebergSchema.toString());
+  }
+
+  @Test
+  void testPreserveRequiredProperty() {
+    // Preserve required fields as required in Iceberg schema
+    when(icebergConfig.preserveRequiredProperty()).thenReturn(true);
+
+    org.apache.iceberg.Schema icebergSchema = setupRequiredPropertyTest();
+    LOGGER.error("{}", icebergSchema);
+
+    assertTrue(icebergSchema.findField("pk_id").isRequired());
+    assertTrue(icebergSchema.findField("f_required").isRequired());
+    assertTrue(icebergSchema.findField("f_optional").isOptional());
+    assertTrue(icebergSchema.findField("f_array").isRequired());
+    assertTrue(icebergSchema.findField("f_array_opt").isOptional());
+    assertTrue(icebergSchema.findField("f_map").isRequired());
+    assertTrue(icebergSchema.findField("f_map_opt").isOptional());
+    assertTrue(icebergSchema.findField("f_struct").isRequired());
+    assertTrue(icebergSchema.findField("f_struct_opt").isOptional());
+  }
+
+  @Test
+  void testDefaultRequiredPropertyConversion() {
+    org.apache.iceberg.Schema icebergSchema = setupRequiredPropertyTest();
+    LOGGER.error("{}", icebergSchema);
+
+    assertTrue(icebergSchema.findField("pk_id").isRequired());
+    assertTrue(icebergSchema.findField("f_required").isOptional());
+    assertTrue(icebergSchema.findField("f_optional").isOptional());
+    assertTrue(icebergSchema.findField("f_array").isOptional());
+    assertTrue(icebergSchema.findField("f_array_opt").isOptional());
+    assertTrue(icebergSchema.findField("f_map").isOptional());
+    assertTrue(icebergSchema.findField("f_map_opt").isOptional());
+    assertTrue(icebergSchema.findField("f_struct").isOptional());
+    assertTrue(icebergSchema.findField("f_struct_opt").isOptional());
+  }
+
+  private org.apache.iceberg.Schema setupRequiredPropertyTest() {
+    // Define nested schema
+    SchemaBuilder structBuilder = SchemaBuilder.struct()
+            .field("nested_id", Schema.INT32_SCHEMA)
+            .field("nested_data", Schema.OPTIONAL_STRING_SCHEMA);
+    SchemaBuilder mapBuilder = SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA);
+
+    // Define value schema
+    org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
+            .name("SimpleRecord")
+            .field("pk_id", Schema.INT32_SCHEMA) // PK field, required by definition in Connect schema
+            .field("f_required", Schema.INT64_SCHEMA)
+            .field("f_optional", Schema.OPTIONAL_INT64_SCHEMA)
+            .field("f_array", SchemaBuilder.array(Schema.INT64_SCHEMA))
+            .field("f_array_opt", SchemaBuilder.array(Schema.INT64_SCHEMA).optional())
+            .field("f_map", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA))
+            .field("f_map_opt", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).optional())
+            .field("f_struct", SchemaBuilder.struct()
+                    .field("nested_id", Schema.INT32_SCHEMA)
+                    .field("nested_data", Schema.OPTIONAL_STRING_SCHEMA))
+            .field("f_struct_opt", SchemaBuilder.struct()
+                    .field("nested_id", Schema.INT32_SCHEMA)
+                    .field("nested_data", Schema.OPTIONAL_STRING_SCHEMA)
+                    .optional())
+            .build();
+    // Define key schema
+    org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
+            .name("SimpleRecordKey")
+            .field("pk_id", Schema.INT32_SCHEMA) // The PK field
+            .build();
+
+    // Convert to Iceberg schema
+    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+    return converter.icebergSchema();
+
   }
 
   // Helper assertion method
