@@ -35,7 +35,7 @@
         <skipITs>true</skipITs>
 
         <!-- Iceberg -->
-        <version.iceberg>1.8.1</version.iceberg>
+        <version.iceberg>1.9.1</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
         <version.spark.major>4.0</version.spark.major>
