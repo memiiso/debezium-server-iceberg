@@ -99,6 +99,8 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       .asc("event_sink_timestamptz", NullOrder.NULLS_LAST)
       .build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
+
+  // add debezium event main metadata fields to VariantMetadata
   private static final VariantMetadata EMPTY_EMPTY_METADATA = Variants.emptyMetadata();
   static Deserializer<JsonNode> valDeserializer;
   static Deserializer<JsonNode> keyDeserializer;
