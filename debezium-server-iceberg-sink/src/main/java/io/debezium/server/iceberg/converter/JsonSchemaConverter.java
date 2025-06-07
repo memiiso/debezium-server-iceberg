@@ -100,8 +100,6 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         final IcebergSchemaInfo keySchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("keys"), fieldName + "_key", keySchemaData, null);
 
-        //schemaData.nextFieldId().incrementAndGet();
-
         // Convert value schema
         final IcebergSchemaInfo valSchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("values"), fieldName + "_val", valSchemaData, null);
