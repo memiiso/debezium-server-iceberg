@@ -62,6 +62,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         "            c_int INTEGER,\n" +
         "            c_date DATE,\n" +
         "            c_timestamp TIMESTAMP,\n" +
+        "            c_timestamp2 TIMESTAMP(2),\n" +
         "            c_timestamptz TIMESTAMPTZ,\n" +
         "            c_float FLOAT,\n" +
         "            c_decimal DECIMAL(18,6),\n" +
@@ -78,13 +79,13 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     sql = "INSERT INTO inventory.data_types (" +
         "c_id, " +
-        "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamptz, " +
+        "c_text, c_varchar, c_int, c_date, c_timestamp, c_timestamp2, c_timestamptz, " +
         "c_float, c_decimal,c_numeric,c_interval,c_boolean,c_uuid,c_bytea,  " +
         "c_json, c_jsonb, c_hstore_keyval, c_last_field) " +
-        "VALUES (1, null, null, null,null,null,null," +
+        "VALUES (1, null, null, null,null,null,null, null," +
         "null,null,null,null,null,null,null," +
         "null,null, null, null)," +
-        "(2, 'val_text', 'A', 123, '2024-05-05'::DATE , current_timestamp, current_timestamp," +
+        "(2, 'val_text', 'A', 123, '2024-05-05'::DATE , current_timestamp, current_timestamp, current_timestamp," +
         "'1.23'::float,'1234566.34456'::decimal,'345672123.452'::numeric, interval '1 day',false," +
         "'3f207ac6-5dba-11eb-ae93-0242ac130002'::UUID, 'aBC'::bytea," +
         "'{\"reading\": 1123}'::json, '{\"reading\": 1123}'::jsonb, " +
@@ -117,6 +118,13 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_float = CAST('1.23' AS DOUBLE)").count(), "c_float not matching");
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
+        // Validate c_timestamp, c_timestamp2, and c_timestamptz casted to date are equal to today
+        if (config.debezium().isConnectKeyValueChangeEventFormat()) {
+          // connect mode supports timestamp formats
+          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp AS DATE) = CURRENT_DATE()").count(), "c_timestamp not matching");
+          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp2 AS DATE) = CURRENT_DATE()").count(), "c_timestamp2 not matching");
+          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamptz AS DATE) = CURRENT_DATE()").count(), "c_timestamptz not matching");
+        }
         return true;
       } catch (Exception e) {
         e.printStackTrace();
