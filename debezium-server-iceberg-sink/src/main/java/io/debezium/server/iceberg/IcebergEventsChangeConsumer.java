@@ -42,6 +42,9 @@ import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.variants.Variant;
+import org.apache.iceberg.variants.VariantMetadata;
+import org.apache.iceberg.variants.Variants;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
@@ -59,6 +62,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
 import static org.apache.iceberg.types.Types.NestedField.optional;
 import static org.apache.iceberg.types.Types.NestedField.required;
 
@@ -78,10 +82,10 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
   static final String TABLE_NAME = "debezium_events";
   static final Schema TABLE_SCHEMA = new Schema(
       required(1, "event_destination", Types.StringType.get()),
-      optional(2, "event_key_schema", Types.StringType.get()),
-      optional(3, "event_key_payload", Types.StringType.get()),
-      optional(4, "event_value_schema", Types.StringType.get()),
-      optional(5, "event_value_payload", Types.StringType.get()),
+      optional(2, "event_key_schema", Types.VariantType.get()),
+      optional(3, "event_key_payload", Types.VariantType.get()),
+      optional(4, "event_value_schema", Types.VariantType.get()),
+      optional(5, "event_value_payload", Types.VariantType.get()),
       optional(6, "event_sink_epoch_ms", Types.LongType.get()),
       optional(7, "event_sink_timestamptz", Types.TimestampType.withZone())
   );
@@ -95,6 +99,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       .asc("event_sink_timestamptz", NullOrder.NULLS_LAST)
       .build();
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergEventsChangeConsumer.class);
+  private static final VariantMetadata EMPTY_EMPTY_METADATA = Variants.emptyMetadata();
   static Deserializer<JsonNode> valDeserializer;
   static Deserializer<JsonNode> keyDeserializer;
   final Configuration hadoopConf = new Configuration();
@@ -123,6 +128,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
           .buildTable(tableIdentifier, TABLE_SCHEMA)
           .withPartitionSpec(TABLE_PARTITION)
           .withSortOrder(TABLE_SORT_ORDER)
+          .withProperty(FORMAT_VERSION, "3")
           .create();
     }
     // load table
@@ -150,12 +156,20 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
       JsonNode keyPayload = record.key() == null ? null : keyDeserializer.deserialize(record.destination(), getBytes(record.key()));
       JsonNode keySchema = record.key() == null ? null : mapper.readTree(getBytes(record.key())).get("schema");
       // convert to GenericRecord
-      GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
+      GenericRecord rec = GenericRecord.create(eventTable.schema().asStruct());
       rec.setField("event_destination", record.destination());
-      rec.setField("event_key_schema", mapper.writeValueAsString(keySchema));
-      rec.setField("event_key_payload", mapper.writeValueAsString(keyPayload));
-      rec.setField("event_value_schema", mapper.writeValueAsString(valueSchema));
-      rec.setField("event_value_payload", mapper.writeValueAsString(valuePayload));
+      // @TODO move this to init as a static variable
+      if (eventTable.schema().findField("event_key_schema").type() == Types.VariantType.get()) {
+        rec.setField("event_key_schema", Variant.of(EMPTY_EMPTY_METADATA, Variants.of(mapper.writeValueAsString(keySchema))));
+        rec.setField("event_key_payload", Variant.of(EMPTY_EMPTY_METADATA, Variants.of(mapper.writeValueAsString(keyPayload))));
+        rec.setField("event_value_schema", Variant.of(EMPTY_EMPTY_METADATA, Variants.of(mapper.writeValueAsString(valueSchema))));
+        rec.setField("event_value_payload", Variant.of(EMPTY_EMPTY_METADATA, Variants.of(mapper.writeValueAsString(valuePayload))));
+      } else {
+        rec.setField("event_key_schema", mapper.writeValueAsString(keySchema));
+        rec.setField("event_key_payload", mapper.writeValueAsString(keyPayload));
+        rec.setField("event_value_schema", mapper.writeValueAsString(valueSchema));
+        rec.setField("event_value_payload", mapper.writeValueAsString(valuePayload));
+      }
       rec.setField("event_sink_epoch_ms", batchTime.toEpochSecond());
       rec.setField("event_sink_timestamptz", batchTime);
 
