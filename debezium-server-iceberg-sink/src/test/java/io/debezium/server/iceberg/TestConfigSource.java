@@ -84,6 +84,7 @@ public class TestConfigSource implements ConfigSource {
 
     config.put("quarkus.devservices.enabled", "false");
     config.put("quarkus.log.level", "WARN");
+    config.put("quarkus.log.category.\"io.debezium.server.iceberg\".level", "INFO");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
     config.put("quarkus.log.category.\"org.apache.hadoop\".level", "ERROR");
     config.put("quarkus.log.category.\"org.apache.parquet\".level", "WARN");
