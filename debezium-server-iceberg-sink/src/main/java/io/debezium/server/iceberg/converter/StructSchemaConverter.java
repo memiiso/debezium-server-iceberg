@@ -82,6 +82,14 @@ public class StructSchemaConverter implements SchemaConverter {
 
     switch (fieldType) {
       case STRUCT:
+        if (config.iceberg().nestedAsVariant()) {
+          // here we are keeping nested fields in variant
+          int variantFieldId = schemaData.nextFieldId().getAndIncrement();
+          final Types.NestedField variantField = Types.NestedField.optional(variantFieldId, fieldName, Types.VariantType.get(), connectSchema.doc());
+          schemaData.fields().add(variantField);
+          break;
+        }
+
         int rootStructId = schemaData.nextFieldId().getAndIncrement();
         final IcebergSchemaInfo subSchemaData = schemaData.copyPreservingMetadata();
         for (Field subField : connectSchema.fields()) {
@@ -173,7 +181,7 @@ public class StructSchemaConverter implements SchemaConverter {
       if(excludedColumns.contains(fieldName)) {
         continue;
       }
-
+      // convert each field to iceberg equivalent field
       debeziumFieldToIcebergField(field, schemaData, equivalentKeyField(keySchema, fieldName));
     }
     return schemaData;

@@ -77,6 +77,14 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
+        if (config.iceberg().nestedAsVariant()) {
+          // here we are keeping nested fields in variant
+          int variantFieldId = schemaData.nextFieldId().getAndIncrement();
+          final Types.NestedField variantField = Types.NestedField.optional(variantFieldId, fieldName, Types.VariantType.get());
+          schemaData.fields().add(variantField);
+          return schemaData;
+        }
+
         int rootStructId = schemaData.nextFieldId().getAndIncrement();
         final IcebergSchemaInfo subSchemaData = schemaData.copyPreservingMetadata();
         for (JsonNode subFieldSchema : fieldSchema.get("fields")) {

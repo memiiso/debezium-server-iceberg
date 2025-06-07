@@ -73,7 +73,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   void connect() {
     config.debezium().validateTemporalPrecisionMode();
 
-    JsonEventConverter.initializeJsonSerde();
+    JsonEventConverter.initializeStaticSerdes();
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     LOGGER.info("IcebergChangeConsumer is configured to use the '{}' format for processing events.", keyValueChangeEventFormat);
     // pass iceberg properties to iceberg and hadoop

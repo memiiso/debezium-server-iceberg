@@ -91,4 +91,8 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean preserveRequiredProperty();
 
+  @WithName("debezium.sink.iceberg.nested-as-variant")
+  @WithDefault("false")
+  boolean nestedAsVariant();
+
 }

@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.converter;
 
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
+import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
@@ -18,11 +19,16 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.variants.Variant;
+import org.apache.iceberg.variants.Variants;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +48,8 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   private final Struct value;
   private final Struct key;
   private final StructSchemaConverter schemaConverter;
+  private static final Serde<Struct> eventSerde = DebeziumSerdes.payloadJson(Struct.class);
+  private static final Serializer<Struct> structSerializer = eventSerde.serializer();
 
   public StructEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     super(config);
@@ -232,6 +240,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         Preconditions.checkArgument(connectValue instanceof Struct,
             "Cannot convert to Struct: value is not a Struct: %s", connectValue.getClass().getName());
         return convertToIcebergRecord(icebergType.asStructType(), (Struct) connectValue);
+
+      case VARIANT:
+        Preconditions.checkArgument(connectValue instanceof Struct,
+            "Cannot convert to Variant: value is not a Struct: %s", connectValue.getClass().getName());
+        final byte[] jsonVal1 = jsonConverter.fromConnectData("dummy-topic-not-used", ((Struct) connectValue).schema(), connectValue);
+        return Variant.of(VARIANT_EMPTY_METADATA, Variants.of(ByteBuffer.wrap(jsonVal1)));
 
       case LIST:
         Preconditions.checkArgument(connectValue instanceof List,

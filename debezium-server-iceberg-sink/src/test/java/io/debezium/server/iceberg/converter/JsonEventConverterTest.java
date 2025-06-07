@@ -51,7 +51,7 @@ class JsonEventConverterTest extends BaseTest {
   @BeforeAll
   static void setup() {
     // configure and set
-    JsonEventConverter.initializeJsonSerde();
+    JsonEventConverter.initializeStaticSerdes();
   }
 
   @BeforeEach
