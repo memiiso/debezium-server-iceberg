@@ -119,7 +119,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
     Assertions.assertEquals(ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
-    S3Minio.listFiles();
+//    S3Minio.listFiles();
   }
 
   @Test
