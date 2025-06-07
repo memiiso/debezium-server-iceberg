@@ -144,9 +144,9 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
-//        getTableData("testc.inventory.data_types").show(false);
+        getTableData("testc.inventory.data_types").show(false);
         Dataset<Row> df = getTableData("testc.inventory.data_types").filter("c_id = 2");
-        df.show(false);
+//        df.show(false);
 
         Assertions.assertEquals(1, df.count());
         // date
