@@ -38,7 +38,6 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.source.database.dbname", "testing-without-source-db");
     config.put("debezium.source.database.user", "testing-without-source-db-user");
     config.put("debezium.source.database.hostname", "testing-without-source-db-hostname");
-    config.put("debezium.source.time.precision.mode", "adaptive");
     // common mysql config
     // "The 'adaptive' time.precision.mode is not supported for this connector"
     config.put("%mysql.debezium.source.time.precision.mode", "connect");
