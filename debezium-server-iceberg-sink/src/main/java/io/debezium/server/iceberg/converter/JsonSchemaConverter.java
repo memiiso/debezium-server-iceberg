@@ -91,14 +91,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         return schemaData;
       case "map":
         if (isPkField) {
-          throw new DebeziumException("Cannot set map field '" + fieldName + "' as a identifier field, map types are not supported as an identifier field!");
+          throw new DebeziumException("Map field '" + fieldName + "' cannot be part of the primary key.");
         }
         int rootMapId = schemaData.nextFieldId().getAndIncrement();
         int keyFieldId = schemaData.nextFieldId().getAndIncrement();
         int valFieldId = schemaData.nextFieldId().getAndIncrement();
+        // Convert key schema
         final IcebergSchemaInfo keySchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("keys"), fieldName + "_key", keySchemaData, null);
-        schemaData.nextFieldId().incrementAndGet();
+
+        // Convert value schema
         final IcebergSchemaInfo valSchemaData = schemaData.copyPreservingMetadata();
         debeziumFieldToIcebergField(fieldSchema.get("values"), fieldName + "_val", valSchemaData, null);
         final Types.MapType mapField = Types.MapType.ofOptional(keyFieldId, valFieldId, keySchemaData.fields().get(0).type(), valSchemaData.fields().get(0).type());
