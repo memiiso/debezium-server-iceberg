@@ -71,6 +71,11 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
 
   @PostConstruct
   void connect() {
+
+    if (config.debezium().isAdaptiveTemporalMode()) {
+      throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + config.debezium().temporalPrecisionMode());
+    }
+
     JsonEventConverter.initializeJsonSerde();
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     // pass iceberg properties to iceberg and hadoop

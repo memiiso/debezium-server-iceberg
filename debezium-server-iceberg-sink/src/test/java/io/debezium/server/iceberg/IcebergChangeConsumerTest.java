@@ -119,12 +119,10 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
         Assertions.assertEquals(1, df.filter("c_id = 2 AND c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
         // Validate c_timestamp, c_timestamp2, and c_timestamptz casted to date are equal to today
-        if (config.debezium().isConnectKeyValueChangeEventFormat()) {
           // connect mode supports timestamp formats
-          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp AS DATE) = CURRENT_DATE()").count(), "c_timestamp not matching");
-          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp2 AS DATE) = CURRENT_DATE()").count(), "c_timestamp2 not matching");
-          Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamptz AS DATE) = CURRENT_DATE()").count(), "c_timestamptz not matching");
-        }
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp AS DATE) = CURRENT_DATE()").count(), "c_timestamp not matching");
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamp2 AS DATE) = CURRENT_DATE()").count(), "c_timestamp2 not matching");
+        Assertions.assertEquals(1, df.filter("c_id = 2 AND CAST(c_timestamptz AS DATE) = CURRENT_DATE()").count(), "c_timestamptz not matching");
         return true;
       } catch (Exception e) {
         e.printStackTrace();
