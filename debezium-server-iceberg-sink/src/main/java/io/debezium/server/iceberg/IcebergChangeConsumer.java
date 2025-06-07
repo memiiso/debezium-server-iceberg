@@ -71,6 +71,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
 
   @PostConstruct
   void connect() {
+    config.debezium().validateTemporalPrecisionMode();
+
     JsonEventConverter.initializeJsonSerde();
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     // pass iceberg properties to iceberg and hadoop

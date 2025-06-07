@@ -21,6 +21,10 @@ public interface DebeziumConfig {
   @WithDefault("isostring")
   TemporalPrecisionMode temporalPrecisionMode();
 
+  @WithName("debezium.source.time.precision.mode.adaptive-allowed")
+  @WithDefault("false")
+  boolean temporalPrecisionModeAdaptiveAllowed();
+
   @WithName("debezium.source.decimal.handling.mode")
   @WithDefault("double")
   RelationalDatabaseConnectorConfig.DecimalHandlingMode decimalHandlingMode();
@@ -112,6 +116,14 @@ public interface DebeziumConfig {
     return this.valueFormat();
   }
 
+  default void validateTemporalPrecisionMode() {
+    if (isAdaptiveTemporalMode()) {
+      if (!temporalPrecisionModeAdaptiveAllowed()) {
+        throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + temporalPrecisionMode() +
+            " to enable it set `debezium.source.time.precision.mode.adaptive-allowed` to true.");
+      }
+    }
+  }
 
   default boolean isEventFlatteningEnabled() {
     if (transformsConfigs() == null || transformsConfigs().isEmpty()) {
