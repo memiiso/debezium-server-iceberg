@@ -144,6 +144,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
+//        getTableData("testc.inventory.data_types").show(false);
         Dataset<Row> df = getTableData("testc.inventory.data_types").filter("c_id = 2");
         df.show(false);
 
@@ -274,7 +275,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     });
     getTableData("testc.inventory.customers").show();
 
-    S3Minio.listFiles();
+//    S3Minio.listFiles();
   }
 
   @Test
@@ -398,7 +399,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         return false;
       }
     });
-    S3Minio.listFiles();
+//    S3Minio.listFiles();
   }
 
   @Test

@@ -57,7 +57,7 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
       }
     });
 
-    S3Minio.listFiles();
+//    S3Minio.listFiles();
   }
 
   public static class TestProfile implements QuarkusTestProfile {
