@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(S3Minio.class);
-  static final String DEFAULT_IMAGE = "minio/minio:latest";
+  static final String DEFAULT_IMAGE = "minio/minio:RELEASE.2025-04-08T15-41-24Z";
   public static MinioClient client;
 
   static public final MinIOContainer container = new MinIOContainer(DockerImageName.parse(DEFAULT_IMAGE))
