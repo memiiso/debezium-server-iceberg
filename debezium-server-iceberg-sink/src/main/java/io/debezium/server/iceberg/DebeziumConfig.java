@@ -21,6 +21,10 @@ public interface DebeziumConfig {
   @WithDefault("isostring")
   TemporalPrecisionMode temporalPrecisionMode();
 
+  @WithName("debezium.source.time.precision.mode.adaptive-allowed")
+  @WithDefault("false")
+  boolean temporalPrecisionModeAdaptiveAllowed();
+
   @WithName("debezium.source.decimal.handling.mode")
   @WithDefault("double")
   RelationalDatabaseConnectorConfig.DecimalHandlingMode decimalHandlingMode();

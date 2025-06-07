@@ -73,7 +73,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   void connect() {
 
     if (config.debezium().isAdaptiveTemporalMode()) {
-      throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + config.debezium().temporalPrecisionMode());
+      if (!config.debezium().temporalPrecisionModeAdaptiveAllowed()) {
+        throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + config.debezium().temporalPrecisionMode());
+      }
     }
 
     JsonEventConverter.initializeJsonSerde();
