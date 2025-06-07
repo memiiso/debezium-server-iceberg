@@ -116,6 +116,14 @@ public interface DebeziumConfig {
     return this.valueFormat();
   }
 
+  default void validateTemporalPrecisionMode() {
+    if (isAdaptiveTemporalMode()) {
+      if (!temporalPrecisionModeAdaptiveAllowed()) {
+        throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + temporalPrecisionMode() +
+            " to enable it set `debezium.source.time.precision.mode.adaptive-allowed` to true.");
+      }
+    }
+  }
 
   default boolean isEventFlatteningEnabled() {
     if (transformsConfigs() == null || transformsConfigs().isEmpty()) {
