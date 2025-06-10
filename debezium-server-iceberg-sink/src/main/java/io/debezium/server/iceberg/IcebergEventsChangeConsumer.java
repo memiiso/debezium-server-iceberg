@@ -69,6 +69,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  */
 @Named("icebergevents")
 @Dependent
+@Deprecated
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
 
   protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
