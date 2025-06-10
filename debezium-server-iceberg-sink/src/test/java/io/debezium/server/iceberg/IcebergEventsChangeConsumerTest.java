@@ -39,6 +39,7 @@ import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
+@Deprecated
 public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
