@@ -13,7 +13,8 @@ theme:
     - content.tabs.link
 nav:
   - Home: index.md
-  - User Guide: docs.md
+  - iceberg Consumer: iceberg.md
+  - icebergevents Consumer: icebergevents.md
   - Python Runner: python-runner.md
   - Caveats: caveats.md
   - Contributing: contributing.md
