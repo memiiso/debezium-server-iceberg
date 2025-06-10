@@ -1,8 +1,7 @@
-# Debezium Iceberg Consumers
+# Debezium Iceberg Consumer
 
-Directly replicates database Change Data Capture (CDC) events to Iceberg tables on cloud storage or HDFS, eliminating the need for intermediate systems like Spark, Kafka, or streaming platforms.
-
-![Debezium Iceberg](images/debezium-iceberg.png)
+Directly replicate database Change Data Capture (CDC) events to Iceberg tables on cloud storage or HDFS, eliminating the
+need for intermediate systems like Spark, Kafka, or streaming platforms.
 
 ## `iceberg` Consumer
 The Iceberg consumer replicates database Change Data Capture (CDC) events to target Iceberg tables. It supports both upsert and append modes for data replication.
@@ -255,34 +254,4 @@ Jackson conversion rule for boolean type:
 ```
 Method that will try to convert value of this node to a Java boolean. JSON booleans map naturally; integer numbers other than 0 map to true, and 0 maps to false and Strings 'true' and 'false' map to corresponding values.
 If representation can not be converted to a boolean value (including structured types like Objects and Arrays), specified defaultValue will be returned; no exceptions are thrown.
-```
-
-## `icebergevents` Consumer
-
-This consumer appends all Change Data Capture (CDC) events as JSON strings to a single Iceberg table. The table is
-partitioned by `event_destination` and `event_sink_timestamptz` for efficient data organization and query performance.
-
-````properties
-debezium.sink.type=icebergevents
-debezium.sink.iceberg.catalog-name=default
-````
-
-Iceberg table definition:
-
-```java
-static final String TABLE_NAME = "debezium_events";
-static final Schema TABLE_SCHEMA = new Schema(
-        required(1, "event_destination", Types.StringType.get()),
-        optional(2, "event_key", Types.StringType.get()),
-        optional(3, "event_value", Types.StringType.get()),
-        optional(4, "event_sink_epoch_ms", Types.LongType.get()),
-        optional(5, "event_sink_timestamptz", Types.TimestampType.withZone())
-);
-static final PartitionSpec TABLE_PARTITION = PartitionSpec.builderFor(TABLE_SCHEMA)
-        .identity("event_destination")
-        .hour("event_sink_timestamptz")
-        .build();
-static final SortOrder TABLE_SORT_ORDER = SortOrder.builderFor(TABLE_SCHEMA)
-        .asc("event_sink_epoch_ms", NullOrder.NULLS_LAST)
-        .build();
 ```
