@@ -109,7 +109,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
             "AND c_date is null AND c_timestamp is null AND c_timestamp2 is null AND c_timestamptz is null " +
             "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
             "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         return false;
       }
     });
@@ -174,7 +174,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("CAST(c_timestamptz2 AS STRING) = '2019-07-09 03:28:10.12'").count(), "c_timestamptz not matching");
         Assertions.assertEquals(1, df.filter("CAST(c_timestamptz6 AS STRING) = '2019-07-09 03:28:10.123456'").count(), "c_timestamptz not matching");
         return true;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         LOGGER.error("Error: {}", e.getMessage());
         return false;
       }
@@ -247,7 +247,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                 && ds.where("first_name == 'SallyUSer2'").count() == 1
                 && ds.where("last_name is null").count() == 1
                 && ds.where("id == '1004'").where("__op == 'd'").count() == 1;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         return false;
       }
     });

@@ -8,7 +8,6 @@
 
 package io.debezium.server.iceberg;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
 import io.debezium.DebeziumException;
 import jakarta.enterprise.inject.Instance;
@@ -48,7 +47,6 @@ import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
  */
 public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
-  protected static final ObjectMapper jsonObjectMapper = new ObjectMapper();
   protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
 
 
@@ -88,7 +86,7 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat) {
+                                         Schema schema, String writeFormat, String formatVersion) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
@@ -99,7 +97,7 @@ public class IcebergUtil {
     }
 
     return icebergCatalog.buildTable(tableIdentifier, schema)
-        .withProperty(FORMAT_VERSION, "3")
+        .withProperty(FORMAT_VERSION, formatVersion)
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
         .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
         .create();

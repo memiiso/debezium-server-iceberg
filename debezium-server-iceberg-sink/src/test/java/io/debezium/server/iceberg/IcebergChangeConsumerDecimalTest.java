@@ -60,7 +60,7 @@ public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.count());
         Assertions.assertEquals(1, df.filter("c_id = 1 AND c_decimal = CAST('1234566.344560' AS DECIMAL(18,6))").count(), "c_decimal not matching");
         return true;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         e.printStackTrace();
         return false;
       }
