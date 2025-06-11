@@ -46,6 +46,7 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
         Record row = result.iterator().next();
         Assertions.assertEquals("variant", row.struct().field("g").type().toString());
         Assertions.assertEquals("variant", row.struct().field("h").type().toString());
+        Assertions.assertTrue(row.getField("g").toString().contains("wkb"));
         printTableData(result);
         return Lists.newArrayList(result).size() >= 3;
       } catch (Exception e) {
