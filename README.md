@@ -15,7 +15,7 @@ See the [Documentation Page](https://memiiso.github.io/debezium-server-iceberg/)
 For a full understanding of current limitations and recommended solutions, please review
 the [caveats](https://memiiso.github.io/debezium-server-iceberg/caveats/).
 
-![Debezium Iceberg](https://raw.githubusercontent.com/memiiso/debezium-server-iceberg/master/docs/images/rdbms-debezium-iceberg_white.png)
+![Debezium Iceberg](https://raw.githubusercontent.com/memiiso/debezium-server-iceberg/master/docs/images/debezium-iceberg-architecture.drawio_white.png)
 
 ## Installation
 - Requirements:
