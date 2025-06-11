@@ -40,16 +40,6 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() {
-//    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-//      try {
-//        CloseableIterable<Record> result = getTableDataV2("testc.inventory.customers");
-//        printTableData(result);
-//        return Lists.newArrayList(result).size() >= 4;
-//      } catch (Exception e) {
-////        e.printStackTrace();
-//        return false;
-//      }
-//    });
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         CloseableIterable<Record> result = getTableDataV2("testc.inventory.geom");
