@@ -47,6 +47,15 @@
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
         <version.testcontainers>1.21.1</version.testcontainers>
     </properties>
+    <scm>
+        <connection>scm:git:git@github.com:memiiso/debezium-server-iceberg.git</connection>
+        <developerConnection>scm:git:git@github.com:memiiso/debezium-server-iceberg.git</developerConnection>
+        <url>https://github.com/memiiso/debezium-server-iceberg</url>
+    </scm>
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/memiiso/debezium-server-iceberg/issues</url>
+    </issueManagement>
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -56,8 +65,15 @@
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub Packages</name>
+            <name>GitHub memiiso Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
+            <layout>central</layout>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
         </repository>
         <snapshotRepository>
             <id>github</id>
@@ -126,13 +142,26 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Disabling this plugin (used by parent debezium project) somehow its failing to publish to GitHub -->
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.7.0</version>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <extensions>true</extensions>
                 <configuration>
-                    <skipStaging>true</skipStaging>
+                    <skipPublishing>true</skipPublishing>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>disable-central</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>publish</goal>
+                        </goals>
+                        <configuration>
+                            <skipPublishing>true</skipPublishing>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
