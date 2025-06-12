@@ -3,7 +3,7 @@ name: Create Release
 on:
   push:
     tags: [ '*.*.*.*' ]
-    branches: [ deploy ]
+    branches: [ master ]
 
 env:
   SPARK_LOCAL_IP: 127.0.0.1
@@ -31,7 +31,7 @@ jobs:
       - name: Determine Release Name
         id: set_release_version
         run: |
-          if [[ "${{ github.ref_name }}" == "deploy" ]]; then
+          if [[ "${{ github.ref_name }}" == "master" ]]; then
             echo "RELEASE_VERSION=latest" >> $GITHUB_ENV
           else
             echo "RELEASE_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
