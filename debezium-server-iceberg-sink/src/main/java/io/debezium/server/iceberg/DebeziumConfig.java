@@ -31,11 +31,11 @@ public interface DebeziumConfig {
 
   // Event format
   @WithName("debezium.format.value")
-  @WithDefault("json")
+  @WithDefault("connect")
   String valueFormat();
 
   @WithName("debezium.format.key")
-  @WithDefault("json")
+  @WithDefault("connect")
   String keyFormat();
 
   @WithName("debezium.format.value.schemas.enable")
