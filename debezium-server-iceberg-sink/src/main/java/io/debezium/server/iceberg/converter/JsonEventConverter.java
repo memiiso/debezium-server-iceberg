@@ -8,11 +8,10 @@
 
 package io.debezium.server.iceberg.converter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
@@ -24,8 +23,8 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serde;
+import org.apache.iceberg.variants.Variant;
+import org.apache.iceberg.variants.Variants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -51,26 +49,12 @@ import java.util.UUID;
  */
 public class JsonEventConverter extends AbstractEventConverter implements EventConverter {
 
-  protected static final ObjectMapper mapper = new ObjectMapper();
   protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
-  static Deserializer<JsonNode> valDeserializer;
-  static Deserializer<JsonNode> keyDeserializer;
-  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
-  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
   protected final String destination;
   protected final byte[] valueData;
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
-
-  public static void initializeJsonSerde() {
-    // configure and set
-    valSerde.configure(Collections.emptyMap(), false);
-    valDeserializer = valSerde.deserializer();
-    // configure and set
-    keySerde.configure(Collections.emptyMap(), true);
-    keyDeserializer = keySerde.deserializer();
-  }
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
@@ -348,6 +332,13 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
           }
         });
         return mapVal;
+      case VARIANT:
+        try {
+          String jsonVal = mapper.writeValueAsString(node);
+          return Variant.of(VARIANT_EMPTY_METADATA, Variants.of(jsonVal));
+        } catch (JsonProcessingException e) {
+          throw new DebeziumException("Failed to convert value, field: " + field.name() + " value: " + node, e);
+        }
       case STRUCT:
         // create it as struct, nested type
         // recursive call to get nested data/record

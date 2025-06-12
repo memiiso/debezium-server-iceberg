@@ -70,7 +70,7 @@ public class IcebergChangeConsumerExcludedColumnsTest extends BaseSparkTest {
         Assertions.assertFalse(columns.contains("__table"));
         Assertions.assertFalse(columns.contains("__db"));
         return true;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         return false;
       }
     });

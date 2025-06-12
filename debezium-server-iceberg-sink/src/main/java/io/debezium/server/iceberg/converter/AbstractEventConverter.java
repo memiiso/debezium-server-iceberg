@@ -8,6 +8,9 @@
 
 package io.debezium.server.iceberg.converter;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.time.IsoDate;
@@ -24,7 +27,13 @@ import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.ByteBuffers;
 import org.apache.iceberg.util.DateTimeUtil;
+import org.apache.iceberg.variants.VariantMetadata;
+import org.apache.iceberg.variants.Variants;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonConverterConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +50,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.Temporal;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
 
@@ -50,9 +60,27 @@ import static io.debezium.jdbc.TemporalPrecisionMode.ISOSTRING;
 public class AbstractEventConverter {
   protected final GlobalConfig config;
   protected static final Logger LOGGER = LoggerFactory.getLogger(AbstractEventConverter.class);
+  protected static final ObjectMapper mapper = new ObjectMapper();
+  protected static final VariantMetadata VARIANT_EMPTY_METADATA = Variants.emptyMetadata();
+  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static JsonConverter jsonConverter = new JsonConverter();
+  protected static Deserializer<JsonNode> valDeserializer;
+  protected static Deserializer<JsonNode> keyDeserializer;
+
 
   public AbstractEventConverter(GlobalConfig config) {
     this.config = config;
+  }
+
+  public static void initializeStaticSerdes() {
+    // configure and set
+    valSerde.configure(Collections.emptyMap(), false);
+    valDeserializer = valSerde.deserializer();
+    // configure and set
+    keySerde.configure(Collections.emptyMap(), true);
+    keyDeserializer = keySerde.deserializer();
+    jsonConverter.configure(Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false"), false);
   }
 
   protected BigDecimal convertDecimal(Object value, Types.DecimalType decimalType, String logicalTypeName) {

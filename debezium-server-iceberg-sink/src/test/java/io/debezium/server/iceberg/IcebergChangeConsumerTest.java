@@ -109,7 +109,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
             "AND c_date is null AND c_timestamp is null AND c_timestamp2 is null AND c_timestamptz is null " +
             "AND c_float is null AND c_decimal is null AND c_numeric is null AND c_interval is null " +
             "AND c_boolean is null AND c_uuid is null AND c_bytea is null").count() == 1;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         return false;
       }
     });
@@ -144,15 +144,17 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     SourcePostgresqlDB.runSQL(sql);
     Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types").filter("c_id = 2");
-        df.show(false);
+        Dataset<Row> df = getTableData("testc.inventory.data_types");
+        Assertions.assertEquals(2, df.count());
 
+        df = df.filter("c_id = 2");
         Assertions.assertEquals(1, df.count());
+        df.show(false);
         // date
         Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
         Assertions.assertEquals(1, df.filter("c_date = to_date('2024-05-05', 'yyyy-MM-dd')").count());
         // number fields
-        Assertions.assertEquals(consumer.config.debezium().decimalHandlingMode(), RelationalDatabaseConnectorConfig.DecimalHandlingMode.DOUBLE);
+        Assertions.assertEquals(RelationalDatabaseConnectorConfig.DecimalHandlingMode.DOUBLE, consumer.config.debezium().decimalHandlingMode());
         Assertions.assertEquals(1, df.filter("c_float = CAST('1.23' AS DOUBLE)").count(), "c_float not matching");
         Assertions.assertEquals(1, df.filter("c_decimal = CAST('1234566.34456' AS DOUBLE)").count(), "c_decimal not matching");
         Assertions.assertEquals(1, df.filter("c_numeric = CAST('345672123.452' AS DOUBLE)").count(), "c_numeric not matching");
@@ -172,8 +174,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("CAST(c_timestamptz2 AS STRING) = '2019-07-09 03:28:10.12'").count(), "c_timestamptz not matching");
         Assertions.assertEquals(1, df.filter("CAST(c_timestamptz6 AS STRING) = '2019-07-09 03:28:10.123456'").count(), "c_timestamptz not matching");
         return true;
-      } catch (Exception e) {
-        e.printStackTrace();
+      } catch (Exception | AssertionError e) {
+        LOGGER.error("Error: {}", e.getMessage());
         return false;
       }
     });
@@ -245,7 +247,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
                 && ds.where("first_name == 'SallyUSer2'").count() == 1
                 && ds.where("last_name is null").count() == 1
                 && ds.where("id == '1004'").where("__op == 'd'").count() == 1;
-      } catch (Exception e) {
+      } catch (Exception | AssertionError e) {
         return false;
       }
     });

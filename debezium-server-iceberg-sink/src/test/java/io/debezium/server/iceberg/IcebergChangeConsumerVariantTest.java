@@ -8,6 +8,7 @@
 
 package io.debezium.server.iceberg;
 
+import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.CatalogJdbc;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -15,8 +16,8 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import org.apache.iceberg.data.Record;
+import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -24,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -36,32 +35,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerDecimalTest.TestProfile.class)
-public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerVariantTest.TestProfile.class)
+public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
 
   @Test
-  public void testConsumingNumerics() throws Exception {
-    assertEquals(sinkType, "iceberg");
-    String sql = "\n" +
-        "        DROP TABLE IF EXISTS inventory.data_types;\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
-        "            c_id INTEGER ,\n" +
-        "            c_decimal DECIMAL(18,6)\n" +
-        "          );";
-    SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.data_types (c_id, c_decimal) " +
-        "VALUES (1, '1234566.34456'::decimal)";
-    SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
+  public void testSimpleUpload() {
+    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(false);
-
-        Assertions.assertEquals(1, df.count());
-        Assertions.assertEquals(1, df.filter("c_id = 1 AND c_decimal = CAST('1234566.344560' AS DECIMAL(18,6))").count(), "c_decimal not matching");
-        return true;
+        CloseableIterable<Record> result = getTableDataV2("testc.inventory.geom");
+        Record row = result.iterator().next();
+        Assertions.assertEquals("variant", row.struct().field("g").type().toString());
+        Assertions.assertEquals("variant", row.struct().field("h").type().toString());
+        Assertions.assertTrue(row.getField("g").toString().contains("wkb"));
+        printTableData(result);
+        return Lists.newArrayList(result).size() >= 3;
       } catch (Exception | AssertionError e) {
-        e.printStackTrace();
         return false;
       }
     });
@@ -71,8 +59,8 @@ public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
     @Override
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
-      config.put("debezium.sink.iceberg.destination-regexp", "\\d");
-      config.put("debezium.source.decimal.handling.mode", "precise");
+      config.put("debezium.sink.iceberg.nested-as-variant", "true");
+//      config.put("debezium.transforms", ",");
       return config;
     }
   }
