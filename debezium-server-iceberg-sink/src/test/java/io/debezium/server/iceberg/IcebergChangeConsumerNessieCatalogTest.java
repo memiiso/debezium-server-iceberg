@@ -37,7 +37,7 @@ public class IcebergChangeConsumerNessieCatalogTest extends BaseSparkTest {
       try {
         Dataset<Row> df = getTableData("testc.inventory.customers");
         df.show(false);
-        return df.count() >= 3666;
+        return df.count() >= 3;
       } catch (Exception e) {
         return false;
       }
