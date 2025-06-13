@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="IcebergChangeConsumerTest.testSimpleUpload" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <module name="debezium-server-iceberg-sink.test" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="io.debezium.server.iceberg.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="PACKAGE_NAME" value="io.debezium.server.iceberg" />
+    <option name="MAIN_CLASS_NAME" value="io.debezium.server.iceberg.IcebergChangeConsumerTest" />
+    <option name="METHOD_NAME" value="testSimpleUpload" />
+    <option name="TEST_OBJECT" value="method" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
