@@ -53,7 +53,6 @@ public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
     if (nessieContainer != null) {
       nessieContainer.stop();
     }
-    System.out.println("All containers stopped.");
   }
 
   public String getNessieUri() {

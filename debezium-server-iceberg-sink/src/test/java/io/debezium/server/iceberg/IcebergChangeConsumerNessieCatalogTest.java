@@ -17,7 +17,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
+import java.sql.SQLException;
 import java.time.Duration;
 
 /**
@@ -29,10 +31,11 @@ import java.time.Duration;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
+@DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
 public class IcebergChangeConsumerNessieCatalogTest extends BaseSparkTest {
 
   @Test
-  public void testSimpleUpload() {
+  public void testSimpleUpload() throws InterruptedException, SQLException, ClassNotFoundException {
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
         Dataset<Row> df = getTableData("testc.inventory.customers");
@@ -42,6 +45,27 @@ public class IcebergChangeConsumerNessieCatalogTest extends BaseSparkTest {
         return false;
       }
     });
+
+    int startId = 1005;
+    int numberOfRecords = 5; // You can change this value
+    for (int i = 0; i < numberOfRecords; i++) {
+      int currentId = startId + i;
+      String firstName = "FirstName" + currentId;
+      String lastName = "LastName" + currentId;
+      String email = "user" + currentId + "@example.com";
+      String insertStatement = String.format(
+          "INSERT INTO inventory.customers (id, first_name, last_name, email) VALUES (%d, '%s', '%s', '%s');",
+          currentId,
+          firstName,
+          lastName,
+          email
+      );
+      SourcePostgresqlDB.runSQL(insertStatement);
+      Thread.sleep(3000);
+      Dataset<Row> df = getTableData("testc.inventory.customers");
+      df.show(false);
+    }
   }
+
 
 }
