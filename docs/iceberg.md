@@ -20,7 +20,7 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.iceberg.table-prefix`                         | ``                                                            | Prefix for Iceberg tables. A prefix added to the names of Iceberg tables.                                                                                                                                                                                                                                         |
 | `debezium.sink.iceberg.write.format.default`                 | `parquet`                                                     | Default file format for Iceberg tables: `parquet`, `avro`, or `orc`                                                                                                                                                                                                                                               |
 | `debezium.sink.iceberg.allow-field-addition`                 | `true`                                                        | Allow field addition to target tables. Enables automatic schema evolution, expansion.                                                                                                                                                                                                                             |
-| `debezium.sink.iceberg.upsert`                               | `true`                                                        | Upsert mode overwrites updated rows. Any existing rows that are updated will be overwritten with the new values. Explained further below.                                                                                                                                                                         |
+| `debezium.sink.iceberg.upsert`                               | `false`                                                       | Upsert mode overwrites updated rows. Any existing rows that are updated will be overwritten with the new values. Explained further below.                                                                                                                                                                         |
 | `debezium.sink.iceberg.upsert-keep-deletes`                  | `true`                                                        | When running in upsert mode, deleted rows are marked as deleted but retained in the target table (soft delete)                                                                                                                                                                                                    |
 | `debezium.sink.iceberg.upsert-dedup-column`                  | `__source_ts_ns`                                              | With upsert mode this field is used to deduplicate data. The row with the highest `__source_ts_ns` timestamp (the latest change event) is retained. _dont change!_                                                                                                                                                |
 | `debezium.sink.iceberg.upsert-op-field`                      | `__op`                                                        | Field name for operation type in upsert mode. _dont change!_                                                                                                                                                                                                                                                      |
@@ -52,7 +52,7 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 
 ### Upsert Mode
 
-By default, the Iceberg consumer operates in upsert mode (`debezium.sink.iceberg.upsert=true`). In this mode, the
+When enabled, (`debezium.sink.iceberg.upsert=true`) the
 consumer utilizes the source table's primary key to perform upsert operations on the target Iceberg table, effectively
 deleting existing rows and inserting updated ones. For tables lacking a primary key, the consumer reverts to append-only
 mode.
@@ -77,10 +77,10 @@ set to `true`) while preserving their last known state in the Iceberg table.
 
 ### Append Mode
 
-Setting `debezium.sink.iceberg.upsert=false` switches the operation mode to append-only. In append-only mode, data
+Default mode, when `debezium.sink.iceberg.upsert=false` switches the operation mode to append-only. In append-only mode, data
 deduplication is not performed, and all incoming records are appended to the destination table.
 
-It's important to note that even when upsert mode is enabled, tables without a primary key will default to append-only
+It's important to note that even when upsert mode is enabled, tables without a primary key will switch to append-only
 behavior.
 
 ## Optimizing batch size (or commit frequency)
