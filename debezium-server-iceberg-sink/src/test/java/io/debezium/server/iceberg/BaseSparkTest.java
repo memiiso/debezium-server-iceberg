@@ -50,6 +50,11 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
         .set("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") // Iceberg catalog
         .set("spark.sql.defaultCatalog", "iceberg")
+//         For spark to read iceberg tables using Hadoop file IO
+//        .set("spark.hadoop.fs.s3a.endpoint", S3Minio.container.getS3URL())
+//        .set("spark.hadoop.fs.s3a.access.key", TestConfigSource.S3_MINIO_ACCESS_KEY)
+//        .set("spark.hadoop.fs.s3a.secret.key", TestConfigSource.S3_MINIO_SECRET_KEY)
+//        .set("spark.hadoop.fs.s3a.path.style.access", "true")
         .set("spark.sql.warehouse.dir", ICEBERG_WAREHOUSE_S3A)
         // Set Spark session timezone to Berlin time, for stable temporal/timestamp-tz testing
         .set("spark.sql.session.timeZone", "Europe/Berlin")
