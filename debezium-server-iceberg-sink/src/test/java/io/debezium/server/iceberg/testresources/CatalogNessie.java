@@ -8,6 +8,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
   private static final String NESSIE_IMAGE = "projectnessie/nessie:latest";
@@ -27,7 +28,6 @@ public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
     CatalogNessie environment = new CatalogNessie();
     try {
       environment.start();
-      System.out.println("Nessie URI: " + environment.getNessieUri());
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -37,8 +37,11 @@ public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
+    long startTime = System.nanoTime(); // Get time before start
     nessieContainer.start();
-    System.out.println("Nessie started: " + getNessieUri());
+    long endTime = System.nanoTime(); // Get time after start
+    double durationSeconds = TimeUnit.NANOSECONDS.toMillis(endTime - startTime) / 1000.0; // Convert nanoseconds to seconds
+    System.out.println("Nessie started: " + getNessieUri() + " Start duration: " + durationSeconds);
 
     Map<String, String> config = new ConcurrentHashMap<>();
 
