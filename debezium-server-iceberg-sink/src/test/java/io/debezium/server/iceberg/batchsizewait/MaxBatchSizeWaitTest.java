@@ -53,6 +53,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
                  "by 1");
         df.show(false);
         // commited batch size should be equal to maxBatchSize
+        // since timeout is set to high number so the batches should be triggered by hitting maxBatchSize limit
         return df.filter("batch_size = " + maxBatchSize).count() >= 3;
       } catch (Exception e) {
         //e.printStackTrace();
@@ -71,8 +72,8 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
       config.put("debezium.source.max.batch.size", "2000");
       config.put("debezium.source.max.queue.size", "70000");
       //config.put("debezium.source.poll.interval.ms", "1000");
-      config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "5000");
-      config.put("debezium.sink.batch.batch-size-wait.wait-interval-ms", "1000");
+      config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "999000");
+      config.put("debezium.sink.batch.batch-size-wait.wait-interval-ms", "5000");
       config.put("quarkus.log.category.\"io.debezium.server.iceberg.batchsizewait\".level", "DEBUG");
       return config;
     }
