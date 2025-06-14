@@ -30,7 +30,7 @@ public interface IcebergConfig {
   String cdcSourceTsField();
 
   @WithName("debezium.sink.iceberg.upsert")
-  @WithDefault("true")
+  @WithDefault("false")
   boolean upsert();
 
   @WithName("debezium.sink.iceberg.upsert-keep-deletes")
