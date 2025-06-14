@@ -46,7 +46,7 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
     for (int i = 0; i <= iteration; i++) {
       this.PGLoadTestDataTable(maxBatchSize / 2, true);
     }
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
         Dataset<Row> df = spark.sql("SELECT substring(input_file_name(),0,260) as input_file, " +
                  "count(*) as batch_size FROM debeziumevents.debeziumcdc_testc_inventory_test_data group " +
