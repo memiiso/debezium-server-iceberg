@@ -24,17 +24,6 @@ public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
           .forPath("/q/health")
           .withStartupTimeout(Duration.ofSeconds(120)));
 
-  public static void main(String[] args) {
-    CatalogNessie environment = new CatalogNessie();
-    try {
-      environment.start();
-    } catch (Exception e) {
-      e.printStackTrace();
-    } finally {
-      environment.stop();
-    }
-  }
-
   @Override
   public Map<String, String> start() {
     long startTime = System.nanoTime(); // Get time before start
