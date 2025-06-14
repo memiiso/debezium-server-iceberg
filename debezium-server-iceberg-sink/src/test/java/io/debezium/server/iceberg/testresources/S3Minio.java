@@ -81,7 +81,7 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    LOGGER.info("Minio Started]nMinio UI: {}\nMinio S3 URL: {}", getS3WebURL(), container.getS3URL());
+    LOGGER.info("Minio Started\nMinio UI: {}\nMinio S3 URL: {}", getS3WebURL(), container.getS3URL());
     Map<String, String> config = new ConcurrentHashMap<>();
     // FOR JDBC CATALOG
     config.put("debezium.sink.iceberg.s3.endpoint", container.getS3URL());

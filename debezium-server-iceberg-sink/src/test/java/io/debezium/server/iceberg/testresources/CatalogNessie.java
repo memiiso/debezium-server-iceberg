@@ -30,7 +30,7 @@ public class CatalogNessie implements QuarkusTestResourceLifecycleManager {
     nessieContainer.start();
     long endTime = System.nanoTime(); // Get time after start
     double durationSeconds = TimeUnit.NANOSECONDS.toMillis(endTime - startTime) / 1000.0; // Convert nanoseconds to seconds
-    System.out.println("Nessie started: " + getNessieUri() + " Start duration: " + durationSeconds);
+    System.out.println("Nessie started: " + getNessieUri() + " duration: " + durationSeconds);
 
     Map<String, String> config = new ConcurrentHashMap<>();
 
