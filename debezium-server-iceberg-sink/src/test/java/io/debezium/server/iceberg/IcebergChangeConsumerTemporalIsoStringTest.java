@@ -79,7 +79,7 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_time = '18:04:00Z'").count());
         return true;
       } catch (Exception | AssertionError e) {
-//        e.printStackTrace();
+        e.printStackTrace();
         return false;
       }
     });
