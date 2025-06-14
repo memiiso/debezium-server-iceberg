@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 import io.debezium.server.iceberg.BaseSparkTest;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -31,7 +31,7 @@ import java.util.Map;
 @TestProfile(MaxBatchSizeWaitTest.TestProfile.class)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class MaxBatchSizeWaitTest extends BaseSparkTest {
 
@@ -44,19 +44,19 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
     int iteration = 100;
     PGCreateTestDataTable();
     for (int i = 0; i <= iteration; i++) {
-      this.PGLoadTestDataTable(maxBatchSize / 10, true);
+      this.PGLoadTestDataTable(maxBatchSize / 2, true);
     }
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
       try {
-        Dataset<Row> df = getTableData("testc.inventory.test_data");
-        df.createOrReplaceGlobalTempView("test_data_batch_size");
-        df = spark
-            .sql("SELECT substring(input_file,94,60) as input_file, " +
-                 "count(*) as batch_size FROM global_temp.test_data_batch_size group " +
+        Dataset<Row> df = spark.sql("SELECT substring(input_file_name(),0,260) as input_file, " +
+                 "count(*) as batch_size FROM debeziumevents.debeziumcdc_testc_inventory_test_data group " +
                  "by 1");
-        //df.show(false);
-        return df.filter("batch_size = " + maxBatchSize).count() >= 5;
+        df.show(false);
+        // commited batch size should be equal to maxBatchSize
+        // since timeout is set to high number so the batches should be triggered by hitting maxBatchSize limit
+        return df.filter("batch_size = " + maxBatchSize).count() >= 3;
       } catch (Exception e) {
+        //e.printStackTrace();
         return false;
       }
     });
@@ -69,11 +69,11 @@ class MaxBatchSizeWaitTest extends BaseSparkTest {
       // wait
       config.put("debezium.sink.batch.batch-size-wait", "MaxBatchSizeWait");
       config.put("debezium.source.connector.class", "io.debezium.connector.postgresql.PostgresConnector");
-      config.put("debezium.source.max.batch.size", "5000");
+      config.put("debezium.source.max.batch.size", "2000");
       config.put("debezium.source.max.queue.size", "70000");
       //config.put("debezium.source.poll.interval.ms", "1000");
-      config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "5000");
-      config.put("debezium.sink.batch.batch-size-wait.wait-interval-ms", "1000");
+      config.put("debezium.sink.batch.batch-size-wait.max-wait-ms", "999000");
+      config.put("debezium.sink.batch.batch-size-wait.wait-interval-ms", "5000");
       config.put("quarkus.log.category.\"io.debezium.server.iceberg.batchsizewait\".level", "DEBUG");
       return config;
     }

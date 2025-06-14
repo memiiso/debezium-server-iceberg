@@ -21,6 +21,7 @@ public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
   @Override
   public Map<String, String> start() {
     container.start();
+    System.out.println("Jdbc Catalog started: " + container.getJdbcUrl());
 
     Map<String, String> config = new ConcurrentHashMap<>();
 

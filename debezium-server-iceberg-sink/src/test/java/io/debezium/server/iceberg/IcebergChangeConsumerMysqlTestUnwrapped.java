@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMysqlTestUnwrapped.TestProfile.class)
 public class IcebergChangeConsumerMysqlTestUnwrapped extends BaseTest {
 
