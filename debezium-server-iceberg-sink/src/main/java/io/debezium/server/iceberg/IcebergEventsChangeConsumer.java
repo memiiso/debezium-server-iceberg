@@ -120,6 +120,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
 
     // create table if not exists
     if (!icebergCatalog.tableExists(tableIdentifier)) {
+      IcebergUtil.createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
       icebergCatalog
           .buildTable(tableIdentifier, TABLE_SCHEMA)
           .withPartitionSpec(TABLE_PARTITION)

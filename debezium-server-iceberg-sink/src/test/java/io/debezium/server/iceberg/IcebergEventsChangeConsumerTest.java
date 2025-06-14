@@ -67,6 +67,8 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
       Map<String, String> config = new HashMap<>();
       config.put("debezium.sink.type", "icebergevents");
       config.put("quarkus.profile", "mysql");
+      config.put("debezium.format.value", "json");
+      config.put("debezium.format.key", "json");
       config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
       config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
       return config;

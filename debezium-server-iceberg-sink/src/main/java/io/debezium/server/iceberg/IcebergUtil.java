@@ -17,9 +17,11 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
+import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
@@ -76,12 +78,21 @@ public class IcebergUtil {
     return instance.get();
   }
 
-  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema) {
+  public static void createNamespaceIfNotExists(Catalog icebergCatalog, Namespace namespace) {
 
-    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(tableIdentifier.namespace())) {
-      ((SupportsNamespaces) icebergCatalog).createNamespace(tableIdentifier.namespace());
-      LOGGER.warn("Created namespace:'{}'", tableIdentifier.namespace());
+    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(namespace)) {
+      try {
+        ((SupportsNamespaces) icebergCatalog).createNamespace(namespace);
+        LOGGER.warn("Created namespace:'{}'", namespace);
+      } catch (AlreadyExistsException e) {
+        // ignore
+      }
     }
+  }
+
+  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema) {
+    createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
+
     return icebergCatalog.createTable(tableIdentifier, schema);
   }
 
@@ -90,11 +101,7 @@ public class IcebergUtil {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
-
-    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(tableIdentifier.namespace())) {
-      ((SupportsNamespaces) icebergCatalog).createNamespace(tableIdentifier.namespace());
-      LOGGER.warn("Created namespace:'{}'", tableIdentifier.namespace());
-    }
+    createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
 
     return icebergCatalog.buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, formatVersion)
