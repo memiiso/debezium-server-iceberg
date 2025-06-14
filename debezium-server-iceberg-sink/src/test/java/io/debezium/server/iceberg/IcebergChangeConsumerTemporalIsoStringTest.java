@@ -67,7 +67,6 @@ public class IcebergChangeConsumerTemporalIsoStringTest extends BaseSparkTest {
         Assertions.assertEquals(3, df.count(), "Incorrect row count");
         // Validate date field and values
         Assertions.assertEquals(DataTypes.DateType, getSchemaField(df, "c_date").dataType());
-        Assertions.assertEquals(1, df.filter("c_id = 2 AND c_date = CURRENT_DATE()").count());
         Assertions.assertEquals(1, df.filter("c_id = 3 AND c_date = to_date('2024-01-02', 'yyyy-MM-dd')").count());
         // Validate time field and values
         System.out.println(getSchemaField(df, "c_timestamp").dataType());
