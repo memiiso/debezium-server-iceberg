@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMongoDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -31,7 +31,7 @@ import java.util.Map;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMongoDB.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerMongodbTest.TestProfile.class)
 public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
 

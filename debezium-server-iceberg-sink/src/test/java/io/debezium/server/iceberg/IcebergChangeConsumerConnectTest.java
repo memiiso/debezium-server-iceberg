@@ -8,7 +8,7 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerConnectTest.TestProfile.class)
 @EnabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 public class IcebergChangeConsumerConnectTest extends BaseSparkTest {

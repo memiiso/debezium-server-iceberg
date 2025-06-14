@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg.converter;
 
 import io.debezium.server.iceberg.BaseTest;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.apache.iceberg.Schema;
@@ -29,7 +29,7 @@ import static org.apache.iceberg.types.Types.NestedField.required;
  * @author Ismail Simsek
  */
 @QuarkusTest
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterBuilderTest extends BaseTest {
 

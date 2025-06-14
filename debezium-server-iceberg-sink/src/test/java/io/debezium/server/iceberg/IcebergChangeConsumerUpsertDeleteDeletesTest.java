@@ -9,7 +9,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.TestUtil;
 import io.quarkus.test.common.QuarkusTestResource;
@@ -32,7 +32,7 @@ import java.util.Map;
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
