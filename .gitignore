@@ -1,6 +1,7 @@
 .flattened-pom.xml
 
 deploy.sh
+.ipynb_checkpoints
 
 # Debezium gitignore
 
