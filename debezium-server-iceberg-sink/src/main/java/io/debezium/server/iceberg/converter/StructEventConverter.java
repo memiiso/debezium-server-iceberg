@@ -243,8 +243,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case VARIANT:
         Preconditions.checkArgument(connectValue instanceof Struct,
             "Cannot convert to Variant: value is not a Struct: %s", connectValue.getClass().getName());
+        List<Field> fieldNamesCollection = ((Struct) connectValue).schema().fields();
         final byte[] jsonVal1 = jsonConverter.fromConnectData("dummy-topic-not-used", ((Struct) connectValue).schema(), connectValue);
-        return Variant.of(VARIANT_EMPTY_METADATA, Variants.of(new String(jsonVal1)));
+        return Variant.of(Variants.metadata(fieldNamesCollection), Variants.of(new String(jsonVal1)));
 
       case LIST:
         Preconditions.checkArgument(connectValue instanceof List,
