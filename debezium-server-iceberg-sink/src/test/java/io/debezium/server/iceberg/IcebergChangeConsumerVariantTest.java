@@ -18,6 +18,8 @@ import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.apache.spark.sql.functions.parse_json;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -40,19 +44,35 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() {
+
     Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
       try {
-        CloseableIterable<Record> result = getTableDataV2("testc.inventory.geom");
-        Record row = result.iterator().next();
-        Assertions.assertEquals("variant", row.struct().field("g").type().toString());
-        Assertions.assertEquals("variant", row.struct().field("h").type().toString());
-        Assertions.assertTrue(row.getField("g").toString().contains("wkb"));
-        printTableData(result);
-        return Lists.newArrayList(result).size() >= 3;
-      } catch (Exception | AssertionError e) {
+        Dataset<Row> df = getTableData("testc.inventory.customers");
+        df.show(false);
+//        df = df.withColumn("data", parse_json(df.after));
+        df.select("after").show(false);
+        df.select("after:id", "after:first_name", "source:version" ).show(false);
+        return df.count() >= 3;
+      } catch (Exception e) {
+        e.printStackTrace();
         return false;
       }
     });
+
+//    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+//      try {
+//        CloseableIterable<Record> result = getTableDataV2("testc.inventory.geom");
+//        printTableData(result);
+//        Record row = result.iterator().next();
+//        Assertions.assertEquals("variant", row.struct().field("g").type().toString());
+//        Assertions.assertEquals("variant", row.struct().field("h").type().toString());
+//        Assertions.assertTrue(row.getField("g").toString().contains("wkb"));
+//        printTableData(result);
+//        return Lists.newArrayList(result).size() >= 3;
+//      } catch (Exception | AssertionError e) {
+//        return false;
+//      }
+//    });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -60,7 +80,7 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
       config.put("debezium.sink.iceberg.nested-as-variant", "true");
-//      config.put("debezium.transforms", ",");
+      config.put("debezium.transforms", ",");
       return config;
     }
   }

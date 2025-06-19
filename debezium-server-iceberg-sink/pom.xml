@@ -267,12 +267,14 @@
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
+            <artifactId>iceberg-spark-${version.spark.major}_${version.spark.scala}</artifactId>
+            <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.iceberg</groupId>
-            <artifactId>iceberg-spark-extensions-${version.spark.major.iceebrgtemp}_${version.spark.scala}</artifactId>
+            <artifactId>iceberg-spark-extensions-${version.spark.major}_${version.spark.scala}</artifactId>
+            <version>${version.iceberg}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
