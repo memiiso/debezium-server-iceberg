@@ -15,6 +15,7 @@ import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.StructEventConverter;
+import io.debezium.server.iceberg.mapper.IcebergTableMapper;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
@@ -30,7 +31,6 @@ import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
-import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
@@ -71,6 +71,11 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Inject
   GlobalConfig config;
 
+  @Inject
+  @Any
+  Instance<IcebergTableMapper> tableMappers;
+  IcebergTableMapper tableMapper;
+
   @PostConstruct
   void connect() {
     config.debezium().validateTemporalPrecisionMode();
@@ -84,6 +89,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
+    tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
   }
 
   @Override
@@ -170,16 +176,6 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
   public TableIdentifier mapDestination(String destination) {
-    final String tableName = destination
-        .replaceAll(config.iceberg().destinationRegexp().orElse(""), config.iceberg().destinationRegexpReplace().orElse(""))
-        .replace(".", "_");
-
-    if (config.iceberg().destinationUppercaseTableNames()) {
-      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toUpperCase());
-    } else if (config.iceberg().destinationLowercaseTableNames()) {
-      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toLowerCase());
-    } else {
-      return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), config.iceberg().tablePrefix().orElse("") + tableName);
-    }
+      return tableMapper.mapDestination(destination);
   }
 }

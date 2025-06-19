@@ -40,6 +40,10 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation();
 
+  @WithName("debezium.sink.iceberg.table-mapper")
+  @WithDefault("default-mapper")
+  String tableMapper();
+
   @WithName("debezium.sink.iceberg.destination-regexp")
 //    @WithDefault("")
   Optional<String> destinationRegexp();
