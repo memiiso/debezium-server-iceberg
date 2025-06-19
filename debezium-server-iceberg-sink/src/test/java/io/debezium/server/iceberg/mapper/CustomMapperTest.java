@@ -37,7 +37,7 @@ public class CustomMapperTest extends BaseSparkTest {
         SourcePostgresqlDB.runSQL("INSERT INTO inventory.sample (id, val) VALUES (1, 123)");
         Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
             try {
-                var df = spark.newSession().table(ICEBERG_CATALOG_TABLE_NAMESPACE + ".CUSTOM_MAPPER_sample");
+              var df = spark.newSession().table(ICEBERG_CATALOG_TABLE_NAMESPACE + ".custom_mapper_sample");
                 Assertions.assertEquals(1, df.count());
 
                 return true;
