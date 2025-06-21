@@ -40,11 +40,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 
 /**
@@ -339,13 +335,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         return mapVal;
       case VARIANT:
         try {
-          Collection<String> fieldNamesCollection = StreamSupport.stream(
-                  Spliterators.spliteratorUnknownSize(node.fields(), Spliterator.ORDERED),
-                  false) // 'false' for a sequential stream
-              .map(Map.Entry::getKey)
-              .collect(Collectors.toList());
-          String jsonVal = mapper.writeValueAsString(node);
-          return Variant.of(Variants.metadata(fieldNamesCollection), Variants.of(jsonVal));
+          return convertVariantValue(node);
         } catch (JsonProcessingException e) {
           throw new DebeziumException("Failed to convert value, field: " + field.name() + " value: " + node, e);
         }
@@ -359,6 +349,14 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         // if the node is not a value node (method isValueNode returns false), convert it to string.
         return node.isValueNode() ? node.textValue() : node.toString();
     }
+  }
+
+  protected Variant convertVariantValue(JsonNode node) throws JsonProcessingException {
+    Collection<String> fieldNames = new ArrayList<>();
+    node.fieldNames().forEachRemaining(fieldNames::add);
+
+    String jsonVal = mapper.writeValueAsString(node);
+    return Variant.of(Variants.metadata(fieldNames), Variants.of(jsonVal));
   }
 
 }
