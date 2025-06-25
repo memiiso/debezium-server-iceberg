@@ -66,15 +66,15 @@ public class IcebergUtil {
   }
 
   public static <T> T selectInstance(Instance<T> instances, String name) {
-
     Instance<T> instance = instances.select(NamedLiteral.of(name));
+    String className = instance.getClass().getName();
     if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple batch size wait class named '" + name + "' were found");
+      throw new DebeziumException("Multiple '" + className + "' class instances named '" + name + "' were found");
     } else if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No batch size wait class named '" + name + "' is available");
+      throw new DebeziumException("No '" + className + "' class instance named '" + name + "' is available");
     }
 
-    LOGGER.info("Using {}", instance.getClass().getName());
+    LOGGER.info("Using {}", className);
     return instance.get();
   }
 
