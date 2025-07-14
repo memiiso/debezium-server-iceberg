@@ -20,9 +20,15 @@ import org.apache.iceberg.RowDelta;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.UpdateSchema;
+import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.expressions.Expression;
+import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.BaseTaskWriter;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.WriteResult;
+import org.apache.iceberg.types.Type.TypeID;
+import org.apache.iceberg.types.Types.NestedField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,6 +184,9 @@ public class IcebergTableOperator {
     try (writer) {
       for (EventConverter e : events) {
         final RecordWrapper record = (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
+        if (config.iceberg().reselectUnavailableValuesOnDelete() && !tableSchema.identifierFieldIds().isEmpty() && record.op() == Operation.DELETE) {
+            reselectUnavailableValues(icebergTable, record);
+        }
         writer.write(record);
       }
 
@@ -202,5 +211,44 @@ public class IcebergTableOperator {
     }
 
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
+  }
+
+  /**
+   * Reselect unavailable values.
+   *
+   * @param icebergTable
+   * @param record
+   */
+  private void reselectUnavailableValues(Table icebergTable, RecordWrapper record) throws IOException {
+    final Schema tableSchema = icebergTable.schema();
+    final String placeholderValue = config.debezium().unavailableValuePlaceholder();
+    List<String> placeholders = new ArrayList<>();
+    for (NestedField field : tableSchema.columns()) {
+      if (field.type().typeId() == TypeID.STRING && placeholderValue.equals(record.getField(field.name()))) {
+        placeholders.add(field.name());
+      }
+    }
+
+    if (placeholders.size() > 0) {
+      Expression primaryId = null;
+      for (Integer fieldId : tableSchema.identifierFieldIds()) {
+        String fieldName = tableSchema.findColumnName(fieldId);
+        Expression fieldExpr = Expressions.equal(fieldName, record.getField(fieldName));
+        primaryId = primaryId == null ? fieldExpr : Expressions.and(primaryId, fieldExpr);
+      }
+      if (primaryId == null) return;
+
+      LOGGER.debug("Reselecting {} where {}", placeholders, primaryId);
+      try (CloseableIterable<Record> results = IcebergGenerics.read(icebergTable).where(primaryId).select(placeholders).build()) {
+        for (Record r : results) {
+          for (String fieldName : placeholders) {
+            Object fieldValue = r.getField(fieldName);
+            LOGGER.debug("Reselected {}: {}", fieldName, fieldValue);
+            record.setField(fieldName, fieldValue);
+          }
+          break;
+        }
+      }
+    }
   }
 }

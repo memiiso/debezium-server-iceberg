@@ -29,6 +29,10 @@ public interface DebeziumConfig {
   @WithDefault("double")
   RelationalDatabaseConnectorConfig.DecimalHandlingMode decimalHandlingMode();
 
+  @WithName("debezium.source.unavailable.value.placeholder")
+  @WithDefault(RelationalDatabaseConnectorConfig.DEFAULT_UNAVAILABLE_VALUE_PLACEHOLDER)
+  String unavailableValuePlaceholder();
+
   // Event format
   @WithName("debezium.format.value")
   @WithDefault("connect")

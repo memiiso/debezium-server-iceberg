@@ -99,4 +99,8 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
+  @WithName("debezium.sink.iceberg.reselect-unavailable-values-on-delete")
+  @WithDefault("false")
+  boolean reselectUnavailableValuesOnDelete();
+
 }
