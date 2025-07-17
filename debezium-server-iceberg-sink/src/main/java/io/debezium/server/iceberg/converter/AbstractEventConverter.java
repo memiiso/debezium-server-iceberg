@@ -27,10 +27,14 @@ import io.debezium.time.ZonedTimestamp;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.ByteBuffers;
 import org.apache.iceberg.util.DateTimeUtil;
+import org.apache.iceberg.variants.Variant;
 import org.apache.iceberg.variants.VariantMetadata;
+import org.apache.iceberg.variants.VariantPrimitive;
 import org.apache.iceberg.variants.Variants;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.json.JsonConverterConfig;
@@ -50,9 +54,11 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.Temporal;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static io.debezium.jdbc.TemporalPrecisionMode.ISOSTRING;
 
@@ -165,7 +171,7 @@ public class AbstractEventConverter {
             case MICROSECONDS -> DateTimeUtil.timestamptzFromMicros((Long) value);
             case NANOSECONDS -> DateTimeUtils.timestamptzFromNanos((Long) value);
             case CONNECT -> DateTimeUtils.timestamptzFromMillis((Long) value);
-            case null, default ->DateTimeUtils.timestamptzFromMillis(((Long) value));
+            case null, default -> DateTimeUtils.timestamptzFromMillis(((Long) value));
           };
         } else if (value instanceof String) { // Debezium ZonedTimestamp
           try {
@@ -340,5 +346,20 @@ public class AbstractEventConverter {
       return convertLocalDateTime(value, logicalTypeName); // Timestamp without timezone
     }
   }
+
+
+  protected Variant convertVariantValue(Struct connectValue, Types.VariantType variantType, String logicalTypeName) {
+    // variant value
+    final byte[] jsonVal1 = jsonConverter.fromConnectData("dummy-topic-not-used", connectValue.schema(), connectValue);
+    VariantPrimitive<String> variantValue = Variants.of(new String(jsonVal1));
+    // variant metadata
+    Collection<String> fieldNames = connectValue.schema().fields().stream()
+        .map(Field::name)
+        .collect(Collectors.toList());
+    VariantMetadata variantMetadata = Variants.metadata(fieldNames);
+
+    return Variant.of(variantMetadata, variantValue);
+  }
+
 
 }
