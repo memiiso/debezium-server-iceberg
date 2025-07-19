@@ -84,9 +84,10 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Any
   Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
-  int numConcurentUploads = 1; // TODO: This should be made configurable
+  int numConcurrentUploads = 1; // TODO: This should be made configurable
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
   private Semaphore concurrencyLimiter;
+  private int concurrentUplodTimeoutMin = 60; // TODO: This should be made configurable
 
   @PostConstruct
   void connect() {
@@ -104,9 +105,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
 
     // Initialize the semaphore for parallel processing
-    if (numConcurentUploads > 1) {
-      this.concurrencyLimiter = new Semaphore(numConcurentUploads);
-      LOGGER.info("Parallel uploads enabled with concurrency limit: {}", numConcurentUploads);
+    if (numConcurrentUploads > 1) {
+      this.concurrencyLimiter = new Semaphore(numConcurrentUploads);
+      LOGGER.info("Parallel uploads enabled with concurrency limit: {}", numConcurrentUploads);
     }
   }
 
@@ -147,7 +148,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
             .collect(Collectors.groupingBy(EventConverter::destination));
 
     // consume list of events for each destination table
-    if (numConcurentUploads > 1) {
+    if (numConcurrentUploads > 1) {
       this.processTablesInParallel(result);
     } else {
       this.processTablesSequentially(result);
@@ -219,7 +220,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     LOGGER.debug("Invoking {} parallel tasks and waiting for completion...", tasks.size());
     try {
       // Invoke all tasks and wait for them to complete, with a timeout.
-      List<Future<Void>> futures = executor.invokeAll(tasks, 60, TimeUnit.MINUTES);
+      List<Future<Void>> futures = executor.invokeAll(tasks, concurrentUplodTimeoutMin, TimeUnit.MINUTES);
 
       // Check the status of each task to log any exceptions
       for (Future<Void> future : futures) {
