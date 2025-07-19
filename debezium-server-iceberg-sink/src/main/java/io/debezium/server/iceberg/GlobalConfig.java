@@ -1,6 +1,5 @@
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.batchsizewait.BatchSizeWaitConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
@@ -19,7 +18,7 @@ public interface GlobalConfig {
   DebeziumConfig debezium();
 
   @WithParentName
-  BatchSizeWaitConfig batch();
+  BatchConfig batch();
 
   @WithName("quarkus.log.level")
   @WithDefault("INFO")

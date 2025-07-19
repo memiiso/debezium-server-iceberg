@@ -85,9 +85,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
   int numConcurrentUploads = 8; // TODO: This should be made configurable
+  private int concurrentUploadsTimeoutMinutes = 60; // TODO: This should be made configurable
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
   private Semaphore concurrencyLimiter;
-  private int concurrentUplodTimeoutMin = 60; // TODO: This should be made configurable
 
   @PostConstruct
   void connect() {
@@ -103,6 +103,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
+
+    this.numConcurrentUploads = config.batch().concurrentUploads();
+    this.concurrentUploadsTimeoutMinutes = config.batch().concurrentUploadsTimeoutMinutes();
 
     // Initialize the semaphore for parallel processing
     if (numConcurrentUploads > 1) {
@@ -220,7 +223,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     LOGGER.debug("Invoking {} parallel tasks and waiting for completion...", tasks.size());
     try {
       // Invoke all tasks and wait for them to complete, with a timeout.
-      List<Future<Void>> futures = executor.invokeAll(tasks, concurrentUplodTimeoutMin, TimeUnit.MINUTES);
+      List<Future<Void>> futures = executor.invokeAll(tasks, concurrentUploadsTimeoutMinutes, TimeUnit.MINUTES);
 
       // Check the status of each task to log any exceptions
       for (Future<Void> future : futures) {

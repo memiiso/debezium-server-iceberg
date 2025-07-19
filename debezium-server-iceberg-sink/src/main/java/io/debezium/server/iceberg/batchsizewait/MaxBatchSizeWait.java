@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.batchsizewait;
 
 import io.debezium.DebeziumException;
 import io.debezium.server.DebeziumMetrics;
+import io.debezium.server.iceberg.BatchConfig;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -27,7 +28,7 @@ public class MaxBatchSizeWait implements BatchSizeWait {
   protected static final Logger LOGGER = LoggerFactory.getLogger(MaxBatchSizeWait.class);
 
   @Inject
-  BatchSizeWaitConfig config;
+  BatchConfig config;
   @Inject
   DebeziumMetrics dbzMetrics;
 
