@@ -84,7 +84,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Any
   Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
-  int numConcurrentUploads;
+  private int numConcurrentUploads;
   private int concurrentUploadsTimeoutMinutes;
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
   private Semaphore concurrencyLimiter;
