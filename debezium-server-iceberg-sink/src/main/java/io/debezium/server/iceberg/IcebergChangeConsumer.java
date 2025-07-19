@@ -117,8 +117,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     try {
       LOGGER.info("Shutting down executor service.");
       executor.shutdown();
-      if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-        LOGGER.warn("Executor service did not terminate in 5 seconds. Forcing shutdown.");
+      if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+        LOGGER.warn("Executor service did not terminate in 30 seconds. Forcing shutdown.");
         executor.shutdownNow();
       }
     } catch (InterruptedException e) {
