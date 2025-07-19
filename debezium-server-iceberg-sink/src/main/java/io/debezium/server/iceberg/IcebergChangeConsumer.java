@@ -32,7 +32,6 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +40,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -75,6 +77,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Any
   Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
+  int numConcurentUploads = 1;
+  ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
   @PostConstruct
   void connect() {
@@ -112,9 +116,10 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
             .collect(Collectors.groupingBy(EventConverter::destination));
 
     // consume list of events for each destination table
-    for (Map.Entry<String, List<EventConverter>> tableEvents : result.entrySet()) {
-      Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
-      icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+    if (numConcurentUploads > 1) {
+      this.processTablesInParallel(result);
+    } else {
+      this.processTablesSequentially(result);
     }
 
     // workaround! somehow offset is not saved to file unless we call committer.markProcessed per event
@@ -128,6 +133,54 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
 
     // waiting to group events as bathes
     batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
+  }
+
+  /**
+   * Processes events for each destination table sequentially in a single thread.
+   *
+   * @param eventsByDestination A map where keys are destination table names and values are lists of events for that table.
+   */
+  private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
+    for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
+      Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+      icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+    }
+  }
+
+
+  /**
+   * Processes events for each destination table in parallel using a virtual thread pool.
+   *
+   * @param eventsByDestination A map where keys are destination table names and values are lists of events for that table.
+   */
+  private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination) {
+    try {
+      for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
+        executor.submit(() -> {
+          try {
+            Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+            icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+          } catch (Exception e) {
+            LOGGER.error("Error processing events in parallel for destination '{}'", tableEvents.getKey(), e);
+          }
+        });
+      }
+    } finally {
+      executor.shutdown();
+    }
+
+    try {
+      // Wait for all tasks to complete, with a reasonable timeout.
+      // This timeout should ideally be configurable.
+      if (!executor.awaitTermination(15, TimeUnit.MINUTES)) {
+        LOGGER.error("Timed out waiting for parallel uploads to complete after 15 minutes.");
+        executor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      LOGGER.warn("Interrupted while waiting for parallel uploads to complete.", e);
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
