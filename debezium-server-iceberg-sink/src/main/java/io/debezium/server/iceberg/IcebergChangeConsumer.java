@@ -21,6 +21,7 @@ import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
@@ -37,11 +38,17 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -77,8 +84,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   @Any
   Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
-  int numConcurentUploads = 1;
+  int numConcurentUploads = 1; // TODO: This should be made configurable
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+  private Semaphore concurrencyLimiter;
 
   @PostConstruct
   void connect() {
@@ -94,6 +102,29 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
+
+    // Initialize the semaphore for parallel processing
+    if (numConcurentUploads > 1) {
+      this.concurrencyLimiter = new Semaphore(numConcurentUploads);
+      LOGGER.info("Parallel uploads enabled with concurrency limit: {}", numConcurentUploads);
+    }
+  }
+
+
+  @PreDestroy
+  void close() {
+    try {
+      LOGGER.info("Shutting down executor service.");
+      executor.shutdown();
+      if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOGGER.warn("Executor service did not terminate in 5 seconds. Forcing shutdown.");
+        executor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      LOGGER.warn("Interrupted while shutting down executor service.");
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
   }
 
   @Override
@@ -148,40 +179,68 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
 
+
+  // In IcebergChangeConsumer.java
+
   /**
    * Processes events for each destination table in parallel using a virtual thread pool.
    *
    * @param eventsByDestination A map where keys are destination table names and values are lists of events for that table.
    */
   private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination) {
-    try {
-      for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
-        executor.submit(() -> {
-          try {
-            Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
-            icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
-          } catch (Exception e) {
-            LOGGER.error("Error processing events in parallel for destination '{}'", tableEvents.getKey(), e);
-          }
-        });
-      }
-    } finally {
-      executor.shutdown();
+    List<Callable<Void>> tasks = new ArrayList<>();
+    for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
+      tasks.add(() -> {
+        try {
+          // Acquire a permit from the Semaphore to enforce the concurrency limit.
+          LOGGER.trace("Task for destination '{}' waiting for permit. Available: {}", tableEvents.getKey(), concurrencyLimiter.availablePermits());
+          concurrencyLimiter.acquire();
+          LOGGER.debug("Task for destination '{}' acquired permit. Starting processing.", tableEvents.getKey());
+
+          Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+          icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+          return null; // Callable must return a value
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt(); // Restore interrupted status
+          LOGGER.warn("Task for destination '{}' was interrupted.", tableEvents.getKey(), e);
+          return null;
+        } catch (Exception e) {
+          // Log and rethrow. This will be wrapped in an ExecutionException by the Future.
+          LOGGER.error("Task for destination '{}' failed.", tableEvents.getKey(), e);
+          throw e;
+        } finally {
+          // Always release the permit, even if an exception occurred.
+          concurrencyLimiter.release();
+          LOGGER.trace("Task for destination '{}' released permit. Available: {}", tableEvents.getKey(), concurrencyLimiter.availablePermits());
+        }
+      });
     }
 
+    LOGGER.debug("Invoking {} parallel tasks and waiting for completion...", tasks.size());
     try {
-      // Wait for all tasks to complete, with a reasonable timeout.
-      // This timeout should ideally be configurable.
-      if (!executor.awaitTermination(15, TimeUnit.MINUTES)) {
-        LOGGER.error("Timed out waiting for parallel uploads to complete after 15 minutes.");
-        executor.shutdownNow();
+      // Invoke all tasks and wait for them to complete, with a timeout.
+      List<Future<Void>> futures = executor.invokeAll(tasks, 60, TimeUnit.MINUTES);
+
+      // Check the status of each task to log any exceptions
+      for (Future<Void> future : futures) {
+        try {
+          // future.get() will throw an exception if the task failed or was cancelled.
+          future.get();
+        } catch (CancellationException e) {
+          LOGGER.error("A task was cancelled, likely due to timeout.", e);
+        } catch (ExecutionException e) {
+          // The original exception from the Callable is wrapped in ExecutionException
+          LOGGER.error("A task failed with an exception: {}", e.getCause().getMessage(), e.getCause());
+        }
       }
+      LOGGER.debug("All parallel tasks have been processed.");
+
     } catch (InterruptedException e) {
-      LOGGER.warn("Interrupted while waiting for parallel uploads to complete.", e);
-      executor.shutdownNow();
+      LOGGER.warn("Main thread interrupted while waiting for tasks to complete.", e);
       Thread.currentThread().interrupt();
     }
   }
+
 
   /**
    * @param tableId     iceberg table identifier
