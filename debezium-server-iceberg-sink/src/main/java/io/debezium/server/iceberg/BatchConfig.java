@@ -1,4 +1,4 @@
-package io.debezium.server.iceberg.batchsizewait;
+package io.debezium.server.iceberg;
 
 import io.debezium.config.CommonConnectorConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
@@ -8,7 +8,7 @@ import io.smallrye.config.WithName;
 
 @ConfigRoot
 @ConfigMapping
-public interface BatchSizeWaitConfig {
+public interface BatchConfig {
   @WithName("debezium.source.max.queue.size")
   @WithDefault(CommonConnectorConfig.DEFAULT_MAX_QUEUE_SIZE + "")
   int sourceMaxQueueSize();
@@ -28,5 +28,14 @@ public interface BatchSizeWaitConfig {
   @WithName("debezium.sink.batch.batch-size-wait")
   @WithDefault("NoBatchSizeWait")
   String batchSizeWaitName();
+
+  @WithName("debezium.sink.batch.concurrent-uploads")
+  @WithDefault("1")
+  int concurrentUploads();
+
+  @WithName("debezium.sink.batch.concurrent-uploads.timeout-minutes")
+  @WithDefault("60")
+  int concurrentUploadsTimeoutMinutes();
+
 
 }
