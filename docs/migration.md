@@ -28,7 +28,34 @@ Let's use the example of a column `order_created_ts_ms` changing from `long` to 
 
 1.  **Stop the Debezium Server** to prevent further write attempts.
 
-2.  **Rename the existing column** in your Iceberg table. **This is a fast, metadata-only operation**. You can use any tool that can manage Iceberg tables, such as Spark, Flink, or the Iceberg REST catalog API.
+2.  **Adjust the Table Schema**
+
+    You have two primary options to resolve the schema mismatch. Choose the one that best fits your table size and operational requirements.
+
+    **Option 1: Rewrite the Table (for small tables)**
+
+    If your table is small, you can rewrite its entire contents while converting the problematic column to the new data type. This approach avoids having separate columns for old and new data but can be very expensive for large tables.
+
+    ⚠️ **Warning:** This operation rewrites the entire table and can be very slow and costly. It is generally not recommended for large production tables.
+
+    Using Spark SQL, you can replace the table with the result of a query. The new table schema will be inferred from the `SELECT` statement.
+
+    ```sql
+    -- Make sure to include ALL columns from the original table to avoid data loss.
+    INSERT OVERWRITE my_catalog.my_db.my_table
+    SELECT
+      id,
+      -- other_column_1,
+      -- other_column_2,
+      timestamp_millis(order_created_ts_ms) AS order_created_ts_ms
+    FROM my_catalog.my_db.my_table;
+    ```
+
+    **Option 2: Rename the Column (Recommended for large tables)**
+
+    This is the **recommended approach for most production scenarios**. Renaming a column is a fast, metadata-only operation that does not require rewriting any data files. It is nearly instantaneous, making it ideal for large tables.
+
+    You can use any tool that supports Iceberg table management, such as Spark, Flink, or the Iceberg REST catalog API.
 
     Using Spark SQL:
     ```sql
@@ -49,5 +76,5 @@ This approach preserves all your data while allowing the schema to evolve to acc
 
 or you can simply could use COALESCE and read consolidated data
 ```sql
-SLEECT COALESCE(rom_unixtime(order_created_ts_ms_legacy), order_created_ts_ms) AS order_created_ts_ms FROM MY_TABLE
+SELECT COALESCE(timestamp_millis(order_created_ts_ms_legacy), order_created_ts_ms) AS order_created_ts_ms FROM my_catalog.my_db.my_table
 ```
