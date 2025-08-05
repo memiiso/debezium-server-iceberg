@@ -16,7 +16,8 @@ nav:
   - iceberg Consumer: iceberg.md
   - icebergevents Consumer: icebergevents.md
   - Python Runner: python-runner.md
-  - Caveats: caveats.md
+  - Migration Guideline: migration.md
+  - FAQ: faq.md
   - Contributing: contributing.md
 
 markdown_extensions:
@@ -27,6 +28,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - admonition
+  - pymdownx.details
   - abbr
   - pymdownx.snippets:
       base_path: [ !relative $config_dir ]
