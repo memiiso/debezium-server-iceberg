@@ -85,7 +85,6 @@ class StructEventConverterTypeTest {
   private static final OffsetDateTime EXPECTED_ZONED_TIMESTAMP_VAL = OffsetDateTime.parse(TEST_ZONED_TIMESTAMP_STR_VAL);
   private static final ByteBuffer EXPECTED_BYTES_VAL = ByteBuffer.wrap(TEST_BYTES_VAL);
   private static final BigDecimal EXPECTED_DECIMAL_VAL = TEST_DECIMAL_VAL.setScale(TEST_DECIMAL_SCALE);
-
   @Mock
   public GlobalConfig config;
   @Mock
@@ -477,6 +476,47 @@ class StructEventConverterTypeTest {
     assertEquals(0, actualDecimal.compareTo(expectedIcebergDecimal), "Decimal values should be equal after scaling");
     // Use assertEquals for scale check
     assertEquals(icebergScale, actualDecimal.scale(), "Decimal scale should match Iceberg schema");
+  }
+
+  @Test
+  void testConnectTimestampField() {
+    // 1. Define the main Value Schema including connect timestamp type
+    org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
+            .name("SimpleRecord")
+            .field("id", Schema.INT32_SCHEMA) // PK field
+            // Logical Types
+            .field("connect_timestamp_field", org.apache.kafka.connect.data.Timestamp.builder().optional().build())
+            .build();
+
+    // 2. Define the Key Schema
+    org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
+            .name("SimpleRecordKey")
+            .field("id", Schema.INT32_SCHEMA) // The PK field
+            .build();
+
+    Struct key = StructBuilder.create("SimpleRecordKey")
+            .field("id", 50)
+            .build();
+
+    long timestampTime = 1651838589000L;
+    EmbeddedEngineChangeEvent event = StructBuilder.create("SimpleRecord")
+            .field("id", 50)
+            .field("connect_timestamp_field", new java.util.Date(timestampTime)) // Date for 2022-05-06T12:43:09Z
+            .field(CDC_OP_FIELD, "c")
+            .field(CDC_TS_MS_FIELD, TEST_TS_MS)
+            .buildChangeEvent(key);
+
+    // 3. Instantiate the Converter
+    StructSchemaConverter schemaConverter = new StructSchemaConverter(valueSchema, keySchema, config);
+    // 4. Convert to Iceberg schema and record
+    org.apache.iceberg.Schema icebergSchema = schemaConverter.icebergSchema();
+
+    StructEventConverter converter = new StructEventConverter(event, config);
+    RecordWrapper record = converter.convert(icebergSchema);
+    // 5. Assertions
+    LocalDateTime EXPECTED_CONNECT_TIMESTAMP =
+            Instant.ofEpochMilli(timestampTime).atOffset(ZoneOffset.UTC).toLocalDateTime();
+    assertEquals(EXPECTED_CONNECT_TIMESTAMP, record.getField("connect_timestamp_field"));
   }
 
 }

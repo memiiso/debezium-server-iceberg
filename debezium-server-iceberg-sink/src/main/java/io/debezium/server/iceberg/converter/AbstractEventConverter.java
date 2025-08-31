@@ -110,8 +110,15 @@ public class AbstractEventConverter {
       case IsoTimestamp.SCHEMA_NAME -> LocalDateTime.parse((String) value, IsoTimestamp.FORMATTER);
       case MicroTimestamp.SCHEMA_NAME -> DateTimeUtil.timestampFromMicros(((Number) value).longValue());
       case NanoTimestamp.SCHEMA_NAME -> DateTimeUtil.timestampFromNanos(((Number) value).longValue());
-      case Timestamp.SCHEMA_NAME, org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME ->
-          DateTimeUtils.timestampFromMillis(((Number) value).longValue());
+      case Timestamp.SCHEMA_NAME -> DateTimeUtils.timestampFromMillis(((Number) value).longValue());
+      case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME -> {
+          // org.apache.kafka.connect.data.Timestamp value is Date type in connect record.
+          if (value instanceof Date) {
+            yield DateTimeUtils.timestampFromMillis(((Date) value).getTime());
+          } else {
+            yield DateTimeUtils.timestampFromMillis(((Number) value).longValue());
+          }
+      }
       case null, default -> {
         if (value instanceof Long) {
           long longVal = ((Long) value);
@@ -157,8 +164,14 @@ public class AbstractEventConverter {
       case IsoTimestamp.SCHEMA_NAME -> OffsetDateTime.parse((String) value, IsoTimestamp.FORMATTER);
       case NanoTimestamp.SCHEMA_NAME -> DateTimeUtils.timestamptzFromNanos((Long) value);
       case MicroTimestamp.SCHEMA_NAME -> DateTimeUtil.timestamptzFromMicros((Long) value);
-      case Timestamp.SCHEMA_NAME, org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME ->
-          DateTimeUtils.timestamptzFromMillis((Long) value);
+      case Timestamp.SCHEMA_NAME -> DateTimeUtils.timestamptzFromMillis((Long) value);
+      case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME -> {
+          if (value instanceof Date) {
+            yield DateTimeUtils.timestamptzFromMillis(((Date) value).getTime());
+          } else {
+            yield DateTimeUtils.timestamptzFromMillis((Long) value);
+          }
+      }
       case null, default -> {
         if (value instanceof Long) {
           yield switch (config.debezium().temporalPrecisionMode()) {
@@ -305,8 +318,14 @@ public class AbstractEventConverter {
   @SuppressWarnings("JavaUtilDate")
   protected LocalTime convertTimeValue(Object value, String logicalTypeName) {
     return switch (logicalTypeName) {
-      case org.apache.kafka.connect.data.Time.LOGICAL_NAME, Time.SCHEMA_NAME ->
-          DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
+      case org.apache.kafka.connect.data.Time.LOGICAL_NAME -> {
+        if (value instanceof Date) {
+          yield DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Date) value).getTime());
+        } else {
+          yield DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
+        }
+      }
+      case Time.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
       case MicroTime.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationMicroseconds(((Number) value).longValue());
       case NanoTime.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationNanoseconds(((Number) value).longValue());
       case IsoTime.SCHEMA_NAME -> LocalTime.parse((String) value, IsoTime.FORMATTER);
