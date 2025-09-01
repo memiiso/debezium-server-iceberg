@@ -86,6 +86,7 @@ class StructEventConverterTest {
   private static final OffsetDateTime EXPECTED_ZONED_TIMESTAMP = OffsetDateTime.parse(TEST_ZONED_TIMESTAMP_STRING);
   private static final ByteBuffer EXPECTED_BYTES = ByteBuffer.wrap(TEST_BYTES);
   private static final BigDecimal EXPECTED_DECIMAL = TEST_DECIMAL.setScale(TEST_DECIMAL_SCALE);
+
   @Mock
   public GlobalConfig config;
   @Mock
@@ -424,6 +425,5 @@ class StructEventConverterTest {
     BigDecimal expectedIcebergDecimal = new BigDecimal("12.35"); // Rounded to scale 2
     assertEquals(0, expectedIcebergDecimal.compareTo((BigDecimal) icebergRecord.getField("dec_field")));
   }
-
 
 }

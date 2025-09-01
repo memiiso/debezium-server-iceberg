@@ -332,6 +332,46 @@ class StructSchemaConverterTest {
 
   }
 
+  @Test
+  void testConnectTimestampField() {
+    // 1. Define the main Value Schema including connect timestamp type
+    org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
+            .name("SimpleRecord")
+            .field("id", Schema.INT32_SCHEMA) // PK field
+            // Logical Types
+            .field("connect_timestamp_field", org.apache.kafka.connect.data.Timestamp.builder().optional().build())
+            .build();
+
+    // 2. Define the Key Schema
+    org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
+            .name("SimpleRecordKey")
+            .field("id", Schema.INT32_SCHEMA) // The PK field
+            .build();
+
+    // 3. Instantiate the Converter
+    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+    LOGGER.error("{}", keySchema.toString());
+    LOGGER.error("{}", valueSchema.toString());
+
+    // 4. Convert to Iceberg Schema
+    org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
+
+    // 5. Assertions
+    assertNotNull(icebergSchema);
+    assertEquals(2, icebergSchema.columns().size(), "Should have 2 top-level fields"); // Increased count by 2
+
+    // Verify Identifier Field
+    assertEquals(Set.of(1), icebergSchema.identifierFieldIds(), "Field 'id' should be the identifier");
+    Types.NestedField idField = icebergSchema.findField("id");
+    assertNotNull(idField);
+    assertEquals(1, idField.fieldId());
+    assertFalse(idField.isOptional(), "Identifier field 'id' should not be optional");
+    assertEquals(Types.IntegerType.get(), idField.type(), "Identifier field 'id' type mismatch");
+
+    // Verify connect_timestamp_field field
+    assertField(icebergSchema, "connect_timestamp_field", 2, true, Types.TimestampType.withoutZone());
+  }
+
   // Helper assertion method
   private Types.NestedField assertField(org.apache.iceberg.Schema schema, String name, int expectedId, boolean expectedOptional, org.apache.iceberg.types.Type expectedType) {
     Types.NestedField field = schema.findField(name);
