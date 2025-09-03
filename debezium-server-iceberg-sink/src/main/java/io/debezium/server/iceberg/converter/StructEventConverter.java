@@ -19,6 +19,7 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.variants.ShreddedObject;
 import org.apache.iceberg.variants.Variant;
 import org.apache.iceberg.variants.Variants;
 import org.apache.kafka.common.serialization.Serde;
@@ -244,9 +245,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         Preconditions.checkArgument(connectValue instanceof Struct,
             "Cannot convert to Variant: value is not a Struct: %s", connectValue.getClass().getName());
       StructVariantObject val = new StructVariantObject((Struct) connectValue);
-//      ShreddedObject shrededVal  = Variants.object(val.metadata(), val);
+      ShreddedObject shrededVal  = Variants.object(val.metadata(), val);
 //      return Variant.of(Variants.emptyMetadata(), shrededVal);
-      return Variant.of(Variants.emptyMetadata(), val);
+      return Variant.of(Variants.emptyMetadata(), shrededVal);
 
       case LIST:
         Preconditions.checkArgument(connectValue instanceof List,

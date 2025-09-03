@@ -18,7 +18,7 @@
  */
 package io.debezium.server.iceberg.converter;
 
-import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
+import org.apache.iceberg.variants.ShreddedObject;
 import org.apache.iceberg.variants.ValueArray;
 import org.apache.iceberg.variants.VariantMetadata;
 import org.apache.iceberg.variants.VariantObject;
@@ -31,9 +31,8 @@ import org.apache.kafka.connect.data.Struct;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * An implementation of {@link VariantObject} that wraps a Kafka Connect {@link Struct}.
@@ -42,22 +41,26 @@ import java.util.List;
  * create a serializable {@code ShreddedObject} or {@code SerializedObject}. This implementation is a
  * read-only wrapper and does not support direct serialization.
  */
-public class StructVariantObject implements VariantObject {
+public class StructVariantObject extends ShreddedObject {
 
   private final Struct data;
-  private final ArrayList<String> fieldnames;
-  VariantMetadata metadata;
 
   public StructVariantObject(Struct data) {
-    Preconditions.checkArgument(data != null, "Invalid Struct: null");
+    super(Variants.metadata(data.schema().fields().stream()
+        .map(Field::name)
+        .collect(Collectors.toList())));
     this.data = data;
-    this.fieldnames = new ArrayList<>();
-    data.schema().fields().forEach(f -> fieldnames.add(f.name()));
-    this.metadata = org.apache.iceberg.variants.Variants.metadata(this.fieldnames);
+    data.schema().fields().forEach(f -> {
+      shreddedFields.put(f.name(), getStructVariantValue(f.name()));
+    });
   }
 
-  @Override
-  public VariantValue get(String name) {
+
+  public VariantMetadata metadata() {
+    return this.metadata;
+  }
+
+  public VariantValue getStructVariantValue(String name) {
     Field field = data.schema().field(name);
     if (field == null) {
       return null;
@@ -65,40 +68,6 @@ public class StructVariantObject implements VariantObject {
 
     Object objectValue = data.get(field);
     return toVariantValue(field.schema(), objectValue);
-  }
-
-  @Override
-  public Iterable<String> fieldNames() {
-    return fieldnames;
-  }
-
-  public VariantMetadata metadata() {
-    return metadata;
-  }
-
-  @Override
-  public int numFields() {
-    return data.schema().fields().size();
-  }
-
-  @Override
-  public int sizeInBytes() {
-    int totalDataSize = 0;
-    for (String field : this.fieldNames()) {
-      totalDataSize += this.get(field).sizeInBytes();
-    }
-    return totalDataSize;
-  }
-
-  @Override
-  public int writeTo(ByteBuffer buffer, int offset) {
-    Preconditions.checkArgument(
-        buffer.order() == ByteOrder.LITTLE_ENDIAN, "Invalid byte order: big endian");
-    int totalSize = offset;
-    for (String field : this.fieldNames()) {
-      totalSize += this.get(field).writeTo(buffer, totalSize);
-    }
-    return totalSize;
   }
 
   private static VariantValue toVariantValue(Schema schema, Object val) {
