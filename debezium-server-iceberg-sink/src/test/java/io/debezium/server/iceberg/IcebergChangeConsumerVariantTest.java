@@ -8,7 +8,6 @@
 
 package io.debezium.server.iceberg;
 
-import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -16,19 +15,14 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.iceberg.data.Record;
-import org.apache.iceberg.io.CloseableIterable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.apache.spark.sql.functions.parse_json;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
@@ -49,9 +43,7 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
       try {
         Dataset<Row> df = getTableData("testc.inventory.customers");
         df.show(false);
-//        df = df.withColumn("data", parse_json(df.after));
-        df.select("after").show(false);
-        df.select("after:id", "after:first_name", "source:version" ).show(false);
+        df.select("after.first_name").show(false);
         return df.count() >= 3;
       } catch (Exception e) {
         e.printStackTrace();
