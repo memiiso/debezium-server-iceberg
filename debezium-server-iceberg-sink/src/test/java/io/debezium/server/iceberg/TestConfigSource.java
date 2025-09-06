@@ -55,6 +55,7 @@ public class TestConfigSource implements ConfigSource {
     config.put("debezium.sink.iceberg.table-prefix", "debeziumcdc_");
     config.put("debezium.sink.iceberg.table-namespace", ICEBERG_CATALOG_TABLE_NAMESPACE);
     config.put("debezium.sink.iceberg.catalog-name", ICEBERG_CATALOG_NAME);
+    config.put("debezium.source.heartbeat.interval.ms", "2");
 
     // drop tombstones for delete events
     config.put("debezium.source.tombstones.on.delete", "false");

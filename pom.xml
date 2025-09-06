@@ -35,13 +35,12 @@
         <skipITs>true</skipITs>
 
         <!-- Iceberg -->
-        <version.iceberg>1.9.1</version.iceberg>
+        <version.iceberg>1.10.0</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
         <!-- Example https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-spark-runtime-3.4_2.13/1.4.3 -->
         <version.spark.major>4.0</version.spark.major>
-        <version.spark.major.iceebrgtemp>3.5</version.spark.major.iceebrgtemp>
         <version.spark.scala>2.13</version.spark.scala>
-        <version.spark>${version.spark.major}.0-preview2</version.spark>
+        <version.spark>${version.spark.major}.0</version.spark>
         <version.hadoop>3.3.6</version.hadoop>
         <version.hive>3.1.3</version.hive>
         <version.googlebigdataoss>2.2.20</version.googlebigdataoss>
@@ -81,6 +80,12 @@
             <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
         </snapshotRepository>
     </distributionManagement>
+    <repositories>
+        <repository>
+            <id>iceberg-stg-repo</id>
+            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1269/</url>
+        </repository>
+    </repositories>
     <dependencyManagement>
         <dependencies>
             <!-- debezium server -->

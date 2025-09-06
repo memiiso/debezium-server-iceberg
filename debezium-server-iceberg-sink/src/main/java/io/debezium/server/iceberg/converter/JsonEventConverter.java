@@ -8,7 +8,6 @@
 
 package io.debezium.server.iceberg.converter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
@@ -23,6 +22,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
+import org.apache.iceberg.variants.ShreddedObject;
 import org.apache.iceberg.variants.Variant;
 import org.apache.iceberg.variants.Variants;
 import org.slf4j.Logger;
@@ -333,12 +333,9 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         });
         return mapVal;
       case VARIANT:
-        try {
-          String jsonVal = mapper.writeValueAsString(node);
-          return Variant.of(VARIANT_EMPTY_METADATA, Variants.of(jsonVal));
-        } catch (JsonProcessingException e) {
-          throw new DebeziumException("Failed to convert value, field: " + field.name() + " value: " + node, e);
-        }
+        JsonVariantObject val = new JsonVariantObject(node);
+        ShreddedObject shrededVal  = Variants.object(val.metadata(), val);
+        return Variant.of(Variants.emptyMetadata(), shrededVal);
       case STRUCT:
         // create it as struct, nested type
         // recursive call to get nested data/record
