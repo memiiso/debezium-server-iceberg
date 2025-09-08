@@ -15,8 +15,13 @@ public class CustomMapper implements IcebergTableMapper {
 
     @Override
     public TableIdentifier mapDestination(String destination) {
+      try {
         String[] parts = destination.split("\\.");
-        String tableName = parts[2];
-        return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), "CUSTOM_MAPPER_" + tableName);
+        String tableName = parts[parts.length - 1];
+        return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), "custom_mapper_" + tableName);
+      } catch (Exception e) {
+        System.out.println("Failed to map:" + destination);
+        throw new RuntimeException(e);
+      }
     }
 }
