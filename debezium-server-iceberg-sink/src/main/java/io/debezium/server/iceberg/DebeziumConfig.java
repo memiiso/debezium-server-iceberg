@@ -89,6 +89,14 @@ public interface DebeziumConfig {
   @WithName("debezium.transforms")
   Map<String, String> transformsConfigs();
 
+  @WithName("debezium.source.topic.heartbeat.prefix")
+  @WithDefault("__debezium-heartbeat")
+  String topicHeartbeatPrefix();
+
+  @WithName("debezium.source.topic.heartbeat.skip-consuming")
+  @WithDefault("ture")
+  boolean topicHeartbeatSkipConsuming();
+
   default boolean isIsoStringTemporalMode() {
     return temporalPrecisionMode() == TemporalPrecisionMode.ISOSTRING;
   }
