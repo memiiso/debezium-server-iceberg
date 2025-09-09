@@ -177,6 +177,11 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
    */
   private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
+
+      if (tableEvents.getKey().startsWith(config.debezium().topicHeartbeatPrefix()) && config.debezium().topicHeartbeatSkipConsuming()) {
+        continue;
+      }
+
       Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
@@ -193,6 +198,11 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination) {
     List<Callable<Void>> tasks = new ArrayList<>();
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
+
+      if (tableEvents.getKey().startsWith(config.debezium().topicHeartbeatPrefix()) && config.debezium().topicHeartbeatSkipConsuming()) {
+        continue;
+      }
+
       tasks.add(() -> {
         try {
           // Acquire a permit from the Semaphore to enforce the concurrency limit.
