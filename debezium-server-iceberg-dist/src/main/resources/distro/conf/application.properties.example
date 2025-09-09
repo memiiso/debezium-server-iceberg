@@ -87,7 +87,7 @@ debezium.source.topic.prefix=dbz_
 debezium.transforms=unwrap
 debezium.transforms.unwrap.type=io.debezium.transforms.ExtractNewRecordState
 debezium.transforms.unwrap.add.fields=op,table,source.ts_ns,db
-debezium.transforms.unwrap.delete.handling.mode=rewrite
+debezium.transforms.unwrap.delete.tombstone.handling.mode=rewrite
 debezium.transforms.unwrap.drop.tombstones=true
 
 ## mongodb event flattening
