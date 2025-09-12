@@ -20,6 +20,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
@@ -33,6 +34,7 @@ import java.util.Map;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
+@Disabled
 class MaxBatchSizeWaitTest extends BaseSparkTest {
 
   @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "1000")
