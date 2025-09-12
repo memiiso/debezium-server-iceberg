@@ -80,12 +80,6 @@
             <url>https://maven.pkg.github.com/memiiso/debezium-server-iceberg</url>
         </snapshotRepository>
     </distributionManagement>
-    <repositories>
-        <repository>
-            <id>iceberg-stg-repo</id>
-            <url>https://repository.apache.org/content/repositories/orgapacheiceberg-1269/</url>
-        </repository>
-    </repositories>
     <dependencyManagement>
         <dependencies>
             <!-- debezium server -->
