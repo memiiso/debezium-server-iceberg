@@ -5,10 +5,13 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.util.PropertyUtil;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
@@ -17,9 +20,21 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 @ConfigMapping
 public interface IcebergConfig {
   String PROP_PREFIX = "debezium.sink.iceberg";
+  String HADOOP_PROP_PREFIX = "debezium.sink.iceberg.hadoop";
+  String CATALOG_PROP_PREFIX = "debezium.sink.iceberg.catalog";
+  String TABLE_PROP_PREFIX = "debezium.sink.iceberg.table";
 
   @WithName(PROP_PREFIX)
   Map<String, String> icebergConfigs();
+
+  @WithName(TABLE_PROP_PREFIX)
+  Map<String, IcebergTableConfig> tableConfigs();
+
+  @WithName(HADOOP_PROP_PREFIX)
+  Map<String, String> icebergHadoopConfigs();
+
+  @WithName(CATALOG_PROP_PREFIX)
+  Map<String, String> icebergCatalogConfigs();
 
   @WithName("debezium.sink.iceberg.upsert-op-field")
   @WithDefault("__op")

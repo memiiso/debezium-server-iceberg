@@ -29,19 +29,23 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -51,6 +55,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Implementation of the consumer that delivers the messages to iceberg tables.
@@ -97,9 +103,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     LOGGER.info("IcebergChangeConsumer is configured to use the '{}' format for processing events.", keyValueChangeEventFormat);
     // pass iceberg properties to iceberg and hadoop
-    config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
+    config.iceberg().icebergHadoopConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergCatalogConfigs(), hadoopConf);
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
@@ -264,6 +270,14 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> this.createIcebergTable(tableId, sampleEvent));
   }
 
+  private List<String> stringToList(String value, String regex) {
+    if (value == null || value.isEmpty()) {
+      return ImmutableList.of();
+    }
+
+    return Arrays.stream(value.split(regex)).map(String::trim).collect(toList());
+  }
+
   private Table createIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
 
     if (!config.debezium().eventSchemaEnabled() && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
@@ -271,18 +285,34 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
     try {
       final Schema schema = sampleEvent.icebergSchema();
+      PartitionSpec spec = PartitionSpec.unpartitioned();;
+      IcebergTableConfig tableConfig = config.iceberg().tableConfigs().get(tableId.name());
+      if (tableConfig != null) {
+        List<String> partitionBy = stringToList(tableConfig.props().get("partition-by"), ",");
+        try {
+          spec = IcebergUtil.createPartitionSpec(schema, partitionBy);
+        } catch (Exception e) {
+          LOGGER.error(
+                  "Unable to create partition spec {}, table {} will be unpartitioned",
+                  partitionBy,
+                  tableId,
+                  e);
+        }
+      }
+
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
       // Check if the message is a schema change event (DDL statement).
       // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
       // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+
       if (sampleEvent.isSchemaChangeEvent()) {
         LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.iceberg().writeFormat(), tableFormatVersion);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), spec, config.iceberg().writeFormat(), tableFormatVersion);
       }
 
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.iceberg().writeFormat(), tableFormatVersion);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, spec, config.iceberg().writeFormat(), tableFormatVersion);
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }
