@@ -21,6 +21,9 @@ public interface IcebergConfig {
   @WithName(PROP_PREFIX)
   Map<String, String> icebergConfigs();
 
+  @WithName("debezium.sink.iceberg.partition-by")
+  Optional<List<String>> partitionBy();
+
   @WithName("debezium.sink.iceberg.upsert-op-field")
   @WithDefault("__op")
   String cdcOpField();
@@ -45,11 +48,11 @@ public interface IcebergConfig {
   String tableMapper();
 
   @WithName("debezium.sink.iceberg.destination-regexp")
-//    @WithDefault("")
+    // @WithDefault("")
   Optional<String> destinationRegexp();
 
   @WithName("debezium.sink.iceberg.destination-regexp-replace")
-//    @WithDefault("")
+    // @WithDefault("")
   Optional<String> destinationRegexpReplace();
 
   @WithName("debezium.sink.iceberg.destination-uppercase-table-names")
@@ -61,7 +64,7 @@ public interface IcebergConfig {
   boolean destinationLowercaseTableNames();
 
   @WithName("debezium.sink.iceberg.table-prefix")
-//    @WithDefault("")
+    // @WithDefault("")
   Optional<String> tablePrefix();
 
   @WithName("debezium.sink.iceberg.table-namespace")
@@ -99,4 +102,11 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
+  /**
+   * Gets the partitionBy value for a given table,
+   * falling back to global if not specified.
+   */
+  default List<String> partitionByForTable(String destination) {
+    return partitionBy().orElse(List.of());
+  }
 }

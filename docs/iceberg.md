@@ -32,6 +32,7 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.iceberg.destination-uppercase-table-names`    | `false`                                                       | Creates uppercase Iceberg table names                                                                                                                                                                                                                                                                             |
 | `debezium.sink.iceberg.destination-lowercase-table-names`    | `false`                                                       | Creates lowercase Iceberg table names                                                                                                                                                                                                                                                                             |
 | `debezium.sink.iceberg.preserve-required-property`           | `false`                                                       | When translating schema from source to Iceberg, by default, only primary key columns are defined as required; the rest of the columns become optional. When this is set to `true`, the columns preserve their original required/optional property.                                                                |
+| `debezium.sink.iceberg.partition-by`                         | ``                                                            | Comma-separated list of partition fields to use when creating the table.                                                                                                                                                                                                                                          |
 | `debezium.sink.batch.batch-size-wait`                        | `NoBatchSizeWait`                                             | Batch size wait strategy: Controls the size of data files and the frequency of uploads. Explained below.                                                                                                                                                                                                          |
 | `debezium.sink.batch.concurrent-uploads`                     | `1`                                                           | The number of parallel threads to use for uploading data to Iceberg tables. When set to a value greater than 1, the consumer will write to multiple tables concurrently.                                                                                                                                          |
 | `debezium.sink.batch.concurrent-uploads.timeout-minutes`     | `60`                                                          | The maximum time in minutes to wait for all parallel uploads to complete before timing out. This is only effective when `debezium.sink.batch.concurrent-uploads` is greater than 1.                                                                                                                               |
@@ -138,6 +139,42 @@ debezium.sink.iceberg.table-prefix=cdc_
 
 With the configuration described above, the database table  `inventory.customers` will be replicated to the Iceberg
 table `default.testc_cdc_inventory_customers`.
+
+### Table Partitioning with `partition-by`
+
+The Debezium Iceberg consumer supports flexible table partitioning using the `debezium.sink.iceberg.partition-by` configuration.
+
+When creating a new Iceberg table, the consumer determines the partitioning strategy as follows:
+
+1. <b>Global Partitioning</b>: If the property `debezium.sink.iceberg.partition-by` is set, consumer uses it to partition all the tables.
+2. <b>Unpartitioned Tables</b>: If the global `partition-by` property is not set, the table will be created as unpartitioned.
+
+> If an invalid or unsupported transform is provided, table will be created as unpartitioned.
+
+#### Configuration
+You can specify partitioning at the global level.
+Examples:
+```properties
+# Partition all tables by a single field
+debezium.sink.iceberg.partition-by=country
+```
+
+The value is a comma-separated list of field names or transform expressions. Supported transforms include:
+* `year(field)`, `month(field)`, `day(field)`, `hour(field)`
+* `bucket(field, N)`, `truncate(field, N)`
+
+Examples
+```properties
+# Identity partitioning (by field)
+debezium.sink.iceberg.partition-by=category
+
+# Partition by year and month of a timestamp field
+debezium.sink.iceberg.partition-by=year(event_time),month(event_time)
+
+# Bucket partitioning
+debezium.sink.iceberg.partition-by=bucket(user_id, 16)
+```
+See the [Iceberg documentation](#https://iceberg.apache.org/docs/latest/partitioning/) for more details on partition transforms.
 
 ## Debezium Offset Storage
 
