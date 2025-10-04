@@ -27,6 +27,7 @@ import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.PartitionSpec;
@@ -103,9 +104,9 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     LOGGER.info("IcebergChangeConsumer is configured to use the '{}' format for processing events.", keyValueChangeEventFormat);
     // pass iceberg properties to iceberg and hadoop
-    config.iceberg().icebergHadoopConfigs().forEach(this.hadoopConf::set);
+    config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergCatalogConfigs(), hadoopConf);
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
     batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
@@ -270,14 +271,6 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> this.createIcebergTable(tableId, sampleEvent));
   }
 
-  private List<String> stringToList(String value, String regex) {
-    if (value == null || value.isEmpty()) {
-      return ImmutableList.of();
-    }
-
-    return Arrays.stream(value.split(regex)).map(String::trim).collect(toList());
-  }
-
   private Table createIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
 
     if (!config.debezium().eventSchemaEnabled() && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
@@ -285,10 +278,11 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
     try {
       final Schema schema = sampleEvent.icebergSchema();
-      PartitionSpec spec = PartitionSpec.unpartitioned();;
-      IcebergTableConfig tableConfig = config.iceberg().tableConfigs().get(tableId.name());
-      if (tableConfig != null) {
-        List<String> partitionBy = stringToList(tableConfig.props().get("partition-by"), ",");
+      Optional<List<String>> partitionByOpt =  config.iceberg().partitionByForTable(tableId.name());
+      PartitionSpec spec = null;
+      // partition if its append mode.
+      if (!config.iceberg().upsert() && partitionByOpt.isPresent()) {
+        List<String> partitionBy = partitionByOpt.get();
         try {
           spec = IcebergUtil.createPartitionSpec(schema, partitionBy);
         } catch (Exception e) {
@@ -296,8 +290,12 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
                   "Unable to create partition spec {}, table {} will be unpartitioned",
                   partitionBy,
                   tableId,
-                  e);
+                  e
+          );
         }
+      } else {
+        LOGGER.debug("No partitioning configured for table {}, using unpartitioned", tableId);
+        spec = PartitionSpec.unpartitioned();
       }
 
       // for backward compatibility, to be removed and set to "3" with one of the next releases

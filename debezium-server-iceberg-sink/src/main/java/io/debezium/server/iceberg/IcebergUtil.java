@@ -187,6 +187,21 @@ public class IcebergUtil {
     return Integer.parseInt(dtFormater.format(Instant.now()));
   }
 
+  /**
+   * Creates an Iceberg {@link PartitionSpec} based on the provided schema and partitioning expressions.
+   *
+   * <p>
+   * The partitioning expressions in the {@code partitionBy} list can be simple field names (for identity partitioning)
+   * or transform expressions such as {@code year(field)}, {@code month(field)}, {@code day(field)}, {@code hour(field)},
+   * {@code bucket(field, N)}, or {@code truncate(field, N)}.
+   * </p>
+   *
+   * @param schema      the Iceberg schema to partition
+   * @param partitionBy a list of partitioning expressions or field names
+   * @return a {@link PartitionSpec} representing the partitioning strategy
+   * @throws UnsupportedOperationException if an unsupported transform is specified
+   * @throws IllegalArgumentException      if transform arguments are invalid
+   */
   public static PartitionSpec createPartitionSpec(
           org.apache.iceberg.Schema schema, List<String> partitionBy) {
     if (partitionBy.isEmpty()) {
