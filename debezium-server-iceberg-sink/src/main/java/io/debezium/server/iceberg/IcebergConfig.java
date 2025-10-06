@@ -1,15 +1,19 @@
 package io.debezium.server.iceberg;
 
+import com.google.common.collect.ImmutableList;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
+import org.apache.commons.lang.StringUtils;
 import org.apache.iceberg.CatalogProperties;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 
@@ -17,9 +21,17 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 @ConfigMapping
 public interface IcebergConfig {
   String PROP_PREFIX = "debezium.sink.iceberg";
+  String TABLE_PROP_PREFIX = "debezium.sink.iceberg.table";
+  String COMMA_NO_PARENS_REGEX = ",(?![^()]*+\\))";
 
   @WithName(PROP_PREFIX)
   Map<String, String> icebergConfigs();
+
+  @WithName(TABLE_PROP_PREFIX)
+  Map<String, IcebergTableConfig> tableConfigs();
+
+  @WithName("debezium.sink.iceberg.partition-by")
+  Optional<String> partitionBy();
 
   @WithName("debezium.sink.iceberg.upsert-op-field")
   @WithDefault("__op")
@@ -98,5 +110,25 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg.nested-as-variant")
   @WithDefault("false")
   boolean nestedAsVariant();
+
+  /**
+   * Gets the partitionBy value for a given table,
+   * falling back to global if not specified.
+   */
+  default Optional<List<String>> partitionByForTable(String tableName) {
+    IcebergTableConfig tableConfig = tableConfigs().get(tableName);
+    if (tableConfig != null && StringUtils.isNotBlank(tableConfig.partitionBy())) {
+      return Optional.of(stringToList(tableConfig.partitionBy(), COMMA_NO_PARENS_REGEX));
+    }
+    return partitionBy().map(p -> stringToList(p, COMMA_NO_PARENS_REGEX));
+  }
+
+  private List<String> stringToList(String value, String regex) {
+    if (value == null || value.isEmpty()) {
+      return ImmutableList.of();
+    }
+
+    return Arrays.stream(value.split(regex)).map(String::trim).collect(toList());
+  }
 
 }
