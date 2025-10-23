@@ -21,4 +21,4 @@ fi
 
 RUNNER=$(ls debezium-server-*runner.jar)
 
-exec $JAVA_BINARY $DEBEZIUM_OPTS $JAVA_OPTS -cp "$RUNNER"$PATH_SEP"conf"$PATH_SEP"lib/*"$PATH_SEP"/opt/conf" io.debezium.server.Main
+exec $JAVA_BINARY $DEBEZIUM_OPTS $JAVA_OPTS -cp "$RUNNER"$PATH_SEP"config"$PATH_SEP"lib/*"$PATH_SEP"/opt/conf" io.debezium.server.Main

@@ -36,7 +36,7 @@ class Debezium(LoggerClass):
             self.log.info("Setting Debezium dir to:%s" % self.debezium_server_dir.as_posix())
 
         if conf_dir is None:
-            self.conf_dir = self.debezium_server_dir.joinpath("conf")
+            self.conf_dir = self.debezium_server_dir.joinpath("config")
         else:
             if not Path(conf_dir).is_dir():
                 raise Exception("Debezium conf directory '%s' not found" % conf_dir)

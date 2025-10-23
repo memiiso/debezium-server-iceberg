@@ -7,10 +7,10 @@ RUN mvn clean package -Passembly -Dmaven.test.skip --quiet -Drevision=${RELEASE_
 RUN unzip /app/debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 
 FROM eclipse-temurin:21-jre
-COPY --from=builder /app/appdist/debezium-server-iceberg/ /app/
+COPY --from=builder /app/appdist/debezium-server-iceberg/ /debezium/
 
-WORKDIR /app
+WORKDIR /debezium
 EXPOSE 8080 8083
-VOLUME ["/app/conf", "/app/data"] 
+VOLUME ["/debezium/config", "/debezium/data"]
 
-ENTRYPOINT ["/app/run.sh"]
+ENTRYPOINT ["/debezium/run.sh"]
