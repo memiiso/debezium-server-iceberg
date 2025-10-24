@@ -6,11 +6,25 @@ WORKDIR /app
 RUN mvn clean package -Passembly -Dmaven.test.skip --quiet -Drevision=${RELEASE_VERSION}
 RUN unzip /app/debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 
-FROM eclipse-temurin:21-jre
-COPY --from=builder /app/appdist/debezium-server-iceberg/ /debezium/
+# Stage 2: Final image
+FROM registry.access.redhat.com/ubi8/openjdk-21
 
-WORKDIR /debezium
-EXPOSE 8080 8083
-VOLUME ["/debezium/config", "/debezium/data"]
+ENV SERVER_HOME=/debezium
 
-ENTRYPOINT ["/debezium/run.sh"]
+USER root
+RUN microdnf clean all
+
+USER jboss
+
+COPY --from=builder /app/appdist/debezium-server-iceberg $SERVER_HOME
+
+# Set the working directory to the Debezium Server home directory
+WORKDIR $SERVER_HOME
+
+#
+# Expose the ports and set up volumes for the data, transaction log, and configuration
+#
+EXPOSE 8080
+VOLUME ["/debezium/config","/debezium/data"]
+
+CMD ["/debezium/run.sh"]
