@@ -32,7 +32,31 @@
                 <exclude>org.codehaus.plexus:*:*</exclude>
                 <exclude>log4j:log4j:*</exclude>
                 <exclude>ch.qos.reload4j:reload4j</exclude>
+    	        <exclude>io.debezium:debezium-scripting</exclude>
+                <exclude>io.debezium:debezium-scripting-languages</exclude>
+                <exclude>io.prometheus.jmx:jmx_prometheus_javaagent:*</exclude>
             </excludes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>${project.parent.artifactId}/lib_metrics</outputDirectory>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useTransitiveFiltering>true</useTransitiveFiltering>
+            <includes>
+                <include>io.prometheus.jmx:jmx_prometheus_javaagent:*</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>${project.parent.artifactId}/lib_opt</outputDirectory>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useTransitiveFiltering>true</useTransitiveFiltering>
+            <includes>
+                <include>io.debezium:debezium-scripting:*</include>
+                <include>io.debezium:debezium-scripting-languages:*</include>
+            </includes>
         </dependencySet>
     </dependencySets>
     <fileSets>
