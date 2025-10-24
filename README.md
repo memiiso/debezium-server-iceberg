@@ -26,7 +26,7 @@ mvn -Passembly -Dmaven.test.skip package
 # unzip and run the application
 unzip debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
 cd appdist/debezium-server-iceberg
-mv conf/application.properties.example conf/application.properties
+mv config/application.properties.example config/application.properties
 bash run.sh
 ```
 

@@ -192,7 +192,7 @@ debezium.sink.iceberg.{iceberg.prop.name}=xyz-value # passed to iceberg!
 
 ### Example Configuration
 
-See [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconf%2Fapplication.properties.example)
+See [application.properties.example](..%2Fdebezium-server-iceberg-dist%2Fsrc%2Fmain%2Fresources%2Fdistro%2Fconfig%2Fapplication.properties.example)
 
 ## Automatic Schema Change Handling
 
