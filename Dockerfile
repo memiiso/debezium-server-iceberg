@@ -5,6 +5,9 @@ COPY . /app
 WORKDIR /app
 RUN mvn clean package -Passembly -Dmaven.test.skip --quiet -Drevision=${RELEASE_VERSION}
 RUN unzip /app/debezium-server-iceberg-dist/target/debezium-server-iceberg-dist*.zip -d appdist
+RUN mkdir /app/appdist/debezium-server-iceberg/data && \
+    chown -R 185 /app/appdist/debezium-server-iceberg && \
+    chmod -R g+w,o+w /app/appdist/debezium-server-iceberg
 
 # Stage 2: Final image
 FROM registry.access.redhat.com/ubi8/openjdk-21
