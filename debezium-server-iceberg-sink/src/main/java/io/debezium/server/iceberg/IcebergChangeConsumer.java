@@ -278,7 +278,13 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     try {
       final Schema schema = sampleEvent.icebergSchema();
       final List<String> partitionByOptions = config.iceberg().partitionByForTable(sampleEvent.destination());
-      PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
+      PartitionSpec spec;
+      try {
+        spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
+      } catch (Exception e) {
+        spec = PartitionSpec.unpartitioned();
+        LOGGER.error("Unable to create partition spec {}, table {} will be unpartitioned", partitionByOptions, sampleEvent.destination(), e);
+      }
 
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
