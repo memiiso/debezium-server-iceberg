@@ -277,7 +277,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
     try {
       final Schema schema = sampleEvent.icebergSchema();
-      PartitionSpec spec = selectPartitionSpec(sampleEvent.destination(), schema);
+      final List<String> partitionByOptions = config.iceberg().partitionByForTable(sampleEvent.destination());
+      PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
 
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
@@ -297,10 +298,6 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
   }
 
-  private PartitionSpec selectPartitionSpec(String destination, Schema schema) {
-    List<String> partitionByOpt = config.iceberg().partitionByForTable(destination);
-    return IcebergUtil.createPartitionSpec(schema, partitionByOpt);
-  }
 
   /**
    * periodically log number of events consumed
