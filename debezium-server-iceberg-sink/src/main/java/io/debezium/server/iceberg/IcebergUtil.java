@@ -102,20 +102,6 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat, String formatVersion) {
-
-    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
-        schema.identifierFieldNames());
-    createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
-
-    return icebergCatalog.buildTable(tableIdentifier, schema)
-        .withProperty(FORMAT_VERSION, formatVersion)
-        .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
-        .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
-        .create();
-  }
-
-  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
                                          Schema schema, PartitionSpec partitionSpec, String writeFormat, String formatVersion) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}\npartitionSpec: {}", tableIdentifier, schema,
