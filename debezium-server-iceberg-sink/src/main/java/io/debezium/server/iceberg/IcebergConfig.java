@@ -22,7 +22,6 @@ import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 public interface IcebergConfig {
   String PROP_PREFIX = "debezium.sink.iceberg";
   String TABLE_PROP_PREFIX = "debezium.sink.iceberg.table";
-  String COMMA_NO_PARENS_REGEX = ",(?![^()]*+\\))";
 
   @WithName(PROP_PREFIX)
   Map<String, String> icebergConfigs();
