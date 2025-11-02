@@ -145,12 +145,9 @@ table `default.testc_cdc_inventory_customers`.
 
 The Debezium Iceberg consumer supports flexible table partitioning using the `partition-by` configuration.
 
-The `partition-by` property is only applicable when the consumer is running in `append-only` mode (`debezium.sink.iceberg.upsert=false`).
-When upsert mode is enabled, tables are always created as unpartitioned, regardless of any `partition-by` configuration.
-
 When creating a new Iceberg table, the consumer determines the partitioning strategy as follows:
 
-1. <b>Table-Level Partitioning</b>: If the property `debezium.sink.iceberg.table.<table-name>.partition-by` is set for a specific table, it takes precedence.
+1. <b>Table-Level Partitioning</b>: If the property `debezium.sink.iceberg.table.<table-name>.partition-by` is set for a specific table, it takes precedence. Table level partitioning is skipped when consumer is running in `append-only` mode (`debezium.sink.iceberg.upsert=false`)
 The table will be partitioned according to this configuration.
 2. <b>Global Partitioning Fallback</b>: If no table-specific partition-by is configured, the consumer falls back to the global `debezium.sink.iceberg.partition-by` property.
 All tables without an explicit table-level setting will use this global partitioning strategy.

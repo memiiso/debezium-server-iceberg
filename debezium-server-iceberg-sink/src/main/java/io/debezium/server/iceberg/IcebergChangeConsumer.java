@@ -272,31 +272,12 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
   private Table createIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
-
     if (!config.debezium().eventSchemaEnabled() && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
       throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
     try {
       final Schema schema = sampleEvent.icebergSchema();
-      Optional<List<String>> partitionByOpt =  config.iceberg().partitionByForTable(tableId.name());
-      PartitionSpec spec = null;
-      // partition if its append mode.
-      if (!config.iceberg().upsert() && partitionByOpt.isPresent()) {
-        List<String> partitionBy = partitionByOpt.get();
-        try {
-          spec = IcebergUtil.createPartitionSpec(schema, partitionBy);
-        } catch (Exception e) {
-          LOGGER.error(
-                  "Unable to create partition spec {}, table {} will be unpartitioned",
-                  partitionBy,
-                  tableId,
-                  e
-          );
-        }
-      } else {
-        LOGGER.debug("No partitioning configured for table {}, using unpartitioned", tableId);
-        spec = PartitionSpec.unpartitioned();
-      }
+      PartitionSpec spec = selectPartitionSpec(sampleEvent.destination(), schema);
 
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
@@ -314,6 +295,26 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }
+  }
+
+  private PartitionSpec selectPartitionSpec(String destination, Schema schema) {
+    // use global partition-by when upsert is false i.e. append-only mode
+    Optional<List<String>> partitionByOpt = config.iceberg().upsert() ?
+            config.iceberg().partitionByForTable(destination):
+            config.iceberg().partitionBy();
+
+    if (partitionByOpt.isPresent()) {
+      try {
+        return IcebergUtil.createPartitionSpec(schema, partitionByOpt.get());
+      } catch (Exception e) {
+        LOGGER.error("Unable to create partition spec {}, table {} will be unpartitioned",
+                partitionByOpt.get(), destination, e);
+      }
+    } else {
+      LOGGER.debug("No partitioning configured for table {}, using unpartitioned", destination);
+    }
+
+    return PartitionSpec.unpartitioned();
   }
 
   /**

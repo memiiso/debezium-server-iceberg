@@ -3,9 +3,9 @@ package io.debezium.server.iceberg;
 import com.google.common.collect.ImmutableList;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithConverter;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
-import org.apache.commons.lang.StringUtils;
 import org.apache.iceberg.CatalogProperties;
 
 import java.util.Arrays;
@@ -31,7 +31,8 @@ public interface IcebergConfig {
   Map<String, IcebergTableConfig> tableConfigs();
 
   @WithName("debezium.sink.iceberg.partition-by")
-  Optional<String> partitionBy();
+  @WithConverter(PartitionByConverter.class)
+  Optional<List<String>> partitionBy();
 
   @WithName("debezium.sink.iceberg.upsert-op-field")
   @WithDefault("__op")
@@ -111,17 +112,6 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
-  /**
-   * Gets the partitionBy value for a given table,
-   * falling back to global if not specified.
-   */
-  default Optional<List<String>> partitionByForTable(String tableName) {
-    IcebergTableConfig tableConfig = tableConfigs().get(tableName);
-    if (tableConfig != null && StringUtils.isNotBlank(tableConfig.partitionBy())) {
-      return Optional.of(stringToList(tableConfig.partitionBy(), COMMA_NO_PARENS_REGEX));
-    }
-    return partitionBy().map(p -> stringToList(p, COMMA_NO_PARENS_REGEX));
-  }
 
   private List<String> stringToList(String value, String regex) {
     if (value == null || value.isEmpty()) {
@@ -131,4 +121,16 @@ public interface IcebergConfig {
     return Arrays.stream(value.split(regex)).map(String::trim).collect(toList());
   }
 
+  /**
+   * Gets the partitionBy value for a given table,
+   * falling back to global if not specified.
+   */
+  default Optional<List<String>> partitionByForTable(String tableName) {
+    Map<String, IcebergTableConfig> tableConfigMap = tableConfigs();
+    return Optional.ofNullable(tableConfigMap)
+            .flatMap(configs -> Optional.ofNullable(configs.get(tableName)))
+            .flatMap(IcebergTableConfig::partitionBy)
+            // if table partitionBy is empty, return global partitionBy
+            .or(this::partitionBy);
+  }
 }
