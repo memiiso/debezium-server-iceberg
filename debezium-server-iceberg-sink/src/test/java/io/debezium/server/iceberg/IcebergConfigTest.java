@@ -67,7 +67,7 @@ class IcebergConfigParenthesesTest {
         @Override
         public Map<String, String> getConfigOverrides() {
             Map<String, String> config = new HashMap<>();
-            config.put("debezium.sink.iceberg.partition-by", "bucket(10, id),year(ts),month(ts)");
+            config.put("debezium.sink.iceberg.partition-by", "bucket(10\\, id),year(ts),month(ts)");
             config.put("debezium.sink.iceberg.warehouse", "/tmp/test-warehouse");
             return config;
         }
@@ -87,9 +87,9 @@ class IcebergConfigComplexPartitionByTest {
         List<String> partitions = icebergConfig.partitionBy().get();
         assertEquals(4, partitions.size());
         assertEquals("bucket(10, id)", partitions.get(0));
-        assertEquals("year(created_at)", partitions.get(1));
-        assertEquals("month(created_at)", partitions.get(2));
-        assertEquals("day(created_at)", partitions.get(3));
+        assertEquals(" year(created_at)", partitions.get(1));
+        assertEquals(" month(created_at)", partitions.get(2));
+        assertEquals(" day(created_at)", partitions.get(3));
     }
 
     public static class ComplexPartitionByProfile implements QuarkusTestProfile {
@@ -97,7 +97,7 @@ class IcebergConfigComplexPartitionByTest {
         public Map<String, String> getConfigOverrides() {
             Map<String, String> config = new HashMap<>();
             config.put("debezium.sink.iceberg.partition-by",
-                "bucket(10, id), year(created_at), month(created_at), day(created_at)");
+                "bucket(10\\, id), year(created_at), month(created_at), day(created_at)");
             config.put("debezium.sink.iceberg.warehouse", "/tmp/test-warehouse");
             return config;
         }
@@ -113,8 +113,8 @@ class IcebergConfigEmptyPartitionByTest {
 
     @Test
     void testEmptyPartitionBy() {
-        assertTrue(icebergConfig.partitionBy().isPresent());
-        assertTrue(icebergConfig.partitionBy().get().isEmpty());
+        assertFalse(icebergConfig.partitionBy().isPresent());
+        assertTrue(icebergConfig.partitionBy().isEmpty());
     }
 
     public static class EmptyPartitionByProfile implements QuarkusTestProfile {
@@ -144,16 +144,16 @@ class IcebergConfigTableSpecificPartitionByTest {
         assertEquals("month(created_at)", globalPartitions.get(1));
 
         // Test table-specific partitionBy
-        assertTrue(icebergConfig.partitionByForTable("users").isPresent());
-        List<String> tablePartitions = icebergConfig.partitionByForTable("users").get();
+        assertFalse(icebergConfig.partitionByForTable("users").isEmpty());
+        List<String> tablePartitions = icebergConfig.partitionByForTable("users");
         assertEquals(3, tablePartitions.size());
         assertEquals("bucket(5, user_id)", tablePartitions.get(0));
         assertEquals("year(signup_date)", tablePartitions.get(1));
         assertEquals("month(signup_date)", tablePartitions.get(2));
 
         // Test fallback to global partitionBy for non-configured table
-        assertTrue(icebergConfig.partitionByForTable("orders").isPresent());
-        List<String> fallbackPartitions = icebergConfig.partitionByForTable("orders").get();
+        assertFalse(icebergConfig.partitionByForTable("orders").isEmpty());
+        List<String> fallbackPartitions = icebergConfig.partitionByForTable("orders");
         assertEquals(globalPartitions, fallbackPartitions);
     }
 
@@ -163,7 +163,7 @@ class IcebergConfigTableSpecificPartitionByTest {
             Map<String, String> config = new HashMap<>();
             config.put("debezium.sink.iceberg.partition-by", "year(created_at),month(created_at)");
             config.put("debezium.sink.iceberg.table.users.partition-by",
-                "bucket(5, user_id),year(signup_date),month(signup_date)");
+                "bucket(5\\, user_id),year(signup_date),month(signup_date)");
             config.put("debezium.sink.iceberg.warehouse", "/tmp/test-warehouse");
             return config;
         }
@@ -183,10 +183,10 @@ class IcebergConfigMixedPartitionByTest {
         List<String> partitions = icebergConfig.partitionBy().get();
         assertEquals(5, partitions.size());
         assertEquals("country", partitions.get(0));
-        assertEquals("year(created_at)", partitions.get(1));
-        assertEquals("bucket(10, customer_id)", partitions.get(2));
-        assertEquals("region", partitions.get(3));
-        assertEquals("truncate(5, name)", partitions.get(4));
+        assertEquals(" year(created_at)", partitions.get(1));
+        assertEquals(" bucket(10, customer_id)", partitions.get(2));
+        assertEquals(" region", partitions.get(3));
+        assertEquals(" truncate(5, name)", partitions.get(4));
     }
 
     public static class MixedPartitionByProfile implements QuarkusTestProfile {
@@ -194,7 +194,7 @@ class IcebergConfigMixedPartitionByTest {
         public Map<String, String> getConfigOverrides() {
             Map<String, String> config = new HashMap<>();
             config.put("debezium.sink.iceberg.partition-by",
-                "country, year(created_at), bucket(10, customer_id), region, truncate(5, name)");
+                "country, year(created_at), bucket(10\\, customer_id), region, truncate(5\\, name)");
             config.put("debezium.sink.iceberg.warehouse", "/tmp/test-warehouse");
             return config;
         }

@@ -298,23 +298,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
   private PartitionSpec selectPartitionSpec(String destination, Schema schema) {
-    // use global partition-by when upsert is false i.e. append-only mode
-    Optional<List<String>> partitionByOpt = config.iceberg().upsert() ?
-            config.iceberg().partitionByForTable(destination):
-            config.iceberg().partitionBy();
-
-    if (partitionByOpt.isPresent()) {
-      try {
-        return IcebergUtil.createPartitionSpec(schema, partitionByOpt.get());
-      } catch (Exception e) {
-        LOGGER.error("Unable to create partition spec {}, table {} will be unpartitioned",
-                partitionByOpt.get(), destination, e);
-      }
-    } else {
-      LOGGER.debug("No partitioning configured for table {}, using unpartitioned", destination);
-    }
-
-    return PartitionSpec.unpartitioned();
+    List<String> partitionByOpt = config.iceberg().partitionByForTable(destination);
+    return IcebergUtil.createPartitionSpec(schema, partitionByOpt);
   }
 
   /**

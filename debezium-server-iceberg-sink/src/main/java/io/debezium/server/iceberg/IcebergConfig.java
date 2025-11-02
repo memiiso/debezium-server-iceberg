@@ -3,7 +3,6 @@ package io.debezium.server.iceberg;
 import com.google.common.collect.ImmutableList;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
-import io.smallrye.config.WithConverter;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 import org.apache.iceberg.CatalogProperties;
@@ -30,7 +29,6 @@ public interface IcebergConfig {
   Map<String, IcebergTableConfig> tableConfigs();
 
   @WithName("debezium.sink.iceberg.partition-by")
-  @WithConverter(PartitionByConverter.class)
   Optional<List<String>> partitionBy();
 
   @WithName("debezium.sink.iceberg.upsert-op-field")
@@ -124,12 +122,18 @@ public interface IcebergConfig {
    * Gets the partitionBy value for a given table,
    * falling back to global if not specified.
    */
-  default Optional<List<String>> partitionByForTable(String tableName) {
-    Map<String, IcebergTableConfig> tableConfigMap = tableConfigs();
-    return Optional.ofNullable(tableConfigMap)
-            .flatMap(configs -> Optional.ofNullable(configs.get(tableName)))
-            .flatMap(IcebergTableConfig::partitionBy)
-            // if table partitionBy is empty, return global partitionBy
-            .or(this::partitionBy);
+  default List<String> partitionByForTable(String destination) {
+    // Get table-specific partitioning configuration.
+    Optional<List<String>> partitionByOpt = Optional.ofNullable(tableConfigs())
+        .map(configs -> configs.get(destination))
+        .flatMap(IcebergTableConfig::partitionBy);
+
+    if (!upsert()) {
+      // In append-only mode, fall back to global partitioning if table-specific is not set.
+      partitionByOpt = partitionByOpt.or(this::partitionBy);
+    }
+
+    // Return the partitioning configuration or an empty list if none is found.
+    return partitionByOpt.orElse(List.of());
   }
 }
