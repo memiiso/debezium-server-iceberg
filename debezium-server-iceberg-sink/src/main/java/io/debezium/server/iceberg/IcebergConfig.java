@@ -109,15 +109,6 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
-
-  private List<String> stringToList(String value, String regex) {
-    if (value == null || value.isEmpty()) {
-      return ImmutableList.of();
-    }
-
-    return Arrays.stream(value.split(regex)).map(String::trim).collect(toList());
-  }
-
   /**
    * Gets the partitionBy value for a given table,
    * falling back to global if not specified.
