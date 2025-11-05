@@ -51,7 +51,7 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>src/main/resources/distro</directory>
+            <directory>${project.basedir}/src/main/resources/distro</directory>
             <outputDirectory>debezium-server/</outputDirectory>
             <includes>
                 <include>**/*</include>
