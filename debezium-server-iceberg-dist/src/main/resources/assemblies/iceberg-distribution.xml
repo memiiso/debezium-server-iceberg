@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+    <id>iceberg-distribution</id>
+    <formats>
+        <format>tar.gz</format>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/</outputDirectory>
+            <unpack>true</unpack>
+            <scope>provided</scope>
+            <includes>
+                <include>io.debezium:debezium-server-dist:zip</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <outputDirectory>debezium-server/lib</outputDirectory>
+            <unpack>false</unpack>
+            <scope>runtime</scope>
+            <includes>
+                <include>io.debezium:debezium-server-iceberg-sink</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+    <fileSets>
+        <fileSet>
+            <!-- Get the files from the top-level directory -->
+            <directory>${project.basedir}/..</directory>
+            <outputDirectory>debezium-server/</outputDirectory>
+            <includes>
+                <include>README*</include>
+                <include>CHANGELOG*</include>
+                <include>CONTRIBUTE*</include>
+                <include>COPYRIGHT*</include>
+                <include>LICENSE*</include>
+            </includes>
+            <useDefaultExcludes>true</useDefaultExcludes>
+        </fileSet>
+        <fileSet>
+            <!-- >directory>../${project.parent.artifactId}-core/target</directory-->
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>debezium-server/</outputDirectory>
+            <includes>
+                <include>*-runner.jar</include>
+                <include>LICENSE-3RD-PARTY.txt</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/resources/distro</directory>
+            <outputDirectory>debezium-server/</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
