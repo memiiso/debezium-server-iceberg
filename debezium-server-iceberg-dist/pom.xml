@@ -22,6 +22,7 @@
 
     <properties>
         <assembly.descriptor>iceberg-distribution</assembly.descriptor>
+        <quarkus.package.type>legacy-jar</quarkus.package.type>
     </properties>
 
     <dependencies>
@@ -41,6 +42,18 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <version>${quarkus.version.runtime}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -87,11 +100,12 @@
             </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
         <id>assembly</id>
         <activation>
-            <activeByDefault>false</activeByDefault>
+            <activeByDefault>true</activeByDefault>
         </activation>
         <dependencies>
             <dependency>
