@@ -1,0 +1,104 @@
+version: "3.7"
+
+services:
+  debezium-iceberg:
+    image: ghcr.io/memiiso/debezium-server-iceberg:latest
+    container_name: debezium-server-iceberg
+    networks:
+      - iceberg_nessie_net
+    depends_on:
+      - nessie
+      - minio
+      - postgresqlsourcedb
+      - mc
+    volumes:
+      - ./config/application.properties:/debezium/config/application.properties
+    command: >
+      bash -c "
+      mvn dependency:copy -Dartifact=org.apache.iceberg:iceberg-nessie:1.10.0:jar -DoutputDirectory=/debezium/lib/ \ 
+      && mvn dependency:copy -Dartifact=org.projectnessie.nessie:nessie-client:0.104.5:jar -DoutputDirectory=/debezium/lib/ \ 
+      && mvn dependency:copy -Dartifact=org.projectnessie.nessie:nessie-model:0.104.5:jar -DoutputDirectory=/debezium/lib/ \ 
+      && /debezium/run.sh
+      "
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+
+  nessie:
+    image: projectnessie/nessie:latest
+    container_name: nessie
+    networks:
+      - iceberg_nessie_net
+    ports:
+      - "19120:19120"
+    depends_on:
+      - minio
+    environment:
+      - QUARKUS_PROFILE=prod
+      - QUARKUS_HTTP_PORT=19120
+      - QUARKUS_LOG_LEVEL=DEBUG
+      - QUARKUS_OTEL_SDK_DISABLED=true
+      - NESSIE_CATALOG_DEFAULT_WAREHOUSE=warehouse
+      - NESSIE_SERVER_AUTHENTICATION_ENABLED=false
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_ENDPOINT=http://minio:9000
+      - NESSIE_VERSION_STORE_TYPE=IN_MEMORY
+      - NESSIE_CATALOG_WAREHOUSES_WAREHOUSE_LOCATION=s3a://warehouse/
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_ACCESS_KEY=urn:nessie-secret:quarkus:nessie.catalog.secrets.access-key
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_PATH_STYLE_ACCESS=true
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_AUTH_TYPE=STATIC
+      - NESSIE_CATALOG_SECRETS_ACCESS_KEY_NAME=admin
+      - NESSIE_CATALOG_SECRETS_ACCESS_KEY_SECRET=password
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_REGION=us-east-1
+      - NESSIE_CLIENT_API_VERSION=2
+
+  postgresqlsourcedb:
+    image: debezium/example-postgres:2.5
+    container_name: postgresql-source-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_INITDB_ARGS="-E UTF8"
+      - LANG=en_US.utf8
+    networks:
+      - iceberg_nessie_net
+    ports:
+      - "5432:5432"
+
+  # storage
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=minio
+      - MINIO_BUCKET=warehouse
+    networks:
+      - iceberg_nessie_net
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    command: [ "server", "/data", "--console-address", ":9001" ]
+  mc:
+    image: minio/mc
+    container_name: mc
+    networks:
+      - iceberg_nessie_net
+    depends_on:
+      - minio
+    environment:
+      - AWS_ACCESS_KEY_ID=demo
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb --ignore-existing minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse;
+      exit 0;
+      "
+networks:
+  iceberg_nessie_net:
+    name: iceberg_nessie_net
