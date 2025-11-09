@@ -162,6 +162,22 @@ services:
     networks:
       - iceberg_lakekeeper_net
 
+  duckdbui:
+    image: datacatering/duckdb:v1.4.1
+    container_name: duckdbui
+    #    entrypoint: ["./duckdb", "-ui", "&&", "sleep", "infinity"]
+    entrypoint: >
+      /bin/sh -c "
+      ./duckdb -ui;
+      sleep infinity;
+      "
+    networks:
+      - iceberg_lakekeeper_net
+    ports:
+      - "4213:4213"
+    depends_on:
+      - lakekeeper
+
 networks:
   iceberg_lakekeeper_net:
     name: iceberg_lakekeeper_net
