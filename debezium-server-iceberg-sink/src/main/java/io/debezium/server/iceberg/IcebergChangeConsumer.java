@@ -279,10 +279,10 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
       if (sampleEvent.isSchemaChangeEvent()) {
         LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.iceberg().writeFormat(), tableFormatVersion);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), null, config.iceberg().writeFormat(), tableFormatVersion);
       }
 
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.iceberg().writeFormat(), tableFormatVersion);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sampleEvent.sortOrder(schema), config.iceberg().writeFormat(), tableFormatVersion);
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }

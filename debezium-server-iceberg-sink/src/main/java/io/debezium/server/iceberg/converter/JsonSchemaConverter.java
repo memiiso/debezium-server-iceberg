@@ -7,6 +7,7 @@ import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
@@ -155,6 +156,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     return null;
   }
 
+  private JsonNode keySchemaNode() {
+    if (!config.iceberg().createIdentifierFields()) return null;
+    if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
+      ObjectNode nestedKeySchema = mapper.createObjectNode();
+      nestedKeySchema.put("type", "struct");
+      nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
+      return nestedKeySchema;
+    }
+    return keySchema;
+  }
 
   /***
    * Converts debezium event fields to iceberg equivalent and returns list of iceberg fields.
@@ -188,17 +199,9 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    final JsonNode keySchemaNode;
+    final JsonNode keySchemaNode = this.keySchemaNode();
     if (!config.iceberg().createIdentifierFields()) {
       LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
-      keySchemaNode = null;
-    } else if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
-      ObjectNode nestedKeySchema = mapper.createObjectNode();
-      nestedKeySchema.put("type", "struct");
-      nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
-      keySchemaNode = nestedKeySchema;
-    } else {
-      keySchemaNode = keySchema;
     }
 
     icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
@@ -220,6 +223,19 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     // @TODO validate key fields are correctly set!?
     return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
 
+  }
+
+  @Override
+  public SortOrder sortOrder(Schema schema) {
+    SortOrder.Builder sob = SortOrder.builderFor(schema);
+    List<String> excludedColumns = config.iceberg().excludedColumns().orElse(Collections.emptyList());
+    for (JsonNode field : getNodeFieldsArray(keySchemaNode())) {
+      if (!field.has("field")) continue;
+      String fieldName = field.get("field").textValue();
+      if (excludedColumns.contains(fieldName)) continue;
+      sob = sob.asc(fieldName);
+    }
+    return sob.build();
   }
 
   private Type.PrimitiveType icebergPrimitiveField(String fieldName, String fieldType, String fieldTypeName, JsonNode fieldSchema) {

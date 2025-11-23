@@ -15,6 +15,7 @@ import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.types.Type;
@@ -159,6 +160,11 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   @Override
   public Schema icebergSchema() {
     return this.schemaConverter.icebergSchema();
+  }
+
+  @Override
+  public SortOrder sortOrder(Schema schema) {
+    return this.schemaConverter.sortOrder(schema);
   }
 
   @Override

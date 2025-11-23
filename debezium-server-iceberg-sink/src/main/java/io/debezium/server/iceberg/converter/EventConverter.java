@@ -4,6 +4,7 @@ import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 
 /**
  * Interface for converting CDC events from various formats (e.g., Json, Debezium Connect format)
@@ -82,6 +83,14 @@ public interface EventConverter {
    */
   @Nullable
   Schema icebergSchema();
+
+  /**
+   * Gets the Iceberg {@link SortOrder} that corresponds to the data key of this specific event.
+   * @param schema The Iceberg schema for {@link SortOrder.Builder}.
+   * @return The Iceberg {@link SortOrder}.
+   */
+  @Nullable
+  SortOrder sortOrder(Schema schema);
 
   /**
    * Gets the destination identifier (e.g., logical table name) for this event.

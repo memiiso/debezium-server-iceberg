@@ -3,6 +3,7 @@ package io.debezium.server.iceberg.converter;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Field;
@@ -166,6 +167,19 @@ public class StructSchemaConverter implements SchemaConverter {
     }
   }
 
+  private Schema keyFieldSchema() {
+    if (!config.iceberg().createIdentifierFields()) return null;
+    if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
+      // For unflattened events, the key fields are expected inside the 'before' or 'after' struct.
+      // However, determining PKs reliably this way is problematic. JsonSchemaConverter throws an exception later.
+      // We'll get the key names but the check below will likely fail if PKs are found.
+      LOGGER.warn("Processing unflattened event schema. Identifier field determination might be unreliable.");
+      Field nestedAfterField = equivalentKeyField(keySchema, "after");
+      return nestedAfterField == null ? null : nestedAfterField.schema();
+    }
+    return keySchema;
+  }
+
   /**
    * Converts the fields of a Connect schema to Iceberg fields.
    */
@@ -217,21 +231,10 @@ public class StructSchemaConverter implements SchemaConverter {
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    Schema keyFieldSchema = null;
+    Schema keyFieldSchema = this.keyFieldSchema();
 
     if (!config.iceberg().createIdentifierFields()) {
       LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
-    } else if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
-      // For unflattened events, the key fields are expected inside the 'before' or 'after' struct.
-      // However, determining PKs reliably this way is problematic. JsonSchemaConverter throws an exception later.
-      // We'll get the key names but the check below will likely fail if PKs are found.
-      LOGGER.warn("Processing unflattened event schema. Identifier field determination might be unreliable.");
-      Field nestedAfterField = equivalentKeyField(keySchema, "after");
-      if (nestedAfterField != null) {
-        keyFieldSchema = nestedAfterField.schema();
-      }
-    } else {
-      keyFieldSchema = keySchema;
     }
 
     icebergSchemaFields(valueSchema, keyFieldSchema, schemaData);
@@ -252,6 +255,17 @@ public class StructSchemaConverter implements SchemaConverter {
 
     // @TODO validate key fields are correctly set!?
     return new org.apache.iceberg.Schema(schemaData.fields(), schemaData.identifierFieldIds());
+  }
+
+  @Override
+  public SortOrder sortOrder(org.apache.iceberg.Schema schema) {
+    SortOrder.Builder sob = SortOrder.builderFor(schema);
+    List<String> excludedColumns = config.iceberg().excludedColumns().orElse(Collections.emptyList());
+    for (Field field : getSchemaFields(keyFieldSchema())) {
+      if (excludedColumns.contains(field.name())) continue;
+      sob = sob.asc(field.name());
+    }
+    return sob.build();
   }
 
   /**
