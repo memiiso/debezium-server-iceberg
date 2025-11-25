@@ -178,7 +178,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
 
-      if (tableEvents.getKey().startsWith(config.debezium().topicHeartbeatPrefix()) && config.debezium().topicHeartbeatSkipConsuming()) {
+      if (config.debezium().isHeartbeatTopic(tableEvents.getKey()) && config.debezium().topicHeartbeatSkipConsuming()) {
         continue;
       }
 
@@ -199,7 +199,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     List<Callable<Void>> tasks = new ArrayList<>();
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
 
-      if (tableEvents.getKey().startsWith(config.debezium().topicHeartbeatPrefix()) && config.debezium().topicHeartbeatSkipConsuming()) {
+      if (config.debezium().isHeartbeatTopic(tableEvents.getKey()) && config.debezium().topicHeartbeatSkipConsuming()) {
         continue;
       }
 
