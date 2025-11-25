@@ -150,4 +150,8 @@ public interface DebeziumConfig {
 
     return false;
   }
+
+  default boolean isHeartbeatTopic(String destination) {
+    return destination.startsWith(this.topicHeartbeatPrefix());
+  }
 }
