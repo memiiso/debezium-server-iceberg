@@ -94,7 +94,7 @@ public interface DebeziumConfig {
   String topicHeartbeatPrefix();
 
   @WithName("debezium.source.topic.heartbeat.skip-consuming")
-  @WithDefault("ture")
+  @WithDefault("true")
   boolean topicHeartbeatSkipConsuming();
 
   default boolean isIsoStringTemporalMode() {
