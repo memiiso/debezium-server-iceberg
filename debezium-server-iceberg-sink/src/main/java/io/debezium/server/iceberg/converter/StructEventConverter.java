@@ -164,6 +164,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
 
   @Override
   public SortOrder sortOrder(Schema schema) {
+    if (config.debezium().isHeartbeatTopic(destination)) {
+      return SortOrder.unsorted();
+    }
     return this.schemaConverter.sortOrder(schema);
   }
 

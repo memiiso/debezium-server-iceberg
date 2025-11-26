@@ -171,6 +171,9 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
 
   @Override
   public SortOrder sortOrder(Schema schema) {
+    if (config.debezium().isHeartbeatTopic(destination)) {
+      return SortOrder.unsorted();
+    }
     return schemaConverter().sortOrder(schema);
   }
 
