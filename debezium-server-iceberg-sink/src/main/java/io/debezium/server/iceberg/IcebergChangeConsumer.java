@@ -296,7 +296,6 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
         sortOrder = sampleEvent.sortOrder(schema);
       }
 
-
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
