@@ -27,21 +27,26 @@ import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.relocated.com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -51,6 +56,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Implementation of the consumer that delivers the messages to iceberg tables.
@@ -265,28 +272,38 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
   private Table createIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
-
     if (!config.debezium().eventSchemaEnabled() && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
       throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
     try {
       final Schema schema = sampleEvent.icebergSchema();
+      final List<String> partitionByOptions = config.iceberg().partitionByForTable(sampleEvent.destination());
+      PartitionSpec spec;
+      try {
+        spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
+      } catch (Exception e) {
+        spec = PartitionSpec.unpartitioned();
+        LOGGER.error("Unable to create partition spec {}, table {} will be unpartitioned", partitionByOptions, sampleEvent.destination(), e);
+      }
+
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
       // Check if the message is a schema change event (DDL statement).
       // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
       // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+
       if (sampleEvent.isSchemaChangeEvent()) {
         LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), config.iceberg().writeFormat(), tableFormatVersion);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), spec, config.iceberg().writeFormat(), tableFormatVersion);
       }
 
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, config.iceberg().writeFormat(), tableFormatVersion);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, spec, config.iceberg().writeFormat(), tableFormatVersion);
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }
   }
+
 
   /**
    * periodically log number of events consumed
