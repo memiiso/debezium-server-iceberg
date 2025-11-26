@@ -168,7 +168,6 @@ public class StructSchemaConverter implements SchemaConverter {
   }
 
   private Schema keyFieldSchema() {
-    if (!config.iceberg().createIdentifierFields()) return null;
     if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
       // For unflattened events, the key fields are expected inside the 'before' or 'after' struct.
       // However, determining PKs reliably this way is problematic. JsonSchemaConverter throws an exception later.
@@ -231,11 +230,7 @@ public class StructSchemaConverter implements SchemaConverter {
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    Schema keyFieldSchema = this.keyFieldSchema();
-
-    if (!config.iceberg().createIdentifierFields()) {
-      LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
-    }
+    final Schema keyFieldSchema = this.keyFieldSchema();
 
     icebergSchemaFields(valueSchema, keyFieldSchema, schemaData);
 
@@ -251,6 +246,15 @@ public class StructSchemaConverter implements SchemaConverter {
 
     if (schemaData.fields().isEmpty()) {
       throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
+    }
+
+    if (!config.iceberg().createIdentifierFields()) {
+      LOGGER.warn("Creating identifier fields is disabled, creating schema without identifier fields!");
+      return new org.apache.iceberg.Schema(schemaData.fields());
+    }
+    if (config.iceberg().nestedAsVariant()) {
+      LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
+      return new org.apache.iceberg.Schema(schemaData.fields());
     }
 
     // @TODO validate key fields are correctly set!?

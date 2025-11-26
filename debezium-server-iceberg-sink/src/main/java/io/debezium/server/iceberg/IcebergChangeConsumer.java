@@ -30,6 +30,7 @@ import jakarta.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -279,7 +280,7 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
       if (sampleEvent.isSchemaChangeEvent()) {
         LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), null, config.iceberg().writeFormat(), tableFormatVersion);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), SortOrder.unsorted(), config.iceberg().writeFormat(), tableFormatVersion);
       }
 
       return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sampleEvent.sortOrder(schema), config.iceberg().writeFormat(), tableFormatVersion);

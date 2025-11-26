@@ -157,7 +157,6 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   }
 
   private JsonNode keySchemaNode() {
-    if (!config.iceberg().createIdentifierFields()) return null;
     if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
       ObjectNode nestedKeySchema = mapper.createObjectNode();
       nestedKeySchema.put("type", "struct");
@@ -195,14 +194,11 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   public Schema icebergSchema() {
 
     if (this.valueSchema.isNull()) {
-      throw new RuntimeException("Failed to get schema from debezium event, event schema is null");
+      throw new DebeziumException("Failed to get schema from debezium event, event schema is null");
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
     final JsonNode keySchemaNode = this.keySchemaNode();
-    if (!config.iceberg().createIdentifierFields()) {
-      LOGGER.warn("Creating identifier fields is disabled, creating table without identifier fields!");
-    }
 
     icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
 
@@ -220,9 +216,17 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
       throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
     }
 
+    if (!config.iceberg().createIdentifierFields()) {
+      LOGGER.warn("Creating identifier fields is disabled, creating schema without identifier fields!");
+      return new Schema(schemaData.fields());
+    }
+    if (config.iceberg().nestedAsVariant()) {
+      LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
+      return new Schema(schemaData.fields());
+    }
+
     // @TODO validate key fields are correctly set!?
     return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
-
   }
 
   @Override
