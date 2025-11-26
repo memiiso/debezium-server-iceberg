@@ -82,7 +82,11 @@ public interface EventConverter {
    * @return The Iceberg schema for the event's data, or null.
    */
   @Nullable
-  Schema icebergSchema();
+  Schema icebergSchema(boolean withIdentifierFields);
+
+  default Schema icebergSchema() {
+    return icebergSchema(true);
+  }
 
   /**
    * Gets the Iceberg {@link SortOrder} that corresponds to the data key of this specific event.

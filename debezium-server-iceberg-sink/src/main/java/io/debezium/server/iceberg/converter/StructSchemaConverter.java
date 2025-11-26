@@ -63,9 +63,9 @@ public class StructSchemaConverter implements SchemaConverter {
    * Handles nested structures (Struct, Map, Array) recursively.
    * Mirrors JsonSchemaConverter.debeziumFieldToIcebergField(JsonNode, String, IcebergSchemaInfo, JsonNode).
    *
-   * @param connectField The Kafka Connect Field to convert.
-   * @param schemaData   The helper object tracking Iceberg schema construction state.
-   * @param connectKeyField  Equivalent field in the Key schema
+   * @param connectField    The Kafka Connect Field to convert.
+   * @param schemaData      The helper object tracking Iceberg schema construction state.
+   * @param connectKeyField Equivalent field in the Key schema
    */
   private void debeziumFieldToIcebergField(Field connectField, IcebergSchemaInfo schemaData, Field connectKeyField) {
     final Schema connectSchema = connectField.schema();
@@ -186,12 +186,12 @@ public class StructSchemaConverter implements SchemaConverter {
     LOGGER.debug("Converting Connect schema fields to Iceberg fields for schema: {}", valueSchema);
 
     List<String> excludedColumns = this.config.iceberg()
-            .excludedColumns()
-            .orElse(Collections.emptyList());
+        .excludedColumns()
+        .orElse(Collections.emptyList());
 
     for (Field field : getSchemaFields(valueSchema)) {
       String fieldName = field.name();
-      if(excludedColumns.contains(fieldName)) {
+      if (excludedColumns.contains(fieldName)) {
         continue;
       }
       // convert each field to iceberg equivalent field
@@ -224,7 +224,7 @@ public class StructSchemaConverter implements SchemaConverter {
    * @return The corresponding Iceberg Schema.
    */
   @Override
-  public org.apache.iceberg.Schema icebergSchema() {
+  public org.apache.iceberg.Schema icebergSchema(boolean withIdentifierFields) {
     if (this.valueSchema == null || this.valueSchema.type() != Schema.Type.STRUCT) {
       throw new DebeziumException("Failed to get schema from Debezium event, value schema is null or not a Struct: " + valueSchema);
     }
@@ -234,31 +234,25 @@ public class StructSchemaConverter implements SchemaConverter {
 
     icebergSchemaFields(valueSchema, keyFieldSchema, schemaData);
 
-    if (!config.debezium().isEventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
-      // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
-      // due to inconsistency in the after and before fields.
-      // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
-      // This inconsistency prevents using either field as a reliable key.
-      throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
-          "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
-          " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
-    }
-
     if (schemaData.fields().isEmpty()) {
       throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
     }
 
-    if (!config.iceberg().createIdentifierFields()) {
-      LOGGER.warn("Creating identifier fields is disabled, creating schema without identifier fields!");
+    if (withIdentifierFields) {
+      if (!config.debezium().isEventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
+        // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
+        // due to inconsistency in the after and before fields.
+        // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
+        // This inconsistency prevents using either field as a reliable key.
+        throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
+            "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+            " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
+      }
+      // @TODO validate key fields are correctly set!?
+      return new org.apache.iceberg.Schema(schemaData.fields(), schemaData.identifierFieldIds());
+    } else {
       return new org.apache.iceberg.Schema(schemaData.fields());
     }
-    if (config.iceberg().nestedAsVariant()) {
-      LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
-      return new org.apache.iceberg.Schema(schemaData.fields());
-    }
-
-    // @TODO validate key fields are correctly set!?
-    return new org.apache.iceberg.Schema(schemaData.fields(), schemaData.identifierFieldIds());
   }
 
   @Override

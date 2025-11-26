@@ -271,19 +271,33 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
     try {
-      final Schema schema = sampleEvent.icebergSchema();
+      final Schema schema;
+      final SortOrder sortOrder;
+      if (!config.iceberg().createIdentifierFields()) {
+        LOGGER.warn("Creating identifier fields is disabled, creating schema without identifier fields!");
+        schema = sampleEvent.icebergSchema(false);
+        sortOrder = SortOrder.unsorted();
+      } else if (config.iceberg().nestedAsVariant()) {
+        LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
+        schema = sampleEvent.icebergSchema(false);
+        sortOrder = SortOrder.unsorted();
+      } else if (sampleEvent.isSchemaChangeEvent()) {
+        // Check if the message is a schema change event (DDL statement).
+        // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
+        // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+        LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
+        schema = sampleEvent.icebergSchema(false);
+        sortOrder = SortOrder.unsorted();
+      } else {
+        schema = sampleEvent.icebergSchema(true);
+        sortOrder = sampleEvent.sortOrder(schema);
+      }
+
+
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
-      // Check if the message is a schema change event (DDL statement).
-      // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
-      // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
-      if (sampleEvent.isSchemaChangeEvent()) {
-        LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
-        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, new Schema(schema.columns()), SortOrder.unsorted(), config.iceberg().writeFormat(), tableFormatVersion);
-      }
-
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sampleEvent.sortOrder(schema), config.iceberg().writeFormat(), tableFormatVersion);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sortOrder, config.iceberg().writeFormat(), tableFormatVersion);
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }

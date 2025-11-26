@@ -10,7 +10,11 @@ public interface SchemaConverter {
   @Override
   boolean equals(Object o);
 
-  Schema icebergSchema() ;
+  Schema icebergSchema(boolean withIdentifierFields);
+
+  default Schema icebergSchema() {
+    return icebergSchema(true);
+  }
 
   SortOrder sortOrder(Schema schema);
 }

@@ -158,18 +158,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
    * @return The Iceberg schema.
    */
   @Override
-  public Schema icebergSchema() {
-    return this.schemaConverter.icebergSchema();
+  public Schema icebergSchema(boolean withIdentifierFields) {
+    return this.schemaConverter.icebergSchema(withIdentifierFields);
   }
 
   @Override
   public SortOrder sortOrder(Schema schema) {
-    if (config.debezium().isHeartbeatTopic(destination())) {
-      return SortOrder.unsorted();
-    }
-    if (config.iceberg().nestedAsVariant()) {
-      return SortOrder.unsorted();
-    }
     return schemaConverter().sortOrder(schema);
   }
 

@@ -191,7 +191,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   }
 
   @Override
-  public Schema icebergSchema() {
+  public Schema icebergSchema(boolean withIdentifierFields) {
 
     if (this.valueSchema.isNull()) {
       throw new DebeziumException("Failed to get schema from debezium event, event schema is null");
@@ -202,31 +202,25 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
 
     icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
 
-    if (!config.debezium().isEventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
-      // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
-      // due to inconsistency in the after and before fields.
-      // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
-      // This inconsistency prevents using either field as a reliable key.
-      throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
-          "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
-          " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
-    }
-
     if (schemaData.fields().isEmpty()) {
       throw new RuntimeException("Failed to get schema from debezium event, event schema has no fields!");
     }
 
-    if (!config.iceberg().createIdentifierFields()) {
-      LOGGER.warn("Creating identifier fields is disabled, creating schema without identifier fields!");
+    if (withIdentifierFields) {
+      if (!config.debezium().isEventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
+        // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped events, Without event flattening)
+        // due to inconsistency in the after and before fields.
+        // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
+        // This inconsistency prevents using either field as a reliable key.
+        throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
+            "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+            " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
+      }
+      // @TODO validate key fields are correctly set!?
+      return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
+    } else {
       return new Schema(schemaData.fields());
     }
-    if (config.iceberg().nestedAsVariant()) {
-      LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
-      return new Schema(schemaData.fields());
-    }
-
-    // @TODO validate key fields are correctly set!?
-    return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
   }
 
   @Override
