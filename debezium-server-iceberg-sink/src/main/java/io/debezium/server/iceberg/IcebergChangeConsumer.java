@@ -285,7 +285,10 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
         // Check if the message is a schema change event (DDL statement).
         // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
         // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
-        LOGGER.warn("Schema change topic detected. Creating Iceberg schema without identifier fields for append-only mode.");
+        LOGGER.warn("Creating schema change topic/table without identifier fields for append-only mode.");
+        schema = sampleEvent.icebergSchema(false);
+        sortOrder = SortOrder.unsorted();
+      } else if (config.debezium().isHeartbeatTopic(sampleEvent.destination())) {
         schema = sampleEvent.icebergSchema(false);
         sortOrder = SortOrder.unsorted();
       } else {
