@@ -19,6 +19,7 @@ import io.debezium.time.IsoDate;
 import io.debezium.time.IsoTime;
 import io.debezium.time.ZonedTime;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
@@ -164,8 +165,13 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
    * @return The Iceberg schema.
    */
   @Override
-  public Schema icebergSchema() {
-    return schemaConverter().icebergSchema();
+  public Schema icebergSchema(boolean withIdentifierFields) {
+    return schemaConverter().icebergSchema(withIdentifierFields);
+  }
+
+  @Override
+  public SortOrder sortOrder(Schema schema) {
+    return schemaConverter().sortOrder(schema);
   }
 
   @Override

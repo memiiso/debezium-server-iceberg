@@ -96,8 +96,8 @@ public class IcebergUtil {
     return icebergCatalog.createTable(tableIdentifier, schema);
   }
 
-  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier,
-                                         Schema schema, String writeFormat, String formatVersion) {
+  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema,
+                                         SortOrder sortOrder, String writeFormat, String formatVersion) {
 
     LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
         schema.identifierFieldNames());
@@ -106,17 +106,8 @@ public class IcebergUtil {
     return icebergCatalog.buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, formatVersion)
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
-        .withSortOrder(IcebergUtil.getIdentifierFieldsAsSortOrder(schema))
+        .withSortOrder(sortOrder)
         .create();
-  }
-
-  private static SortOrder getIdentifierFieldsAsSortOrder(Schema schema) {
-    SortOrder.Builder sob = SortOrder.builderFor(schema);
-    for (String fieldName : schema.identifierFieldNames()) {
-      sob = sob.asc(fieldName);
-    }
-
-    return sob.build();
   }
 
   public static Optional<Table> loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId) {
