@@ -26,7 +26,7 @@ jobs:
       DEBEZIUM_FORMAT_KEY: json
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
@@ -46,7 +46,7 @@ jobs:
       DEBEZIUM_FORMAT_KEY: connect
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Java
         uses: actions/setup-java@v5
