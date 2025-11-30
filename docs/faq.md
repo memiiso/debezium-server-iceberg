@@ -30,3 +30,15 @@
     - **In `application.properties`**: Use the `debezium.sink.iceberg.fs.s3a.access.key` and `debezium.sink.iceberg.fs.s3a.secret.key` properties.
       - **As environment variables**: Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
       - **Using Hadoop's configuration**: Set up the `HADOOP_HOME` environment variable and add S3A configuration to `core-site.xml`. More information can be found [here](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html#Authenticating_with_S3).
+
+
+
+???+ question "How optimize snapshot process for latge tables, so it doenst take too long?"
+    TODO sql override stting incremental_field > current_date - 1o days  
+
+???+ question "How to start processing from scract including snapshot?"
+
+delete binlog storage table. 
+
+
+    
