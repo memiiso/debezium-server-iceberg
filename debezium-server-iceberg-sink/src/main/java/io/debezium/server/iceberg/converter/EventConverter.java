@@ -58,6 +58,12 @@ public interface EventConverter {
   Operation cdcOpValue();
 
   /**
+   * True if a delete operation was found before this event in the same batch
+   */
+  boolean isRecreated();
+  void setRecreated(boolean recreated);
+
+  /**
    * Provides a converter capable of transforming the event's schema representation
    * into an Iceberg {@link Schema}.
    *

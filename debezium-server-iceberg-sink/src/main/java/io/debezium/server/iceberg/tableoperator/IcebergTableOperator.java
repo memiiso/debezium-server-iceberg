@@ -52,6 +52,7 @@ public class IcebergTableOperator {
   protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
     ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
+    boolean cdcKeepLatest = config.iceberg().cdcKeepLatest();
 
     events.forEach(e -> {
           if (!e.hasKeyData()) {
@@ -60,13 +61,33 @@ public class IcebergTableOperator {
 
           try {
             // deduplicate using key(PK)
-            deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-              if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
-                return newValue;
-              } else {
-                return oldValue;
+            if (cdcKeepLatest) {
+              EventConverter prev = deduplicatedEvents.get(e.key());
+              if (prev != null) {
+                Long prevTs = prev.cdcSourceTsValue();
+                Long ts = e.cdcSourceTsValue();
+                Operation prevOp = prev.cdcOpValue();
+                Operation op = e.cdcOpValue();
+                if (Long.compare(prevTs, ts) > 0 ||
+                    (prevOp == Operation.INSERT && op == Operation.INSERT) ||
+                    (prevOp == Operation.UPDATE && op == Operation.INSERT) ||
+                    (prevOp == Operation.DELETE && op == Operation.UPDATE) ||
+                    (prevOp == Operation.DELETE && op == Operation.DELETE)
+                ) {
+                  LOGGER.warn("Out of order events for key {} detected: {} {} -> {} {}", e.key(), prevTs, prevOp, ts, op);
+                }
+                e.setRecreated(prev.isRecreated() || prevOp == Operation.DELETE);
               }
-            });
+              deduplicatedEvents.put(e.key(), e);
+            } else {
+              deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+                if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
+                  return newValue;
+                } else {
+                  return oldValue;
+                }
+              });
+            }
           } catch (Exception ex) {
             throw new DebeziumException("Failed to deduplicate events", ex);
           }
