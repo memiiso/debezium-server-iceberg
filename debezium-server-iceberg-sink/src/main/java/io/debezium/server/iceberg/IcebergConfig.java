@@ -29,6 +29,10 @@ public interface IcebergConfig {
   @WithDefault("__source_ts_ns")
   String cdcSourceTsField();
 
+  @WithName("debezium.sink.iceberg.upsert-keep-latest")
+  @WithDefault("false")
+  boolean cdcKeepLatest();
+
   @WithName("debezium.sink.iceberg.upsert")
   @WithDefault("false")
   boolean upsert();

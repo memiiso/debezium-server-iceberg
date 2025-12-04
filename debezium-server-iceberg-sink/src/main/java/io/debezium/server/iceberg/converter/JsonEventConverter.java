@@ -54,6 +54,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
+  private boolean recreated = false;
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
@@ -134,6 +135,15 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   }
 
   @Override
+  public boolean isRecreated() {
+    return recreated;
+  }
+  @Override
+  public void setRecreated(boolean recreated) {
+    this.recreated = recreated;
+  }
+
+  @Override
   public JsonSchemaConverter schemaConverter() {
     try {
       return new JsonSchemaConverter(
@@ -185,14 +195,14 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convert(schema.asStruct(), value());
-    return new RecordWrapper(row, Operation.INSERT);
+    return new RecordWrapper(row, Operation.INSERT, false);
   }
 
   @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convert(schema.asStruct(), value());
     Operation op = cdcOpValue();
-    return new RecordWrapper(row, op);
+    return new RecordWrapper(row, op, recreated);
   }
 
 

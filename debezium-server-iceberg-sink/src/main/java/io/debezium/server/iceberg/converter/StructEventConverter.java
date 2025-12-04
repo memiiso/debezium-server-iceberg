@@ -49,6 +49,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   private final StructSchemaConverter schemaConverter;
   private static final Serde<Struct> eventSerde = DebeziumSerdes.payloadJson(Struct.class);
   private static final Serializer<Struct> structSerializer = eventSerde.serializer();
+  private boolean recreated = false;
 
   public StructEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     super(config);
@@ -130,6 +131,15 @@ public class StructEventConverter extends AbstractEventConverter implements Even
           throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
   }
+ 
+  @Override
+  public boolean isRecreated() {
+    return recreated;
+  }
+  @Override
+  public void setRecreated(boolean recreated) {
+    this.recreated = recreated;
+  }
 
   @Override
   public StructSchemaConverter schemaConverter() {
@@ -178,14 +188,14 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
-    return new RecordWrapper(row, Operation.INSERT);
+    return new RecordWrapper(row, Operation.INSERT, false);
   }
 
   @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
     Operation op = cdcOpValue();
-    return new RecordWrapper(row, op);
+    return new RecordWrapper(row, op, recreated);
   }
 
   /**
