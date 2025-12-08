@@ -13,7 +13,7 @@ jobs:
     if: github.repository_owner == 'memiiso'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/stale@v10.1.0
+      - uses: actions/stale@v10.1.1
         with:
           # stale issues
           stale-issue-label: 'stale'
