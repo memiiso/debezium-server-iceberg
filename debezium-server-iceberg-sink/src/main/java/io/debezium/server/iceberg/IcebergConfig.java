@@ -99,4 +99,7 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
+  @WithName("debezium.sink.iceberg.partition-spec")
+  Optional<String> partitionSpec();
+
 }

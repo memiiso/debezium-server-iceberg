@@ -13,6 +13,7 @@ import io.debezium.DebeziumException;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
@@ -110,6 +111,21 @@ public class IcebergUtil {
         .create();
   }
 
+  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema,
+                                         SortOrder sortOrder, PartitionSpec partitionSpec, String writeFormat, String formatVersion) {
+
+    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}\npartitionSpec:{}", tableIdentifier, schema,
+        schema.identifierFieldNames(), partitionSpec);
+    createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
+
+    return icebergCatalog.buildTable(tableIdentifier, schema)
+        .withProperty(FORMAT_VERSION, formatVersion)
+        .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
+        .withSortOrder(sortOrder)
+        .withPartitionSpec(partitionSpec)
+        .create();
+  }
+
   public static Optional<Table> loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId) {
     if (icebergCatalog.tableExists(tableId)){
       Table table = icebergCatalog.loadTable(tableId);
@@ -156,6 +172,82 @@ public class IcebergUtil {
 
   public static int partitionId() {
     return Integer.parseInt(dtFormater.format(Instant.now()));
+  }
+
+  /**
+   * Builds a PartitionSpec from a string like "day(__source_ts_ms)" or "hour(timestamp),bucket(user_id,16)"
+   *
+   * @param schema          the table schema
+   * @param partitionSpecStr partition spec string
+   * @return PartitionSpec object
+   */
+  public static PartitionSpec buildPartitionSpec(Schema schema, String partitionSpecStr) {
+    if (partitionSpecStr == null || partitionSpecStr.trim().isEmpty()) {
+      return PartitionSpec.unpartitioned();
+    }
+
+    PartitionSpec.Builder builder = PartitionSpec.builderFor(schema);
+
+    // Parse comma-separated partition transforms: "day(ts),bucket(id,16)"
+    String[] transforms = partitionSpecStr.split(",");
+    for (String transform : transforms) {
+      transform = transform.trim();
+
+      // Extract transform function and column name
+      // Formats: "day(column)", "bucket(column, N)", "truncate(column, width)", "identity(column)"
+      int openParen = transform.indexOf('(');
+      int closeParen = transform.lastIndexOf(')');
+
+      if (openParen == -1 || closeParen == -1) {
+        throw new DebeziumException("Invalid partition spec format: " + transform +
+            ". Expected format: transform(column) or transform(column, param)");
+      }
+
+      String transformType = transform.substring(0, openParen).trim().toLowerCase(Locale.ENGLISH);
+      String params = transform.substring(openParen + 1, closeParen).trim();
+
+      // Split parameters
+      String[] paramParts = params.split(",");
+      String columnName = paramParts[0].trim();
+
+      // Apply transform based on type
+      switch (transformType) {
+        case "identity":
+          builder.identity(columnName);
+          break;
+        case "year":
+          builder.year(columnName);
+          break;
+        case "month":
+          builder.month(columnName);
+          break;
+        case "day":
+          builder.day(columnName);
+          break;
+        case "hour":
+          builder.hour(columnName);
+          break;
+        case "bucket":
+          if (paramParts.length < 2) {
+            throw new DebeziumException("bucket() requires number of buckets: bucket(column, N)");
+          }
+          int numBuckets = Integer.parseInt(paramParts[1].trim());
+          builder.bucket(columnName, numBuckets);
+          break;
+        case "truncate":
+          if (paramParts.length < 2) {
+            throw new DebeziumException("truncate() requires width: truncate(column, width)");
+          }
+          int width = Integer.parseInt(paramParts[1].trim());
+          builder.truncate(columnName, width);
+          break;
+        default:
+          throw new DebeziumException("Unsupported partition transform: " + transformType +
+              ". Supported: identity, year, month, day, hour, bucket, truncate");
+      }
+    }
+
+    return builder.build();
   }
 
 }
