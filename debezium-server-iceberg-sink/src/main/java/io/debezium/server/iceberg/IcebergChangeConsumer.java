@@ -299,7 +299,16 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       // for backward compatibility, to be removed and set to "3" with one of the next releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sortOrder, config.iceberg().writeFormat(), tableFormatVersion);
+
+      // Check if partition spec is configured
+      if (config.iceberg().partitionSpec().isPresent()) {
+        String partitionSpecStr = config.iceberg().partitionSpec().get();
+        LOGGER.info("Creating table with partition spec: {}", partitionSpecStr);
+        org.apache.iceberg.PartitionSpec partitionSpec = IcebergUtil.buildPartitionSpec(schema, partitionSpecStr);
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sortOrder, partitionSpec, config.iceberg().writeFormat(), tableFormatVersion);
+      } else {
+        return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sortOrder, config.iceberg().writeFormat(), tableFormatVersion);
+      }
     } catch (Exception e) {
       throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }
