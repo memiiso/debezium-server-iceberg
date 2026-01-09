@@ -29,6 +29,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
@@ -133,23 +134,21 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   }
 
   @Override
-  public void handleBatch(List<EmbeddedEngineChangeEvent> records, DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
+  public void handleBatch(List<EmbeddedEngineChangeEvent> records,
+                          DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
       throws InterruptedException {
     Instant start = Instant.now();
 
-    //group events by destination (per iceberg table)
-    Map<String, List<EventConverter>> result =
-        records.stream()
-            .map((EmbeddedEngineChangeEvent e)
-                    -> {
-                  return switch (keyValueChangeEventFormat) {
-                    case "json" -> new JsonEventConverter(e, config);
-                    case "connect" -> new StructEventConverter(e, config);
-                    default -> throw new DebeziumException("Unsupported format:" + keyValueChangeEventFormat);
-                  };
-                }
-            )
-            .collect(Collectors.groupingBy(EventConverter::destination));
+    // group events by destination (per iceberg table)
+    Map<String, List<EventConverter>> result = records.stream()
+        .map((EmbeddedEngineChangeEvent e) -> {
+          return switch (keyValueChangeEventFormat) {
+            case "json" -> new JsonEventConverter(e, config);
+            case "connect" -> new StructEventConverter(e, config);
+            default -> throw new DebeziumException("Unsupported format:" + keyValueChangeEventFormat);
+          };
+        })
+        .collect(Collectors.groupingBy(EventConverter::destination));
 
     // consume list of events for each destination table
     if (numConcurrentUploads > 1) {
@@ -158,7 +157,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       this.processTablesSequentially(result);
     }
 
-    // workaround! somehow offset is not saved to file unless we call committer.markProcessed per event
+    // workaround! somehow offset is not saved to file unless we call
+    // committer.markProcessed per event
     // even it's should be saved to file periodically
     for (EmbeddedEngineChangeEvent record : records) {
       LOGGER.trace("Processed event '{}'", record);
@@ -174,7 +174,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   /**
    * Processes events for each destination table sequentially in a single thread.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of events for that table.
+   * @param eventsByDestination A map where keys are destination table names and
+   *                            values are lists of events for that table.
    */
   private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
@@ -188,13 +189,14 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
   }
 
-
   // In IcebergChangeConsumer.java
 
   /**
-   * Processes events for each destination table in parallel using a virtual thread pool.
+   * Processes events for each destination table in parallel using a virtual
+   * thread pool.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of events for that table.
+   * @param eventsByDestination A map where keys are destination table names and
+   *                            values are lists of events for that table.
    */
   private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination) {
     List<Callable<Void>> tasks = new ArrayList<>();
@@ -207,11 +209,13 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
       tasks.add(() -> {
         try {
           // Acquire a permit from the Semaphore to enforce the concurrency limit.
-          LOGGER.trace("Task for destination '{}' waiting for permit. Available: {}", tableEvents.getKey(), concurrencyLimiter.availablePermits());
+          LOGGER.trace("Task for destination '{}' waiting for permit. Available: {}", tableEvents.getKey(),
+              concurrencyLimiter.availablePermits());
           concurrencyLimiter.acquire();
           LOGGER.debug("Task for destination '{}' acquired permit. Starting processing.", tableEvents.getKey());
 
-          Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+          Table icebergTable = this.loadIcebergTable(mapDestination(tableEvents.getKey()),
+              tableEvents.getValue().get(0));
           icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
           return null; // Callable must return a value
         } catch (InterruptedException e) {
@@ -225,7 +229,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
         } finally {
           // Always release the permit, even if an exception occurred.
           concurrencyLimiter.release();
-          LOGGER.trace("Task for destination '{}' released permit. Available: {}", tableEvents.getKey(), concurrencyLimiter.availablePermits());
+          LOGGER.trace("Task for destination '{}' released permit. Available: {}", tableEvents.getKey(),
+              concurrencyLimiter.availablePermits());
         }
       });
     }
@@ -255,20 +260,23 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
     }
   }
 
-
   /**
    * @param tableId     iceberg table identifier
-   * @param sampleEvent sample debezium event. event schema used to create iceberg table when table not found
-   * @return iceberg table, throws RuntimeException when table not found, and it's not possible to create it
+   * @param sampleEvent sample debezium event. event schema used to create iceberg
+   *                    table when table not found
+   * @return iceberg table, throws RuntimeException when table not found, and it's
+   * not possible to create it
    */
   public Table loadIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
-    return IcebergUtil.loadIcebergTable(icebergCatalog, tableId).orElseGet(() -> this.createIcebergTable(tableId, sampleEvent));
+    return IcebergUtil.loadIcebergTable(icebergCatalog, tableId)
+        .orElseGet(() -> this.createIcebergTable(tableId, sampleEvent));
   }
 
   private Table createIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
-
-    if (!config.debezium().eventSchemaEnabled() && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
-      throw new RuntimeException("Table '" + tableId + "' not found! " + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
+    if (!config.debezium().eventSchemaEnabled()
+        && !Objects.equals(config.debezium().keyValueChangeEventFormat(), "connect")) {
+      throw new RuntimeException("Table '" + tableId + "' not found! "
+          + "Set `debezium.format.value.schemas.enable` to true to create tables automatically!");
     }
     try {
       final Schema schema;
@@ -278,13 +286,16 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
         schema = sampleEvent.icebergSchema(false);
         sortOrder = SortOrder.unsorted();
       } else if (config.iceberg().nestedAsVariant()) {
-        LOGGER.warn("Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
+        LOGGER.warn(
+            "Identifier fields are not supported when data consumed to variant fields, creating schema without identifier fields!");
         schema = sampleEvent.icebergSchema(false);
         sortOrder = SortOrder.unsorted();
       } else if (sampleEvent.isSchemaChangeEvent()) {
         // Check if the message is a schema change event (DDL statement).
-        // Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
-        // "schema change topic" https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
+        // Schema change events are identified by the presence of "ddl", "databaseName",
+        // and "tableChanges" fields.
+        // "schema change topic"
+        // https://debezium.io/documentation/reference/3.0/connectors/mysql.html#mysql-schema-change-topic
         LOGGER.warn("Creating schema change topic/table without identifier fields for append-only mode.");
         schema = sampleEvent.icebergSchema(false);
         sortOrder = SortOrder.unsorted();
@@ -296,12 +307,18 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
         sortOrder = sampleEvent.sortOrder(schema);
       }
 
-      // for backward compatibility, to be removed and set to "3" with one of the next releases
+      final List<String> partitionByOptions = config.iceberg().partitionByForTable(sampleEvent.destination());
+      PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
+
+      // for backward compatibility, to be removed and set to "3" with one of the next
+      // releases
       // Format 3 will be used when variant data type is used
       final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
-      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, sortOrder, config.iceberg().writeFormat(), tableFormatVersion);
+      return IcebergUtil.createIcebergTable(icebergCatalog, tableId, schema, spec, sortOrder,
+          config.iceberg().writeFormat(), tableFormatVersion);
     } catch (Exception e) {
-      throw new DebeziumException("Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
+      throw new DebeziumException(
+          "Failed to create table from debezium event table:" + tableId + " Error:" + e.getMessage(), e);
     }
   }
 
@@ -313,7 +330,8 @@ public class IcebergChangeConsumer implements DebeziumEngine.ChangeConsumer<Embe
   protected void logConsumerProgress(long numUploadedEvents) {
     numConsumedEvents += numUploadedEvents;
     if (logTimer.expired()) {
-      LOGGER.info("Consumed {} records after {}", numConsumedEvents, Strings.duration(clock.currentTimeInMillis() - consumerStart));
+      LOGGER.info("Consumed {} records after {}", numConsumedEvents,
+          Strings.duration(clock.currentTimeInMillis() - consumerStart));
       numConsumedEvents = 0;
       consumerStart = clock.currentTimeInMillis();
       logTimer = Threads.timer(clock, LOG_INTERVAL);

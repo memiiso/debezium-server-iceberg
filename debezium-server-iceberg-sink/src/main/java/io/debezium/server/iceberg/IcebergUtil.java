@@ -13,6 +13,7 @@ import io.debezium.DebeziumException;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
@@ -25,6 +26,7 @@ import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
+import org.apache.iceberg.util.Pair;
 import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,24 +35,27 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
 import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
 import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
-
 
 /**
  * @author Ismail Simsek
  */
 public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
-  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
-
+  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd")
+      .withZone(ZoneOffset.UTC);
+  private static final Pattern TRANSFORM_REGEX = Pattern.compile("(\\w+)\\((.+)\\)");
 
   public static Map<String, String> getConfigSubset(Config config, String prefix) {
     final Map<String, String> ret = new HashMap<>();
@@ -97,21 +102,22 @@ public class IcebergUtil {
   }
 
   public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema,
-                                         SortOrder sortOrder, String writeFormat, String formatVersion) {
+      PartitionSpec partitionSpec, SortOrder sortOrder, String writeFormat, String formatVersion) {
 
-    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}", tableIdentifier, schema,
-        schema.identifierFieldNames());
+    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}\npartitionSpec: {}", tableIdentifier, schema,
+        schema.identifierFieldNames(), partitionSpec);
     createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
 
     return icebergCatalog.buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, formatVersion)
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
         .withSortOrder(sortOrder)
+        .withPartitionSpec(partitionSpec)
         .create();
   }
 
   public static Optional<Table> loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId) {
-    if (icebergCatalog.tableExists(tableId)){
+    if (icebergCatalog.tableExists(tableId)) {
       Table table = icebergCatalog.loadTable(tableId);
       return Optional.of(table);
     }
@@ -147,7 +153,7 @@ public class IcebergUtil {
 
   public static OutputFileFactory getTableOutputFileFactory(Table icebergTable, FileFormat format) {
     return OutputFileFactory.builderFor(icebergTable,
-            IcebergUtil.partitionId(), 1L)
+        IcebergUtil.partitionId(), 1L)
         .defaultSpec(icebergTable.spec())
         .operationId(UUID.randomUUID().toString())
         .format(format)
@@ -156,6 +162,82 @@ public class IcebergUtil {
 
   public static int partitionId() {
     return Integer.parseInt(dtFormater.format(Instant.now()));
+  }
+
+  /**
+   * Creates an Iceberg {@link PartitionSpec} based on the provided schema and
+   * partitioning expressions.
+   *
+   * <p>
+   * The partitioning expressions in the {@code partitionBy} list can be simple
+   * field names (for identity partitioning)
+   * or transform expressions such as {@code year(field)}, {@code month(field)},
+   * {@code day(field)}, {@code hour(field)},
+   * {@code bucket(field, N)}, or {@code truncate(field, N)}.
+   * </p>
+   *
+   * @param schema      the Iceberg schema to partition
+   * @param partitionBy a list of partitioning expressions or field names
+   * @return a {@link PartitionSpec} representing the partitioning strategy
+   * @throws UnsupportedOperationException if an unsupported transform is
+   *                                       specified
+   * @throws IllegalArgumentException      if transform arguments are invalid
+   */
+  public static PartitionSpec createPartitionSpec(
+      org.apache.iceberg.Schema schema, List<String> partitionBy) {
+    if (partitionBy.isEmpty()) {
+      return PartitionSpec.unpartitioned();
+    }
+
+    PartitionSpec.Builder specBuilder = PartitionSpec.builderFor(schema);
+    partitionBy.forEach(
+        partitionField -> {
+          Matcher matcher = TRANSFORM_REGEX.matcher(partitionField);
+          if (matcher.matches()) {
+            String transform = matcher.group(1);
+            switch (transform) {
+              case "year":
+              case "years":
+                specBuilder.year(matcher.group(2));
+                break;
+              case "month":
+              case "months":
+                specBuilder.month(matcher.group(2));
+                break;
+              case "day":
+              case "days":
+                specBuilder.day(matcher.group(2));
+                break;
+              case "hour":
+              case "hours":
+                specBuilder.hour(matcher.group(2));
+                break;
+              case "bucket": {
+                Pair<String, Integer> args = transformArgPair(matcher.group(2));
+                specBuilder.bucket(args.first(), args.second());
+                break;
+              }
+              case "truncate": {
+                Pair<String, Integer> args = transformArgPair(matcher.group(2));
+                specBuilder.truncate(args.first(), args.second());
+                break;
+              }
+              default:
+                throw new UnsupportedOperationException("Unsupported transform: " + transform);
+            }
+          } else {
+            specBuilder.identity(partitionField);
+          }
+        });
+    return specBuilder.build();
+  }
+
+  private static Pair<String, Integer> transformArgPair(String argsStr) {
+    String[] parts = argsStr.split(",");
+    if (parts.length != 2) {
+      throw new IllegalArgumentException("Invalid argument " + argsStr + ", should have 2 parts");
+    }
+    return Pair.of(parts[0].trim(), Integer.parseInt(parts[1].trim()));
   }
 
 }

@@ -1,6 +1,7 @@
 .gemini
 .flattened-pom.xml
 
+.gemini
 deploy.sh
 .ipynb_checkpoints
 
