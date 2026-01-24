@@ -20,6 +20,7 @@ import org.apache.spark.sql.catalog.Database;
 import org.apache.spark.sql.catalog.Table;
 import org.apache.spark.sql.types.StructField;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Map;
@@ -50,15 +51,15 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
         .set("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") // Iceberg catalog
         .set("spark.sql.defaultCatalog", "iceberg")
-//         For spark to read iceberg tables using Hadoop file IO
-//        .set("spark.hadoop.fs.s3a.endpoint", S3Minio.container.getS3URL())
-//        .set("spark.hadoop.fs.s3a.access.key", TestConfigSource.S3_MINIO_ACCESS_KEY)
-//        .set("spark.hadoop.fs.s3a.secret.key", TestConfigSource.S3_MINIO_SECRET_KEY)
-//        .set("spark.hadoop.fs.s3a.path.style.access", "true")
+        // For spark to read iceberg tables using Hadoop file IO
+        // .set("spark.hadoop.fs.s3a.endpoint", S3Minio.container.getS3URL())
+        // .set("spark.hadoop.fs.s3a.access.key", TestConfigSource.S3_MINIO_ACCESS_KEY)
+        // .set("spark.hadoop.fs.s3a.secret.key", TestConfigSource.S3_MINIO_SECRET_KEY)
+        // .set("spark.hadoop.fs.s3a.path.style.access", "true")
         .set("spark.sql.warehouse.dir", ICEBERG_WAREHOUSE_S3A)
-        // Set Spark session timezone to Berlin time, for stable temporal/timestamp-tz testing
-        .set("spark.sql.session.timeZone", "Europe/Berlin")
-    ;
+        // Set Spark session timezone to Berlin time, for stable temporal/timestamp-tz
+        // testing
+        .set("spark.sql.session.timeZone", "Europe/Berlin");
     // take current settings and use them for sparkconf
     Map<String, String> catalogConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), "debezium.sink.iceberg.");
     catalogConf.forEach((key, value) -> {
@@ -70,7 +71,20 @@ public class BaseSparkTest extends BaseTest {
         .config(BaseSparkTest.sparkconf)
         .getOrCreate();
 
-//    System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
+    // System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
+  }
+
+  @AfterAll
+  public static void tearDownSpark() {
+    if (spark != null) {
+      spark.stop();
+      try {
+        spark.close();
+      } catch (Exception e) {
+        // ignore
+      }
+      spark = null;
+    }
   }
 
   public static String dataTypeString(Dataset<Row> dataset, String colName) {
@@ -107,9 +121,11 @@ public class BaseSparkTest extends BaseTest {
           }
           String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
               "VALUES ";
-          StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '" + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
+          StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '"
+              + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
           for (int i = 0; i < 100; i++) {
-            values.append("\n,(").append(TestUtil.randomInt(15, 32)).append(", '").append(TestUtil.randomString(524)).append("', '").append(TestUtil.randomString(524)).append("')");
+            values.append("\n,(").append(TestUtil.randomInt(15, 32)).append(", '").append(TestUtil.randomString(524))
+                .append("', '").append(TestUtil.randomString(524)).append("')");
           }
           SourcePostgresqlDB.runSQL(sql + values);
           SourcePostgresqlDB.runSQL("COMMIT;");
@@ -123,14 +139,13 @@ public class BaseSparkTest extends BaseTest {
     return numInsert;
   }
 
-
   public Dataset<Row> getTableData(String table) throws InterruptedException {
     return getTableData(ICEBERG_CATALOG_TABLE_NAMESPACE, "debeziumcdc_" + table);
   }
 
   public Dataset<Row> getTableData(String namespace, String table) {
     table = namespace + "." + table.replace(".", "_");
-//    printSparkTables();
+    // printSparkTables();
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 
