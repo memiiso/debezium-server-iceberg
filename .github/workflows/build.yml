@@ -18,9 +18,25 @@ env:
   SPARK_LOCAL_IP: 127.0.0.1
 
 jobs:
+  check-code-formatting:
+    name: Check Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+          cache: 'maven'
+      - name: Check Code Formatting
+        run: mvn spotless:check
+
   build-java-project-json-format:
     name: Build-Test (Json Format)
     runs-on: ubuntu-latest
+    needs: check-code-formatting
     env:
       DEBEZIUM_FORMAT_VALUE: json
       DEBEZIUM_FORMAT_KEY: json
