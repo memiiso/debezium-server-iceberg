@@ -192,7 +192,7 @@
                 <version>2.43.0</version>
                 <configuration>
                     <!-- optional: limit format enforcement to just the files changed by this feature branch -->
-                    <ratchetFrom>origin/master</ratchetFrom>
+                    <ratchetFrom>master</ratchetFrom>
                     <java>
                         <googleJavaFormat>
                             <version>1.19.2</version>
