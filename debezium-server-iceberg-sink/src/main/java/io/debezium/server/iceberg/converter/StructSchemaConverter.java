@@ -186,8 +186,8 @@ public class StructSchemaConverter implements SchemaConverter {
     LOGGER.debug("Converting Connect schema fields to Iceberg fields for schema: {}", valueSchema);
 
     List<String> excludedColumns = this.config.iceberg()
-            .excludedColumns()
-            .orElse(Collections.emptyList());
+        .excludedColumns()
+        .orElse(Collections.emptyList());
 
     for (Field field : getSchemaFields(valueSchema)) {
       String fieldName = field.name();
@@ -204,9 +204,9 @@ public class StructSchemaConverter implements SchemaConverter {
     // Find the matching Field object from the keyFields list, if it exists
     List<Field> keyFields = getSchemaFields(keySchema);
     return keyFields.stream()
-            .filter(keyField -> keyField.name().equals(fieldName))
-            .findFirst()
-            .orElse(null);
+        .filter(keyField -> keyField.name().equals(fieldName))
+        .findFirst()
+        .orElse(null);
   }
 
   public Field equivalentKeyField(Field ParentKeyField, String fieldName) {
@@ -245,8 +245,8 @@ public class StructSchemaConverter implements SchemaConverter {
         // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
         // This inconsistency prevents using either field as a reliable key.
         throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
-                "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
-                " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
+            "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+            " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
       }
       // @TODO validate key fields are correctly set!?
       return new org.apache.iceberg.Schema(schemaData.fields(), schemaData.identifierFieldIds());
@@ -290,7 +290,7 @@ public class StructSchemaConverter implements SchemaConverter {
       case INT16:
       case INT32: // int 4 bytes
         if (org.apache.kafka.connect.data.Date.LOGICAL_NAME.equals(logicalTypeName) ||
-                io.debezium.time.Date.SCHEMA_NAME.equals(logicalTypeName)) {
+            io.debezium.time.Date.SCHEMA_NAME.equals(logicalTypeName)) {
           return Types.DateType.get();
         }
         // NOTE: Time type is disabled for the moment, it's not supported by spark
@@ -304,9 +304,9 @@ public class StructSchemaConverter implements SchemaConverter {
         }
         // Handle standard Timestamp logical types
         if (org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME.equals(logicalTypeName) ||
-                io.debezium.time.Timestamp.SCHEMA_NAME.equals(logicalTypeName) ||
-                io.debezium.time.MicroTimestamp.SCHEMA_NAME.equals(logicalTypeName) ||
-                io.debezium.time.NanoTimestamp.SCHEMA_NAME.equals(logicalTypeName)) {
+            io.debezium.time.Timestamp.SCHEMA_NAME.equals(logicalTypeName) ||
+            io.debezium.time.MicroTimestamp.SCHEMA_NAME.equals(logicalTypeName) ||
+            io.debezium.time.NanoTimestamp.SCHEMA_NAME.equals(logicalTypeName)) {
           // Debezium's timestamps are typically UTC, hence representable as withoutZone.
           return Types.TimestampType.withoutZone();
         }

@@ -174,14 +174,14 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   private IcebergSchemaInfo icebergSchemaFields(JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
     LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
     List<String> excludedColumns = this.config.iceberg()
-            .excludedColumns()
-            .orElse(Collections.emptyList());
+          .excludedColumns()
+          .orElse(Collections.emptyList());
 
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
-      if(excludedColumns.contains(fieldName)) {
-        continue;
-      }
+        if(excludedColumns.contains(fieldName)) {
+            continue;
+        }
 
       JsonNode equivalentKeyFieldNode = findNodeFieldByName(fieldName, keySchemaNode);
       debeziumFieldToIcebergField(field, fieldName, schemaData, equivalentKeyFieldNode);
@@ -213,8 +213,8 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         // For insert events, only the `before` field is NULL, while for delete events after field is NULL.
         // This inconsistency prevents using either field as a reliable key.
         throw new DebeziumException("Debezium events are unnested, Identifier fields are not supported for unnested events! " +
-                "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
-                " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
+            "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html " +
+            " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
       }
       // @TODO validate key fields are correctly set!?
       return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
