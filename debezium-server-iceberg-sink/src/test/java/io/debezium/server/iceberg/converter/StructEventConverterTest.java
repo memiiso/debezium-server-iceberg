@@ -82,7 +82,7 @@ class StructEventConverterTest {
   private static final LocalDate EXPECTED_DATE = LocalDate.ofEpochDay(TEST_DATE_INT);
   private static final LocalTime EXPECTED_TIME = LocalTime.ofNanoOfDay(TEST_TIME_MICROS * 1000);
   private static final LocalDateTime EXPECTED_TIMESTAMP =
-          Instant.ofEpochSecond(0, TEST_TIMESTAMP_MICROS * 1000).atOffset(ZoneOffset.UTC).toLocalDateTime();
+      Instant.ofEpochSecond(0, TEST_TIMESTAMP_MICROS * 1000).atOffset(ZoneOffset.UTC).toLocalDateTime();
   private static final OffsetDateTime EXPECTED_ZONED_TIMESTAMP = OffsetDateTime.parse(TEST_ZONED_TIMESTAMP_STRING);
   private static final ByteBuffer EXPECTED_BYTES = ByteBuffer.wrap(TEST_BYTES);
   private static final BigDecimal EXPECTED_DECIMAL = TEST_DECIMAL.setScale(TEST_DECIMAL_SCALE);
@@ -113,93 +113,93 @@ class StructEventConverterTest {
 
     // Define Nested Connect Schema
     nestedConnectSchema = SchemaBuilder.struct().name("Nested")
-            .field("nested_str", Schema.STRING_SCHEMA)
-            .field("nested_long", Schema.INT64_SCHEMA)
-            .build();
+        .field("nested_str", Schema.STRING_SCHEMA)
+        .field("nested_long", Schema.INT64_SCHEMA)
+        .build();
 
     // Define Value Connect Schema
     valueConnectSchema = SchemaBuilder.struct().name("Value")
-            .field("id", Schema.INT32_SCHEMA) // Part of key
-            .field("col_int", Schema.OPTIONAL_INT32_SCHEMA)
-            .field("col_long", Schema.OPTIONAL_INT64_SCHEMA)
-            .field("col_float", Schema.OPTIONAL_FLOAT32_SCHEMA)
-            .field("col_double", Schema.OPTIONAL_FLOAT64_SCHEMA)
-            .field("col_bool", Schema.OPTIONAL_BOOLEAN_SCHEMA)
-            .field("col_string", Schema.OPTIONAL_STRING_SCHEMA)
-            .field("col_bytes", Schema.OPTIONAL_BYTES_SCHEMA)
-            .field("col_decimal", Decimal.builder(TEST_DECIMAL_SCALE).optional().build())
-            .field("col_uuid", Uuid.builder().optional().build())
-            .field("col_date", Date.builder().optional().build()) // Debezium Date (int)
-            .field("col_time_micros", MicroTime.builder().optional().build()) // Debezium MicroTime (long)
-            .field("col_ts_micros", MicroTimestamp.builder().optional().build()) // Debezium MicroTimestamp (long) - maps to LocalDateTime
-            .field("col_ts_zoned", ZonedTimestamp.builder().optional().build()) // Debezium ZonedTimestamp (string) - maps to OffsetDateTime
-            .field("col_list", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
-            .field("col_map", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).optional().build())
-            .field("col_struct", nestedConnectSchema)
-            .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
-            .field(CDC_TS_MS_FIELD, Schema.INT64_SCHEMA)
-            .build();
+        .field("id", Schema.INT32_SCHEMA) // Part of key
+        .field("col_int", Schema.OPTIONAL_INT32_SCHEMA)
+        .field("col_long", Schema.OPTIONAL_INT64_SCHEMA)
+        .field("col_float", Schema.OPTIONAL_FLOAT32_SCHEMA)
+        .field("col_double", Schema.OPTIONAL_FLOAT64_SCHEMA)
+        .field("col_bool", Schema.OPTIONAL_BOOLEAN_SCHEMA)
+        .field("col_string", Schema.OPTIONAL_STRING_SCHEMA)
+        .field("col_bytes", Schema.OPTIONAL_BYTES_SCHEMA)
+        .field("col_decimal", Decimal.builder(TEST_DECIMAL_SCALE).optional().build())
+        .field("col_uuid", Uuid.builder().optional().build())
+        .field("col_date", Date.builder().optional().build()) // Debezium Date (int)
+        .field("col_time_micros", MicroTime.builder().optional().build()) // Debezium MicroTime (long)
+        .field("col_ts_micros", MicroTimestamp.builder().optional().build()) // Debezium MicroTimestamp (long) - maps to LocalDateTime
+        .field("col_ts_zoned", ZonedTimestamp.builder().optional().build()) // Debezium ZonedTimestamp (string) - maps to OffsetDateTime
+        .field("col_list", SchemaBuilder.array(Schema.STRING_SCHEMA).optional().build())
+        .field("col_map", SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).optional().build())
+        .field("col_struct", nestedConnectSchema)
+        .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
+        .field(CDC_TS_MS_FIELD, Schema.INT64_SCHEMA)
+        .build();
 
     // Define Key Connect Schema
     keyConnectSchema = SchemaBuilder.struct().name("Key")
-            .field("id", Schema.INT32_SCHEMA)
-            .build();
+        .field("id", Schema.INT32_SCHEMA)
+        .build();
 
     // Define Nested Iceberg Schema
     nestedIcebergStructType = Types.StructType.of(
-            Types.NestedField.optional(100, "nested_str", Types.StringType.get()),
-            Types.NestedField.optional(101, "nested_long", Types.LongType.get())
+        Types.NestedField.optional(100, "nested_str", Types.StringType.get()),
+        Types.NestedField.optional(101, "nested_long", Types.LongType.get())
     );
 
     // Define Iceberg Schema (field IDs need to be unique and sequential)
     icebergSchema = new org.apache.iceberg.Schema(
-            Types.NestedField.required(1, "id", Types.IntegerType.get()), // Key field
-            Types.NestedField.optional(2, "col_int", Types.IntegerType.get()),
-            Types.NestedField.optional(3, "col_long", Types.LongType.get()),
-            Types.NestedField.optional(4, "col_float", Types.FloatType.get()),
-            Types.NestedField.optional(5, "col_double", Types.DoubleType.get()),
-            Types.NestedField.optional(6, "col_bool", Types.BooleanType.get()),
-            Types.NestedField.optional(7, "col_string", Types.StringType.get()),
-            Types.NestedField.optional(8, "col_bytes", Types.BinaryType.get()),
-            Types.NestedField.optional(9, "col_decimal", Types.DecimalType.of(TEST_DECIMAL_PRECISION, TEST_DECIMAL_SCALE)),
-            Types.NestedField.optional(10, "col_uuid", Types.UUIDType.get()),
-            Types.NestedField.optional(11, "col_date", Types.DateType.get()),
-            Types.NestedField.optional(12, "col_time_micros", Types.TimeType.get()),
-            Types.NestedField.optional(13, "col_ts_micros", Types.TimestampType.withoutZone()), // MicroTimestamp -> LocalDateTime
-            Types.NestedField.optional(14, "col_ts_zoned", Types.TimestampType.withZone()), // ZonedTimestamp -> OffsetDateTime
-            Types.NestedField.optional(15, "col_list", Types.ListType.ofOptional(16, Types.StringType.get())),
-            Types.NestedField.optional(17, "col_map", Types.MapType.ofOptional(18, 19, Types.StringType.get(), Types.IntegerType.get())),
-            Types.NestedField.optional(20, "col_struct", nestedIcebergStructType),
-            Types.NestedField.optional(21, CDC_OP_FIELD, Types.StringType.get()),
-            Types.NestedField.optional(22, CDC_TS_MS_FIELD, Types.LongType.get()) // Assuming Long for ts_ms
+        Types.NestedField.required(1, "id", Types.IntegerType.get()), // Key field
+        Types.NestedField.optional(2, "col_int", Types.IntegerType.get()),
+        Types.NestedField.optional(3, "col_long", Types.LongType.get()),
+        Types.NestedField.optional(4, "col_float", Types.FloatType.get()),
+        Types.NestedField.optional(5, "col_double", Types.DoubleType.get()),
+        Types.NestedField.optional(6, "col_bool", Types.BooleanType.get()),
+        Types.NestedField.optional(7, "col_string", Types.StringType.get()),
+        Types.NestedField.optional(8, "col_bytes", Types.BinaryType.get()),
+        Types.NestedField.optional(9, "col_decimal", Types.DecimalType.of(TEST_DECIMAL_PRECISION, TEST_DECIMAL_SCALE)),
+        Types.NestedField.optional(10, "col_uuid", Types.UUIDType.get()),
+        Types.NestedField.optional(11, "col_date", Types.DateType.get()),
+        Types.NestedField.optional(12, "col_time_micros", Types.TimeType.get()),
+        Types.NestedField.optional(13, "col_ts_micros", Types.TimestampType.withoutZone()), // MicroTimestamp -> LocalDateTime
+        Types.NestedField.optional(14, "col_ts_zoned", Types.TimestampType.withZone()), // ZonedTimestamp -> OffsetDateTime
+        Types.NestedField.optional(15, "col_list", Types.ListType.ofOptional(16, Types.StringType.get())),
+        Types.NestedField.optional(17, "col_map", Types.MapType.ofOptional(18, 19, Types.StringType.get(), Types.IntegerType.get())),
+        Types.NestedField.optional(20, "col_struct", nestedIcebergStructType),
+        Types.NestedField.optional(21, CDC_OP_FIELD, Types.StringType.get()),
+        Types.NestedField.optional(22, CDC_TS_MS_FIELD, Types.LongType.get()) // Assuming Long for ts_ms
     );
   }
 
   private Struct createTestValueStruct(String opValue) {
     Struct nestedStruct = new Struct(nestedConnectSchema)
-            .put("nested_str", NESTED_STRUCT_STRING)
-            .put("nested_long", NESTED_STRUCT_LONG);
+        .put("nested_str", NESTED_STRUCT_STRING)
+        .put("nested_long", NESTED_STRUCT_LONG);
 
     Struct valueStruct = new Struct(valueConnectSchema)
-            .put("id", 1) // Match key
-            .put("col_int", TEST_INT)
-            .put("col_long", TEST_LONG)
-            .put("col_float", TEST_FLOAT)
-            .put("col_double", TEST_DOUBLE)
-            .put("col_bool", TEST_BOOLEAN)
-            .put("col_string", TEST_STRING)
-            .put("col_bytes", TEST_BYTES)
-            .put("col_decimal", TEST_DECIMAL)
-            .put("col_uuid", TEST_UUID.toString()) // Connect Uuid logical type expects String
-            .put("col_date", TEST_DATE_INT) // Debezium Date expects int
-            .put("col_time_micros", TEST_TIME_MICROS) // Debezium MicroTime expects long
-            .put("col_ts_micros", TEST_TIMESTAMP_MICROS) // Debezium MicroTimestamp expects long
-            .put("col_ts_zoned", TEST_ZONED_TIMESTAMP_STRING) // Debezium ZonedTimestamp expects String
-            .put("col_list", TEST_LIST)
-            .put("col_map", TEST_MAP)
-            .put("col_struct", nestedStruct)
-            .put(CDC_OP_FIELD, opValue)
-            .put(CDC_TS_MS_FIELD, TEST_TS_MS);
+        .put("id", 1) // Match key
+        .put("col_int", TEST_INT)
+        .put("col_long", TEST_LONG)
+        .put("col_float", TEST_FLOAT)
+        .put("col_double", TEST_DOUBLE)
+        .put("col_bool", TEST_BOOLEAN)
+        .put("col_string", TEST_STRING)
+        .put("col_bytes", TEST_BYTES)
+        .put("col_decimal", TEST_DECIMAL)
+        .put("col_uuid", TEST_UUID.toString()) // Connect Uuid logical type expects String
+        .put("col_date", TEST_DATE_INT) // Debezium Date expects int
+        .put("col_time_micros", TEST_TIME_MICROS) // Debezium MicroTime expects long
+        .put("col_ts_micros", TEST_TIMESTAMP_MICROS) // Debezium MicroTimestamp expects long
+        .put("col_ts_zoned", TEST_ZONED_TIMESTAMP_STRING) // Debezium ZonedTimestamp expects String
+        .put("col_list", TEST_LIST)
+        .put("col_map", TEST_MAP)
+        .put("col_struct", nestedStruct)
+        .put(CDC_OP_FIELD, opValue)
+        .put(CDC_TS_MS_FIELD, TEST_TS_MS);
 
     return valueStruct;
   }
@@ -326,10 +326,10 @@ class StructEventConverterTest {
   void testNullValueHandling() {
     Struct keyStruct = createTestKeyStruct();
     Struct valueStruct = new Struct(valueConnectSchema)
-            .put("id", 1)
-            // All optional fields are null
-            .put(CDC_OP_FIELD, "i")
-            .put(CDC_TS_MS_FIELD, TEST_TS_MS);
+        .put("id", 1)
+        // All optional fields are null
+        .put(CDC_OP_FIELD, "i")
+        .put(CDC_TS_MS_FIELD, TEST_TS_MS);
     // Put null for the optional struct field
     valueStruct.put("col_int", null);
     valueStruct.put("col_string", null);
@@ -404,20 +404,20 @@ class StructEventConverterTest {
     org.apache.kafka.connect.data.Schema decimalConnectSchema = Decimal.builder(connectScale).build();
 
     org.apache.iceberg.Schema decimalIcebergSchema = new org.apache.iceberg.Schema(
-            Types.NestedField.required(1, "dec_field", Types.DecimalType.of(5, 2)) // precision 5, scale 2
+        Types.NestedField.required(1, "dec_field", Types.DecimalType.of(5, 2)) // precision 5, scale 2
     );
     Types.StructType icebergStruct = decimalIcebergSchema.asStruct();
 
     Struct valueStruct = new Struct(SchemaBuilder.struct().field("dec_field", decimalConnectSchema)
-            .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
-            .build())
-            .put("dec_field", connectDecimal)
-            .put(CDC_OP_FIELD, "c");
+        .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
+        .build())
+        .put("dec_field", connectDecimal)
+        .put(CDC_OP_FIELD, "c");
 
     // Minimal mock setup for convertValue
     StructEventConverter converter = new StructEventConverter(
-            createMockChangeEvent(null, valueStruct), // Key not needed for this specific test part
-            config
+        createMockChangeEvent(null, valueStruct), // Key not needed for this specific test part
+        config
     );
 
     RecordWrapper icebergRecord = converter.convert(decimalIcebergSchema);
