@@ -13,6 +13,7 @@ import io.debezium.time.Date;
 import io.debezium.time.MicroTime;
 import io.debezium.time.MicroTimestamp;
 import io.debezium.time.ZonedTimestamp;
+import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Decimal;
@@ -426,4 +427,91 @@ class StructEventConverterTest {
     assertEquals(0, expectedIcebergDecimal.compareTo((BigDecimal) icebergRecord.getField("dec_field")));
   }
 
+  @Test
+  void testSortOrderSkipsKeyFieldsNotInValueSchema() {
+    // This test verifies that sortOrder() correctly skips key fields that don't exist
+    // in the value schema. This scenario occurs when using Debezium's ByLogicalTableRouter
+    // transform which adds a key field (e.g., 'tenant_db') only for records matching
+    // a specific pattern, but the field is not present in the value schema.
+
+    // 1. Define the Value Schema (without 'tenant_db' field)
+    org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
+            .name("TournamentRecord")
+            .field("id", Schema.INT32_SCHEMA)
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("location", Schema.OPTIONAL_STRING_SCHEMA)
+            .build();
+
+    // 2. Define the Key Schema WITH an extra field 'tenant_db' that doesn't exist in value schema
+    // This simulates what ByLogicalTableRouter does when it adds a key field for routing
+    org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
+            .name("TournamentRecordKey")
+            .field("id", Schema.INT32_SCHEMA)
+            .field("tenant_db", Schema.STRING_SCHEMA) // Extra key field not in value schema
+            .build();
+
+    // 3. Instantiate the Converter
+    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+
+    // 4. Convert to Iceberg Schema
+    org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
+    LOGGER.debug("Generated Iceberg schema: {}", icebergSchema);
+
+    // 5. Verify the Iceberg schema does NOT contain 'tenant_db'
+    assertNotNull(icebergSchema, "Iceberg schema should not be null");
+    assertEquals(3, icebergSchema.columns().size(), "Should have 3 fields (id, name, location)");
+    assertNotNull(icebergSchema.findField("id"), "Field 'id' should exist");
+    assertNotNull(icebergSchema.findField("name"), "Field 'name' should exist");
+    assertNotNull(icebergSchema.findField("location"), "Field 'location' should exist");
+    assertEquals(null, icebergSchema.findField("tenant_db"), "Field 'tenant_db' should NOT exist in schema");
+
+    // 6. Get the sort order - this should NOT throw an exception
+    SortOrder sortOrder = converter.sortOrder(icebergSchema);
+    LOGGER.debug("Generated sort order: {}", sortOrder);
+
+    // 7. Verify the sort order only contains 'id' (the key field that exists in value schema)
+    assertNotNull(sortOrder, "Sort order should not be null");
+    // Sort order should have 1 field (id), not 2 (id + tenant_db)
+    assertEquals(1, sortOrder.fields().size(), "Sort order should have 1 field (only 'id')");
+    assertEquals("id", sortOrder.fields().get(0).sourceId() == 1 ? "id" : "unknown",
+            "Sort order should be on 'id' field");
+  }
+
+  @Test
+  void testSortOrderWithAllKeyFieldsInValueSchema() {
+    // This test verifies that sortOrder() includes all key fields when they all exist
+    // in the value schema (the normal case).
+
+    // 1. Define the Value Schema
+    org.apache.kafka.connect.data.Schema valueSchema = SchemaBuilder.struct()
+            .name("TournamentRecord")
+            .field("id", Schema.INT32_SCHEMA)
+            .field("tenant_db", Schema.STRING_SCHEMA) // This time tenant_db IS in value schema
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA)
+            .build();
+
+    // 2. Define the Key Schema with both id and tenant_db
+    org.apache.kafka.connect.data.Schema keySchema = SchemaBuilder.struct()
+            .name("TournamentRecordKey")
+            .field("id", Schema.INT32_SCHEMA)
+            .field("tenant_db", Schema.STRING_SCHEMA)
+            .build();
+
+    // 3. Instantiate the Converter
+    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+
+    // 4. Convert to Iceberg Schema
+    org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
+
+    // 5. Verify the Iceberg schema contains both key fields
+    assertNotNull(icebergSchema.findField("id"), "Field 'id' should exist");
+    assertNotNull(icebergSchema.findField("tenant_db"), "Field 'tenant_db' should exist");
+
+    // 6. Get the sort order
+    SortOrder sortOrder = converter.sortOrder(icebergSchema);
+
+    // 7. Verify the sort order contains both key fields
+    assertNotNull(sortOrder, "Sort order should not be null");
+    assertEquals(2, sortOrder.fields().size(), "Sort order should have 2 fields (id and tenant_db)");
+  }
 }
