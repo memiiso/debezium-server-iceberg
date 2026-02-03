@@ -113,7 +113,6 @@ class StructEventConverterTest {
         .thenReturn(TemporalPrecisionMode.ISOSTRING);
     lenient().when(icebergConfig.createIdentifierFields()).thenReturn(true);
     lenient().when(icebergConfig.cdcOpField()).thenReturn(CDC_OP_FIELD);
-    lenient().when(icebergConfig.cdcSourceTsField()).thenReturn(CDC_TS_MS_FIELD);
 
     // Define Nested Connect Schema
     nestedConnectSchema =

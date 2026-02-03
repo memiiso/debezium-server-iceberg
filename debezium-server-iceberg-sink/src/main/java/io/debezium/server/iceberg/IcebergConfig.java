@@ -28,10 +28,6 @@ public interface IcebergConfig {
   @WithDefault("__op")
   String cdcOpField();
 
-  @WithName("debezium.sink.iceberg.upsert-dedup-column")
-  @WithDefault("__source_ts_ns")
-  String cdcSourceTsField();
-
   @WithName("debezium.sink.iceberg.upsert")
   @WithDefault("false")
   boolean upsert();

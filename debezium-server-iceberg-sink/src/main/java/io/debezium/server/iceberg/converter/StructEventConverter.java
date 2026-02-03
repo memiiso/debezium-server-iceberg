@@ -46,6 +46,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   protected final String destination;
   private final Struct value;
   private final Struct key;
+  private boolean newKey = false;
   private final StructSchemaConverter schemaConverter;
   private static final Serde<Struct> eventSerde = DebeziumSerdes.payloadJson(Struct.class);
   private static final Serializer<Struct> structSerializer = eventSerde.serializer();
@@ -84,25 +85,6 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   }
 
   @Override
-  public Long cdcSourceTsValue() {
-    if (value == null) {
-      throw new DebeziumException("Value is null, cannot extract '" + config.iceberg().cdcSourceTsField() + "'");
-    }
-
-    Object tsValue = value.get(config.iceberg().cdcSourceTsField());
-    if (tsValue == null) {
-      LOGGER.warn("Field '{}' is null in the event for destination '{}'", config.iceberg().cdcSourceTsField(), destination);
-      return null; // Or throw an exception if null is not acceptable
-    }
-
-    if (!(tsValue instanceof Long)) {
-      throw new DebeziumException("Expected Long type for field '" + config.iceberg().cdcSourceTsField() + "', but found " + tsValue.getClass().getName());
-    }
-
-    return (Long) tsValue;
-  }
-
-  @Override
   public Operation cdcOpValue() {
     if (value == null) {
       throw new DebeziumException("Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");
@@ -129,6 +111,16 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       default ->
           throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
+  }
+
+  @Override
+  public boolean isNewKey() {
+    return newKey;
+  }
+
+  @Override
+  public void setNewKey(boolean newKey) {
+    this.newKey = newKey;
   }
 
   @Override
@@ -178,14 +170,14 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
-    return new RecordWrapper(row, Operation.INSERT);
+    return new RecordWrapper(row, Operation.INSERT, true);
   }
 
   @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
     Operation op = cdcOpValue();
-    return new RecordWrapper(row, op);
+    return new RecordWrapper(row, op, newKey);
   }
 
   /**

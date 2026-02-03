@@ -106,18 +106,22 @@ class IcebergTableOperatorTest extends BaseTest {
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
+        .addField("__op", "c")
         .addField("__source_ts_ns", 1L)
         .build();
     JsonEventConverter e2 = eventBuilder
         .destination("destination")
         .addKeyField("id", 1)
         .addKeyField("first_name", "row1")
+        .addField("__op", "u")
         .addField("__source_ts_ns", 3L)
         .build();
 
     List<EventConverter> records = List.of(e1, e2);
     List<EventConverter> dedups = icebergTableOperator.deduplicateBatch(records);
     Assertions.assertEquals(1, dedups.size());
+    Assertions.assertEquals(true, ((EventConverter)dedups.get(0)).isNewKey());
+    Assertions.assertEquals("u", ((JsonNode)dedups.get(0).value()).get("__op").asText("x"));
     Assertions.assertEquals(3L, ((JsonNode)dedups.get(0).value()).get("__source_ts_ns").asLong(0L));
 
     EventConverter e21 = eventBuilder
@@ -136,6 +140,7 @@ class IcebergTableOperatorTest extends BaseTest {
     List<EventConverter> records2 = List.of(e21, e22);
     List<EventConverter> dedups2 = icebergTableOperator.deduplicateBatch(records2);
     Assertions.assertEquals(1, dedups2.size());
+    Assertions.assertEquals(false, ((EventConverter)dedups2.get(0)).isNewKey());
     Assertions.assertEquals("u", ((JsonNode)dedups2.get(0).value()).get("__op").asText("x"));
 
     // deduplicating wth null key should fail!

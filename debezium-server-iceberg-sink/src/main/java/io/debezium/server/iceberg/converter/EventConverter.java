@@ -42,20 +42,18 @@ public interface EventConverter {
   <T> T value();
 
   /**
-   * Extracts the source timestamp of the event.
-   *
-   * @return The timestamp, or null if not available in the event.
-   */
-  @NotNull
-  Long cdcSourceTsValue();
-
-  /**
    * Extracts the CDC operation type (Create, Update, Delete, Read).
    *
    * @return The {@link Operation} enum value.
    */
   @NotNull
   Operation cdcOpValue();
+
+  /**
+   * True if the first operation for a key in a batch is an insert
+   */
+  boolean isNewKey();
+  void setNewKey(boolean newKey);
 
   /**
    * Provides a converter capable of transforming the event's schema representation

@@ -22,7 +22,6 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.iceberg.allow-field-addition`                 | `true`                                                        | Allow field addition to target tables. Enables automatic schema evolution, expansion.                                                                                                                                                                                                                             |
 | `debezium.sink.iceberg.upsert`                               | `false`                                                       | Upsert mode overwrites updated rows. Any existing rows that are updated will be overwritten with the new values. Explained further below.                                                                                                                                                                         |
 | `debezium.sink.iceberg.upsert-keep-deletes`                  | `true`                                                        | When running in upsert mode, deleted rows are marked as deleted but retained in the target table (soft delete)                                                                                                                                                                                                    |
-| `debezium.sink.iceberg.upsert-dedup-column`                  | `__source_ts_ns`                                              | With upsert mode this field is used to deduplicate data. The row with the highest `__source_ts_ns` timestamp (the latest change event) is retained. _dont change!_                                                                                                                                                |
 | `debezium.sink.iceberg.upsert-op-field`                      | `__op`                                                        | Field name for operation type in upsert mode. _dont change!_                                                                                                                                                                                                                                                      |
 | `debezium.sink.iceberg.nested-as-variant`                    | `false`                                                       | When true, all nested data is stored in Iceberg variant fields, allowing schema changes to be absorbed directly within these fields.                                                                                                                                                                              |
 | `debezium.sink.iceberg.create-identifier-fields`             | `true`                                                        | When set to `false`, the consumer will create tables without identifier fields. This is useful for scenarios where users want to consume nested events in append-only mode.                                                                                                                                       |
@@ -60,16 +59,7 @@ When enabled, (`debezium.sink.iceberg.upsert=true`) the
 consumer utilizes the source table's primary key to perform upsert operations on the target Iceberg table, effectively
 deleting existing rows and inserting updated ones. For tables lacking a primary key, the consumer reverts to append-only
 mode.
-
-#### Upsert Mode Data Deduplication
-
-Upsert mode enables data deduplication, prioritizing records based on their `__source_ts_ns` timestamp and operation
-type (`__op`). The `debezium.sink.iceberg.upsert-dedup-column` property can be used to specify a different column for
-deduplication (currently limited to Long type).
-
-Operation type priorities are as follows: `c` (create) > `r` (read) > `u` (update) > `d` (delete). When two records with
-the same key and timestamp are received, the record with the higher priority operation type is retained and added to the
-destination table, while the duplicate record is discarded.
+Upsert mode enables data deduplication, only the latest record in a batch is retained for each primary key.
 
 #### Upsert Mode, Keeping Deleted Records
 
