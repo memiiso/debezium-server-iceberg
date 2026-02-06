@@ -50,11 +50,10 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
     Operation rowOperation = ((RecordWrapper) row).op();
-    if (((RecordWrapper) row).isNewKey()) {
-      if (rowOperation != Operation.DELETE || keepDeletes) {
-        // new row
-        writer.write(row);
-      }
+    boolean isNewKey = ((RecordWrapper) row).isNewKey();
+    if (isNewKey && !keepDeletes && rowOperation != Operation.DELETE) {
+      // new row
+      writer.write(row);
     } else if (rowOperation == Operation.DELETE && !keepDeletes) {
       // deletes. doing hard delete. when keepDeletes = FALSE we dont keep deleted record
       writer.deleteKey(keyProjection.wrap(row));
