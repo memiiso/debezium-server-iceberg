@@ -85,6 +85,30 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   }
 
   @Override
+  public Long cdcSourceTsValue() {
+    String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
+    if (cdcSourceTsField.isBlank()) {
+      throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
+    }
+
+    if (value == null) {
+      throw new DebeziumException("Value is null, cannot extract '" + cdcSourceTsField + "'");
+    }
+
+    Object tsValue = value.get(cdcSourceTsField);
+    if (tsValue == null) {
+      LOGGER.warn("Field '{}' is null in the event for destination '{}'", cdcSourceTsField, destination);
+      return null; // Or throw an exception if null is not acceptable
+    }
+
+    if (!(tsValue instanceof Long)) {
+      throw new DebeziumException("Expected Long type for field '" + cdcSourceTsField + "', but found " + tsValue.getClass().getName());
+    }
+
+    return (Long) tsValue;
+  }
+
+  @Override
   public Operation cdcOpValue() {
     if (value == null) {
       throw new DebeziumException("Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");

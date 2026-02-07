@@ -52,18 +52,64 @@ public class IcebergTableOperator {
   protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
     ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
+    boolean isBlankUpsertDedupColumn = config.iceberg().cdcSourceTsField().orElse("").isBlank();
 
     events.forEach(e -> {
-          if (!e.hasKeyData()) {
-            throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
-          }
+        if (!e.hasKeyData()) {
+          throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
+        }
+
+        if (isBlankUpsertDedupColumn) {
           EventConverter prev = deduplicatedEvents.get(e.key());
           e.setNewKey(prev == null ? e.cdcOpValue() == Operation.INSERT : prev.isNewKey());
           deduplicatedEvents.put(e.key(), e);
+        } else {
+          try {
+            e.setNewKey(e.cdcOpValue() == Operation.INSERT);
+            // deduplicate using key(PK)
+            deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
+              if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
+                return newValue;
+              } else {
+                return oldValue;
+              }
+            });
+          } catch (Exception ex) {
+            throw new DebeziumException("Failed to deduplicate events", ex);
+          }
         }
+      }
     );
 
     return new ArrayList<>(deduplicatedEvents.values());
+  }
+
+  /**
+   * This is used to deduplicate events within given batch.
+   * <p>
+   * Forex ample a record can be updated multiple times in the source. for example insert followed by update and
+   * delete. for this case we need to only pick last change event for the row.
+   * <p>
+   * Its used when `upsert` feature enabled (when the consumer operating non append mode) which means it should not add
+   * duplicate records to target table.
+   *
+   * @param lhs
+   * @param rhs
+   * @return
+   */
+  private int compareByTsThenOp(EventConverter lhs, EventConverter rhs) {
+
+    int result = Long.compare(lhs.cdcSourceTsValue(), rhs.cdcSourceTsValue());
+
+    if (result == 0) {
+      // return (x < y) ? -1 : ((x == y) ? 0 : 1);
+      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(), -1)
+          .compareTo(
+              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(), -1)
+          );
+    }
+
+    return result;
   }
 
   /**

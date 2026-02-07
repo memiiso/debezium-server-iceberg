@@ -99,6 +99,25 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   }
 
   @Override
+  public Long cdcSourceTsValue() {
+    String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
+    if (cdcSourceTsField.isBlank()) {
+      throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
+    }
+
+    final JsonNode element = value().get(cdcSourceTsField);
+    if (element == null) {
+      throw new DebeziumException("Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
+    }
+
+    try {
+      return element.asLong();
+    } catch (NumberFormatException e) {
+      throw new DebeziumException("Error converting field '" + cdcSourceTsField + "' value '" + element + "' to Long: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
   public Operation cdcOpValue() {
     if (!value().has(config.iceberg().cdcOpField())) {
       throw new DebeziumException("The value for field `" + config.iceberg().cdcOpField() + "` is missing. " +
