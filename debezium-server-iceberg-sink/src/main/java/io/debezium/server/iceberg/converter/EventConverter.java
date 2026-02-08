@@ -58,6 +58,12 @@ public interface EventConverter {
   Operation cdcOpValue();
 
   /**
+   * True if the first operation for a key in a batch is an insert
+   */
+  boolean isNewKey();
+  void setNewKey(boolean newKey);
+
+  /**
    * Provides a converter capable of transforming the event's schema representation
    * into an Iceberg {@link Schema}.
    *

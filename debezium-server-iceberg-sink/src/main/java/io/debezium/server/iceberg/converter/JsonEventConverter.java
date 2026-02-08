@@ -54,6 +54,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   protected final byte[] keyData;
   private final JsonNode value;
   private final JsonNode key;
+  private boolean newKey = false;
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
@@ -99,16 +100,20 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
 
   @Override
   public Long cdcSourceTsValue() {
+    String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
+    if (cdcSourceTsField.isBlank()) {
+      throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
+    }
 
-    final JsonNode element = value().get(config.iceberg().cdcSourceTsField());
+    final JsonNode element = value().get(cdcSourceTsField);
     if (element == null) {
-      throw new DebeziumException("Field '" + config.iceberg().cdcSourceTsField() + "' not found in JSON object: " + value());
+      throw new DebeziumException("Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
     }
 
     try {
       return element.asLong();
     } catch (NumberFormatException e) {
-      throw new DebeziumException("Error converting field '" + config.iceberg().cdcSourceTsField() + "' value '" + element + "' to Long: " + e.getMessage(), e);
+      throw new DebeziumException("Error converting field '" + cdcSourceTsField + "' value '" + element + "' to Long: " + e.getMessage(), e);
     }
   }
 
@@ -131,6 +136,16 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       default ->
           throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
+  }
+
+  @Override
+  public boolean isNewKey() {
+    return newKey;
+  }
+
+  @Override
+  public void setNewKey(boolean newKey) {
+    this.newKey = newKey;
   }
 
   @Override
@@ -185,14 +200,14 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convert(schema.asStruct(), value());
-    return new RecordWrapper(row, Operation.INSERT);
+    return new RecordWrapper(row, Operation.INSERT, true);
   }
 
   @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convert(schema.asStruct(), value());
     Operation op = cdcOpValue();
-    return new RecordWrapper(row, op);
+    return new RecordWrapper(row, op, newKey);
   }
 
 

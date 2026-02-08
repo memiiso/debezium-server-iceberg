@@ -30,6 +30,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.iceberg.SortOrder;
@@ -113,7 +114,7 @@ class StructEventConverterTest {
         .thenReturn(TemporalPrecisionMode.ISOSTRING);
     lenient().when(icebergConfig.createIdentifierFields()).thenReturn(true);
     lenient().when(icebergConfig.cdcOpField()).thenReturn(CDC_OP_FIELD);
-    lenient().when(icebergConfig.cdcSourceTsField()).thenReturn(CDC_TS_MS_FIELD);
+    lenient().when(icebergConfig.cdcSourceTsField()).thenReturn(Optional.of(CDC_TS_MS_FIELD));
 
     // Define Nested Connect Schema
     nestedConnectSchema =

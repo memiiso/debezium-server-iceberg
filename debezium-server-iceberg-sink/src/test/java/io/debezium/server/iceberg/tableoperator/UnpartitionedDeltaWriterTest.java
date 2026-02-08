@@ -22,7 +22,7 @@ class UnpartitionedDeltaWriterTest extends BaseWriterTest {
     row.setField("id2", "123");
     row.setField("__op", "u");
 
-    writer.write(new RecordWrapper(row, Operation.UPDATE));
+    writer.write(new RecordWrapper(row, Operation.UPDATE, false));
     WriteResult result = writer.complete();
 
     // in upsert mode, each write is a delete + append, so we'll have 1 data file and 1 delete file

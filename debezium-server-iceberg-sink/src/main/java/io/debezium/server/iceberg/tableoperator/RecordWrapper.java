@@ -27,14 +27,20 @@ public class RecordWrapper implements Record {
 
   private final Record delegate;
   private final Operation op;
+  private final boolean newKey;
 
-  public RecordWrapper(Record delegate, Operation op) {
+  public RecordWrapper(Record delegate, Operation op, boolean newKey) {
     this.delegate = delegate;
     this.op = op;
+    this.newKey = newKey;
   }
 
   public Operation op() {
     return op;
+  }
+
+  public boolean isNewKey() {
+    return newKey;
   }
 
   @Override
@@ -59,12 +65,12 @@ public class RecordWrapper implements Record {
 
   @Override
   public Record copy() {
-    return new RecordWrapper(delegate.copy(), op);
+    return new RecordWrapper(delegate.copy(), op, newKey);
   }
 
   @Override
   public Record copy(Map<String, Object> overwriteValues) {
-    return new RecordWrapper(delegate.copy(overwriteValues), op);
+    return new RecordWrapper(delegate.copy(overwriteValues), op, newKey);
   }
 
   @Override

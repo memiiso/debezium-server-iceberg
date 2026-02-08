@@ -50,7 +50,8 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
     Operation rowOperation = ((RecordWrapper) row).op();
-    if (rowOperation == Operation.INSERT) {
+    boolean isNewKey = ((RecordWrapper) row).isNewKey();
+    if (isNewKey && !keepDeletes && rowOperation != Operation.DELETE) {
       // new row
       writer.write(row);
     } else if (rowOperation == Operation.DELETE && !keepDeletes) {

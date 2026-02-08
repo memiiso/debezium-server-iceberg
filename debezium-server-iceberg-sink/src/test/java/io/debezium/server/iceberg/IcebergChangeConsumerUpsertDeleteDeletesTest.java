@@ -70,7 +70,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.where("id = 4 AND __op= 'c'").count(), 1);
 
     records.clear();
-    // incase of duplicate records it should only keep the latest by epoch ts
+    // in case of duplicate records it should only keep the latest one
     records.add(eventFactory.of(dest, 3, "r", "UpdatednameV2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV3", TEST_EPOCH_MS + 2L));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV4", TEST_EPOCH_MS + 3L));
@@ -79,9 +79,9 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     records.add(eventFactory.of(dest, 4, "d", "Updatedname-4-V3", TEST_EPOCH_MS + 6L));
     records.add(eventFactory.of(dest, 5, "d", TEST_EPOCH_MS + 7L));
     records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 8L));
-    records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 9L));
-    records.add(eventFactory.of(dest, 6, "u", TEST_EPOCH_MS + 10L));
-    records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 11L));
+    records.add(eventFactory.of(dest, 6, "d", TEST_EPOCH_MS + 8L));
+    records.add(eventFactory.of(dest, 6, "c", TEST_EPOCH_MS + 8L));
+    records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 8L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -90,19 +90,6 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.where("id = 4 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 5 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
-
-    // in case of duplicate records including epoch ts, its should keep latest one based on operation priority
-    // ("c", 1, "r", 2, "u", 3, "d", 4);
-    records.clear();
-    records.add(eventFactory.of(dest, 3, "d", "UpdatednameV5", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV6", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 6, "c", "Updatedname-6-V2", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 6, "r", "Updatedname-6-V3", TEST_EPOCH_MS + 1L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
-    ds = getTableData("testc.inventory.customers_upsert");
-    ds.show();
-    Assertions.assertEquals(ds.where("id = 3 ").count(), 0);
-    Assertions.assertEquals(ds.where("id = 6 AND __op= 'r' AND first_name= 'Updatedname-6-V3'").count(), 1);
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
