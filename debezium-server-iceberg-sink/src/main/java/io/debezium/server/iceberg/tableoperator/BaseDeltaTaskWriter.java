@@ -52,12 +52,17 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     Operation rowOperation = ((RecordWrapper) row).op();
     boolean isNewKey = ((RecordWrapper) row).isNewKey();
     if (isNewKey && !keepDeletes && rowOperation != Operation.DELETE) {
-      // new row
+      // Optimization: Pure INSERT (new key) - direct write,
+      // skipping the costly pre-delete since we know no previous version exists.
       writer.write(row);
     } else if (rowOperation == Operation.DELETE && !keepDeletes) {
-      // deletes. doing hard delete. when keepDeletes = FALSE we dont keep deleted record
+      // Hard DELETE: The record is deleted and history is disabled -
+      // remove the key without writing a tombstone.
       writer.deleteKey(keyProjection.wrap(row));
     } else {
+      // Upsert/Update: Key already exists (Update) or Soft Delete -
+      // delete the old version first to ensure uniqueness/deduplication,
+      // then write the new state.
       writer.deleteKey(keyProjection.wrap(row));
       writer.write(row);
     }

@@ -63,9 +63,10 @@ mode.
 
 #### Upsert Mode Data Deduplication
 
-Upsert mode enables data deduplication. By default only the latest record in a batch is retained for each primary key.
-The `debezium.sink.iceberg.upsert-dedup-column` property can be used to specify a column for deduplication (currently limited to Long type).
-If it's set the record with the greatest value of the column is retained.
+Upsert mode enables data deduplication. By default only the latest record in a batch is retained for each primary key,
+since by default Debezium produces events in the order in which they were obtained from the database.
+The `debezium.sink.iceberg.upsert-dedup-column` property can be used to specify a column for deduplication
+(currently limited to Long type). If it's set the record with the greatest value of the column is retained.
 
 When two records with the same key and value of the specified column are received,
 the record with the higher priority operation type is retained and added to the destination table, while the duplicate record is discarded.
