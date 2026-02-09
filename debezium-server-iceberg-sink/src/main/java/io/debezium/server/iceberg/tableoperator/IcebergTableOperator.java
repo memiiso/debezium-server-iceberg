@@ -52,18 +52,12 @@ public class IcebergTableOperator {
   protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
     ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
-    boolean isBlankUpsertDedupColumn = config.iceberg().cdcSourceTsField().orElse("").isBlank();
 
     events.forEach(e -> {
-        if (!e.hasKeyData()) {
-          throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
-        }
+          if (!e.hasKeyData()) {
+            throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
+          }
 
-        if (isBlankUpsertDedupColumn) {
-          EventConverter prev = deduplicatedEvents.get(e.key());
-          e.setNewKey(prev == null ? e.cdcOpValue() == Operation.INSERT : prev.isNewKey());
-          deduplicatedEvents.put(e.key(), e);
-        } else {
           try {
             e.setNewKey(e.cdcOpValue() == Operation.INSERT);
             // deduplicate using key(PK)
@@ -78,7 +72,6 @@ public class IcebergTableOperator {
             throw new DebeziumException("Failed to deduplicate events", ex);
           }
         }
-      }
     );
 
     return new ArrayList<>(deduplicatedEvents.values());
@@ -98,6 +91,10 @@ public class IcebergTableOperator {
    * @return
    */
   private int compareByTsThenOp(EventConverter lhs, EventConverter rhs) {
+    if (config.iceberg().cdcSourceTsField().orElse("").isBlank()) {
+      rhs.setNewKey(lhs.isNewKey());
+      return -1;
+    }
 
     int result = Long.compare(lhs.cdcSourceTsValue(), rhs.cdcSourceTsValue());
 
