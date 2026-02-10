@@ -1,20 +1,27 @@
 package io.debezium.server.iceberg.tableoperator;
 
+import java.io.IOException;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.WriteResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-
 class UnpartitionedDeltaWriterTest extends BaseWriterTest {
 
   @Test
   public void testUnpartitionedDeltaWriter() throws IOException {
-    UnpartitionedDeltaWriter writer = new UnpartitionedDeltaWriter(table.spec(), format, appenderFactory, fileFactory,
-        table.io(),
-        Long.MAX_VALUE, table.schema(), identifierFieldIds, true);
+    UnpartitionedDeltaWriter writer =
+        new UnpartitionedDeltaWriter(
+            table.spec(),
+            format,
+            appenderFactory,
+            fileFactory,
+            table.io(),
+            Long.MAX_VALUE,
+            table.schema(),
+            identifierFieldIds,
+            true);
 
     Record row = GenericRecord.create(SCHEMA);
     row.setField("id", "123");

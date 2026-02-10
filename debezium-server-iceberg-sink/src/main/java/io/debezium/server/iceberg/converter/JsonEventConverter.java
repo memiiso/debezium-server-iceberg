@@ -18,15 +18,6 @@ import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
 import io.debezium.time.IsoTime;
 import io.debezium.time.ZonedTime;
-import org.apache.iceberg.Schema;
-import org.apache.iceberg.SortOrder;
-import org.apache.iceberg.data.GenericRecord;
-import org.apache.iceberg.types.Type;
-import org.apache.iceberg.types.Types;
-import org.apache.iceberg.variants.Variant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -39,10 +30,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
+import org.apache.iceberg.Schema;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.data.GenericRecord;
+import org.apache.iceberg.types.Type;
+import org.apache.iceberg.types.Types;
+import org.apache.iceberg.variants.Variant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields. Converts event schema to Iceberg Schema.
+ * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields.
+ * Converts event schema to Iceberg Schema.
  *
  * @author Ismail Simsek
  */
@@ -61,7 +60,8 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   }
 
   // Testing only
-  public JsonEventConverter(String destination, Object valueData, Object keyData, GlobalConfig config) {
+  public JsonEventConverter(
+      String destination, Object valueData, Object keyData, GlobalConfig config) {
     super(config);
     this.destination = destination;
     this.valueData = getBytes(valueData);
@@ -107,22 +107,32 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
 
     final JsonNode element = value().get(cdcSourceTsField);
     if (element == null) {
-      throw new DebeziumException("Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
+      throw new DebeziumException(
+          "Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
     }
 
     try {
       return element.asLong();
     } catch (NumberFormatException e) {
-      throw new DebeziumException("Error converting field '" + cdcSourceTsField + "' value '" + element + "' to Long: " + e.getMessage(), e);
+      throw new DebeziumException(
+          "Error converting field '"
+              + cdcSourceTsField
+              + "' value '"
+              + element
+              + "' to Long: "
+              + e.getMessage(),
+          e);
     }
   }
 
   @Override
   public Operation cdcOpValue() {
     if (!value().has(config.iceberg().cdcOpField())) {
-      throw new DebeziumException("The value for field `" + config.iceberg().cdcOpField() + "` is missing. " +
-          "This field is required when updating or deleting data, when running in upsert mode."
-      );
+      throw new DebeziumException(
+          "The value for field `"
+              + config.iceberg().cdcOpField()
+              + "` is missing. "
+              + "This field is required when updating or deleting data, when running in upsert mode.");
     }
 
     final String opFieldValue = value().get(config.iceberg().cdcOpField()).asText("c");
@@ -134,7 +144,12 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       case "c" -> Operation.INSERT;
       case "i" -> Operation.INSERT;
       default ->
-          throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+          throw new DebeziumException(
+              "Unexpected `"
+                  + config.iceberg().cdcOpField()
+                  + "="
+                  + opFieldValue
+                  + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
   }
 
@@ -154,17 +169,15 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       return new JsonSchemaConverter(
           mapper.readTree(valueData).get("schema"),
           keyData == null ? null : mapper.readTree(keyData).get("schema"),
-          config
-      );
+          config);
     } catch (IOException e) {
       throw new DebeziumException("Failed to get event schema", e);
     }
   }
 
-
   /**
-   * Checks if the current message represents a schema change event.
-   * Schema change events are identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
+   * Checks if the current message represents a schema change event. Schema change events are
+   * identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
    *
    * @return True if it's a schema change event, false otherwise.
    */
@@ -172,7 +185,6 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   public boolean isSchemaChangeEvent() {
     return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
   }
-
 
   /**
    * Converts the Kafka Connect schema to an Iceberg schema.
@@ -197,7 +209,8 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   @Override
   public RecordWrapper convertAsAppend(Schema schema) {
     if (value == null) {
-      throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
+      throw new DebeziumException(
+          "Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convert(schema.asStruct(), value());
     return new RecordWrapper(row, Operation.INSERT, true);
@@ -209,7 +222,6 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
     Operation op = cdcOpValue();
     return new RecordWrapper(row, op, newKey);
   }
-
 
   private GenericRecord convert(Types.StructType tableFields, JsonNode data) {
     GenericRecord record = GenericRecord.create(tableFields);
@@ -243,23 +255,26 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         return node.floatValue();
       case DOUBLE: // double is represented in 64 bits
         return node.asDouble();
-      case DECIMAL: {
-        BigDecimal decimalVal = null;
-        try {
-          int scale = ((Types.DecimalType) field.type()).scale();
-          decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
-        } catch (IOException e) {
-          throw new RuntimeException("Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+      case DECIMAL:
+        {
+          BigDecimal decimalVal = null;
+          try {
+            int scale = ((Types.DecimalType) field.type()).scale();
+            decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
+          } catch (IOException e) {
+            throw new RuntimeException(
+                "Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+          }
+          return decimalVal;
         }
-        return decimalVal;
-      }
       case BOOLEAN:
         return node.asBoolean();
       case UUID:
         if (node.isTextual()) {
           return UUID.fromString(node.textValue());
         }
-        throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+        throw new RuntimeException(
+            "Failed to convert date value, field: " + field.name() + " value: " + node);
       case DATE:
         if ((node.isInt())) {
           // io.debezium.time.Date
@@ -269,38 +284,42 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         }
         if (node.isTextual()) {
           // io.debezium.time.IsoDate
-          // Represents date values in UTC format, according to the ISO 8601 standard, for example, 2017-09-15Z.
+          // Represents date values in UTC format, according to the ISO 8601 standard, for example,
+          // 2017-09-15Z.
           return LocalDate.parse(node.asText(), IsoDate.FORMATTER);
         }
-        throw new RuntimeException("Failed to convert date value, field: " + field.name() + " value: " + node);
+        throw new RuntimeException(
+            "Failed to convert date value, field: " + field.name() + " value: " + node);
 
       case TIME:
         if (node.isTextual()) {
           return switch (config.debezium().temporalPrecisionMode()) {
-            // io.debezium.time.IsoTime
+              // io.debezium.time.IsoTime
             case ISOSTRING -> LocalTime.parse(node.asText(), IsoTime.FORMATTER);
-            // io.debezium.time.ZonedTime
-            // A string representation of a time value with timezone information,
-            // Iceberg using LocalTime for time values
+              // io.debezium.time.ZonedTime
+              // A string representation of a time value with timezone information,
+              // Iceberg using LocalTime for time values
             default -> OffsetTime.parse(node.asText(), ZonedTime.FORMATTER).toLocalTime();
           };
         }
         if (node.isNumber()) {
           return switch (config.debezium().temporalPrecisionMode()) {
-            // io.debezium.time.MicroTime
-            // Represents the time value in microseconds
+              // io.debezium.time.MicroTime
+              // Represents the time value in microseconds
             case MICROSECONDS -> LocalTime.ofNanoOfDay(node.asLong() * 1000);
-            // io.debezium.time.NanoTime
-            // Represents the time value in nanoseconds
+              // io.debezium.time.NanoTime
+              // Represents the time value in nanoseconds
             case NANOSECONDS -> LocalTime.ofNanoOfDay(node.asLong());
-            //org.apache.kafka.connect.data.Time
-            //Represents the number of milliseconds since midnight,
+              // org.apache.kafka.connect.data.Time
+              // Represents the number of milliseconds since midnight,
             case CONNECT -> LocalTime.ofNanoOfDay(node.asLong() * 1_000_000);
             default ->
-                throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
+                throw new RuntimeException(
+                    "Failed to convert time value, field: " + field.name() + " value: " + node);
           };
         }
-        throw new RuntimeException("Failed to convert time value, field: " + field.name() + " value: " + node);
+        throw new RuntimeException(
+            "Failed to convert time value, field: " + field.name() + " value: " + node);
       case TIMESTAMP:
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
         if (node.isNumber()) {
@@ -322,16 +341,20 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         try {
           return ByteBuffer.wrap(node.binaryValue());
         } catch (IOException e) {
-          throw new RuntimeException("Failed to convert binary value to iceberg value, field: " + field.name(), e);
+          throw new RuntimeException(
+              "Failed to convert binary value to iceberg value, field: " + field.name(), e);
         }
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
         // recursive value mapping when list elements are nested type
         if (listItemsType.type().isNestedType()) {
           ArrayList<Object> listVal = new ArrayList<>();
-          node.elements().forEachRemaining(element -> {
-            listVal.add(jsonValToIcebergVal(field.type().asListType().fields().get(0), element));
-          });
+          node.elements()
+              .forEachRemaining(
+                  element -> {
+                    listVal.add(
+                        jsonValToIcebergVal(field.type().asListType().fields().get(0), element));
+                  });
           return listVal;
         }
         return mapper.convertValue(node, ArrayList.class);
@@ -343,13 +366,15 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         }
         // convert complex/nested map value with recursion
         HashMap<Object, Object> mapVal = new HashMap<>();
-        node.fields().forEachRemaining(f -> {
-          if (valType.isStructType()) {
-            mapVal.put(f.getKey(), convert(valType.asStructType(), f.getValue()));
-          } else {
-            mapVal.put(f.getKey(), f.getValue());
-          }
-        });
+        node.fields()
+            .forEachRemaining(
+                f -> {
+                  if (valType.isStructType()) {
+                    mapVal.put(f.getKey(), convert(valType.asStructType(), f.getValue()));
+                  } else {
+                    mapVal.put(f.getKey(), f.getValue());
+                  }
+                });
         return mapVal;
       case VARIANT:
         JsonVariantObject val = new JsonVariantObject(node);
@@ -365,5 +390,4 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         return node.isValueNode() ? node.textValue() : node.toString();
     }
   }
-
 }

@@ -1,4 +1,5 @@
 package io.debezium.server.iceberg.converter;
+
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import jakarta.annotation.Nullable;
@@ -13,8 +14,8 @@ import org.apache.iceberg.SortOrder;
 public interface EventConverter {
 
   /**
-   * Extracts the key part of the CDC event.
-   * The actual type depends on the source event format (e.g., Struct, String).
+   * Extracts the key part of the CDC event. The actual type depends on the source event format
+   * (e.g., Struct, String).
    *
    * @param <T> The expected type of the key.
    * @return The event key, or potentially null if the event has no key.
@@ -23,17 +24,16 @@ public interface EventConverter {
   <T> T key();
 
   /**
-   * Checks if the event contains key data. Useful for distinguishing
-   * events with explicit null keys from events without keys.
+   * Checks if the event contains key data. Useful for distinguishing events with explicit null keys
+   * from events without keys.
    *
    * @return true if key data is present, false otherwise.
    */
   boolean hasKeyData();
 
-
   /**
-   * Extracts the value/payload part of the CDC event.
-   * The actual type depends on the source event format (e.g., Struct, String).
+   * Extracts the value/payload part of the CDC event. The actual type depends on the source event
+   * format (e.g., Struct, String).
    *
    * @param <T> The expected type of the value.
    * @return The event value, or null for delete events (tombstones).
@@ -57,15 +57,14 @@ public interface EventConverter {
   @NotNull
   Operation cdcOpValue();
 
-  /**
-   * True if the first operation for a key in a batch is an insert
-   */
+  /** True if the first operation for a key in a batch is an insert */
   boolean isNewKey();
+
   void setNewKey(boolean newKey);
 
   /**
-   * Provides a converter capable of transforming the event's schema representation
-   * into an Iceberg {@link Schema}.
+   * Provides a converter capable of transforming the event's schema representation into an Iceberg
+   * {@link Schema}.
    *
    * @return The schema converter instance.
    */
@@ -80,10 +79,10 @@ public interface EventConverter {
   boolean isSchemaChangeEvent();
 
   /**
-   * Gets the Iceberg {@link Schema} that corresponds to the data payload (`value()`)
-   * of this specific event, potentially derived from schema information embedded within the event.
-   * This might differ from the target table's schema if schema evolution is occurring.
-   * Returns null if the event is a schema change event or has no associated data schema.
+   * Gets the Iceberg {@link Schema} that corresponds to the data payload (`value()`) of this
+   * specific event, potentially derived from schema information embedded within the event. This
+   * might differ from the target table's schema if schema evolution is occurring. Returns null if
+   * the event is a schema change event or has no associated data schema.
    *
    * @return The Iceberg schema for the event's data, or null.
    */
@@ -96,6 +95,7 @@ public interface EventConverter {
 
   /**
    * Gets the Iceberg {@link SortOrder} that corresponds to the data key of this specific event.
+   *
    * @param schema The Iceberg schema for {@link SortOrder.Builder}.
    * @return The Iceberg {@link SortOrder}.
    */
@@ -112,8 +112,8 @@ public interface EventConverter {
 
   /**
    * Converts the event data into a {@link RecordWrapper} suitable for direct append operations,
-   * using the provided target Iceberg schema. This might optimize by only including necessary fields
-   * for an append (e.g., the 'after' state).
+   * using the provided target Iceberg schema. This might optimize by only including necessary
+   * fields for an append (e.g., the 'after' state).
    *
    * @param schema The target Iceberg schema to conform to.
    * @return A {@link RecordWrapper} containing the data formatted for appending.

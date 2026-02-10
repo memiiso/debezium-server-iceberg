@@ -15,6 +15,13 @@ import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.RowDelta;
 import org.apache.iceberg.Schema;
@@ -26,14 +33,6 @@ import org.apache.iceberg.io.WriteResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
 /**
  * Wrapper to perform operations on iceberg tables
  *
@@ -42,49 +41,58 @@ import java.util.stream.Collectors;
 @Dependent
 public class IcebergTableOperator {
 
-  static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY = ImmutableMap.of(Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
+  static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY =
+      ImmutableMap.of(
+          Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
-  @Inject
-  IcebergTableWriterFactory writerFactory;
-  @Inject
-  GlobalConfig config;
+  @Inject IcebergTableWriterFactory writerFactory;
+  @Inject GlobalConfig config;
 
   protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
     ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
 
-    events.forEach(e -> {
+    events.forEach(
+        e -> {
           if (!e.hasKeyData()) {
-            throw new DebeziumException("Cannot deduplicate data with null key! destination:'" + e.destination() + "' event: '" + e.value().toString() + "'");
+            throw new DebeziumException(
+                "Cannot deduplicate data with null key! destination:'"
+                    + e.destination()
+                    + "' event: '"
+                    + e.value().toString()
+                    + "'");
           }
 
           try {
             e.setNewKey(e.cdcOpValue() == Operation.INSERT);
             // deduplicate using key(PK)
-            deduplicatedEvents.merge(e.key(), e, (oldValue, newValue) -> {
-              if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
-                return newValue;
-              } else {
-                return oldValue;
-              }
-            });
+            deduplicatedEvents.merge(
+                e.key(),
+                e,
+                (oldValue, newValue) -> {
+                  if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
+                    return newValue;
+                  } else {
+                    return oldValue;
+                  }
+                });
           } catch (Exception ex) {
             throw new DebeziumException("Failed to deduplicate events", ex);
           }
-        }
-    );
+        });
 
     return new ArrayList<>(deduplicatedEvents.values());
   }
 
   /**
    * This is used to deduplicate events within given batch.
-   * <p>
-   * Forex ample a record can be updated multiple times in the source. for example insert followed by update and
-   * delete. for this case we need to only pick last change event for the row.
-   * <p>
-   * Its used when `upsert` feature enabled (when the consumer operating non append mode) which means it should not add
-   * duplicate records to target table.
+   *
+   * <p>Forex ample a record can be updated multiple times in the source. for example insert
+   * followed by update and delete. for this case we need to only pick last change event for the
+   * row.
+   *
+   * <p>Its used when `upsert` feature enabled (when the consumer operating non append mode) which
+   * means it should not add duplicate records to target table.
    *
    * @param lhs
    * @param rhs
@@ -100,32 +108,35 @@ public class IcebergTableOperator {
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result = CDC_OPERATION_PRIORITY.getOrDefault(lhs.cdcOpValue(), -1)
-          .compareTo(
-              CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(), -1)
-          );
+      result =
+          CDC_OPERATION_PRIORITY
+              .getOrDefault(lhs.cdcOpValue(), -1)
+              .compareTo(CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(), -1));
     }
 
     return result;
   }
 
   /**
-   * If given schema contains new fields compared to target table schema then it adds new fields to target iceberg
-   * table.
-   * <p>
-   * Its used when allow field addition feature is enabled.
+   * If given schema contains new fields compared to target table schema then it adds new fields to
+   * target iceberg table.
+   *
+   * <p>Its used when allow field addition feature is enabled.
    *
    * @param icebergTable
    * @param newSchema
    */
   private void applyFieldAddition(Table icebergTable, Schema newSchema) {
 
-    UpdateSchema us = icebergTable.updateSchema().
-        unionByNameWith(newSchema).
-        setIdentifierFields(newSchema.identifierFieldNames());
+    UpdateSchema us =
+        icebergTable
+            .updateSchema()
+            .unionByNameWith(newSchema)
+            .setIdentifierFields(newSchema.identifierFieldNames());
     Schema newSchemaCombined = us.apply();
 
-    // @NOTE avoid committing when there is no schema change. commit creates new commit even when there is no change!
+    // @NOTE avoid committing when there is no schema change. commit creates new commit even when
+    // there is no change!
     if (!icebergTable.schema().sameSchema(newSchemaCombined)) {
       LOGGER.warn("Extending schema of {}", icebergTable.name());
       us.commit();
@@ -134,12 +145,13 @@ public class IcebergTableOperator {
 
   /**
    * Adds list of events to iceberg table.
-   * <p>
-   * If field addition enabled then it groups list of change events by their schema first. Then adds new fields to
-   * iceberg table if there is any. And then follows with adding data to the table.
-   * <p>
-   * New fields are detected using CDC event schema, since events are grouped by their schemas it uses single
-   * event to find-out schema for the whole list of events.
+   *
+   * <p>If field addition enabled then it groups list of change events by their schema first. Then
+   * adds new fields to iceberg table if there is any. And then follows with adding data to the
+   * table.
+   *
+   * <p>New fields are detected using CDC event schema, since events are grouped by their schemas it
+   * uses single event to find-out schema for the whole list of events.
    *
    * @param icebergTable
    * @param events
@@ -156,18 +168,20 @@ public class IcebergTableOperator {
       addToTablePerSchema(icebergTable, events);
     } else {
       Map<SchemaConverter, List<EventConverter>> eventsGroupedBySchema =
-          events.stream()
-              .collect(Collectors.groupingBy(EventConverter::schemaConverter));
-      LOGGER.debug("Batch got {} records with {} different schema!!", events.size(), eventsGroupedBySchema.keySet().size());
+          events.stream().collect(Collectors.groupingBy(EventConverter::schemaConverter));
+      LOGGER.debug(
+          "Batch got {} records with {} different schema!!",
+          events.size(),
+          eventsGroupedBySchema.keySet().size());
 
-      for (Map.Entry<SchemaConverter, List<EventConverter>> schemaEvents : eventsGroupedBySchema.entrySet()) {
+      for (Map.Entry<SchemaConverter, List<EventConverter>> schemaEvents :
+          eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(icebergTable, schemaEvents.getValue().get(0).icebergSchema());
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
     }
-
   }
 
   /**
@@ -182,7 +196,10 @@ public class IcebergTableOperator {
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
     try (writer) {
       for (EventConverter e : events) {
-        final RecordWrapper record = (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty()) ? e.convert(tableSchema) : e.convertAsAppend(tableSchema);
+        final RecordWrapper record =
+            (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty())
+                ? e.convert(tableSchema)
+                : e.convertAsAppend(tableSchema);
         writer.write(record);
       }
 
@@ -203,7 +220,8 @@ public class IcebergTableOperator {
       } catch (IOException e) {
         // pass
       }
-      throw new DebeziumException("Failed to write data to table:`" + icebergTable.name() + "`", ex);
+      throw new DebeziumException(
+          "Failed to write data to table:`" + icebergTable.name() + "`", ex);
     }
 
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());

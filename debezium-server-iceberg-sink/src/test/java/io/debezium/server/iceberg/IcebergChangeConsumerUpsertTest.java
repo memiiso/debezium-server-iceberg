@@ -17,21 +17,19 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
@@ -41,7 +39,7 @@ import java.util.Map;
 @TestProfile(IcebergChangeConsumerUpsertTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
-  final static Long TEST_EPOCH_MS = 1577840461000L;
+  static final Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
   public void testSimpleUpsert() throws Exception {
@@ -91,10 +89,13 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     ds = getTableData("testc.inventory.customers_upsert");
     ds.sort("id").show(false);
     Assertions.assertEquals(ds.count(), 6);
-    Assertions.assertEquals(ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
-    Assertions.assertEquals(ds.where("id = 4 AND __op= 'r' AND first_name= 'Updatedname-4-V3'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 4 AND __op= 'r' AND first_name= 'Updatedname-4-V3'").count(), 1);
     Assertions.assertEquals(ds.where("id = 5 AND __op= 'r' ").count(), 1);
-    Assertions.assertEquals(ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
@@ -105,8 +106,9 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
-//    S3Minio.listFiles();
+    Assertions.assertEquals(
+        ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
+    //    S3Minio.listFiles();
   }
 
   @Test
@@ -165,40 +167,46 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     Assertions.assertEquals(ds.where("id = 1 AND __op= 'c' AND first_name= 'user2'").count(), 2);
   }
 
-
   @Test
   public void testTableUpsertNokey() throws SQLException, ClassNotFoundException {
-    String sql = "\n" +
-            "        DROP TABLE IF EXISTS inventory.table_without_pk;\n" +
-            "        CREATE TABLE IF NOT EXISTS inventory.table_without_pk (\n" +
-            "            c_id INTEGER ,\n" +
-            "            c_varchar VARCHAR\n" +
-            "          );" +
-            "ALTER TABLE inventory.table_without_pk REPLICA IDENTITY FULL;";
+    String sql =
+        "\n"
+            + "        DROP TABLE IF EXISTS inventory.table_without_pk;\n"
+            + "        CREATE TABLE IF NOT EXISTS inventory.table_without_pk (\n"
+            + "            c_id INTEGER ,\n"
+            + "            c_varchar VARCHAR\n"
+            + "          );"
+            + "ALTER TABLE inventory.table_without_pk REPLICA IDENTITY FULL;";
     SourcePostgresqlDB.runSQL(sql);
     SourcePostgresqlDB.runSQL(
-            "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (1, 'STRING-DATA-1');" +
-                    "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (2, 'STRING-DATA-2');");
-    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
-      try {
-        Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
-        ds.show();
-        return ds.count() == 2;
-      } catch (Exception e) {
-        return false;
-      }
-    });
-    SourcePostgresqlDB.runSQL("UPDATE inventory.table_without_pk SET c_varchar='STRING-UPDATE-1'; ");
-    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
-      try {
-        Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
-        ds.show();
-        return ds.count() == 4
-                && ds.where("__op == 'u'").count() == 2;
-      } catch (Exception e) {
-        return false;
-      }
-    });
+        "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (1, 'STRING-DATA-1');"
+            + "INSERT INTO inventory.table_without_pk (c_id, c_varchar) VALUES (2, 'STRING-DATA-2');");
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(180))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
+                ds.show();
+                return ds.count() == 2;
+              } catch (Exception e) {
+                return false;
+              }
+            });
+    SourcePostgresqlDB.runSQL(
+        "UPDATE inventory.table_without_pk SET c_varchar='STRING-UPDATE-1'; ");
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(180))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> ds = getTableData("testc.inventory.table_without_pk");
+                ds.show();
+                return ds.count() == 4 && ds.where("__op == 'u'").count() == 2;
+              } catch (Exception e) {
+                return false;
+              }
+            });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -210,5 +218,4 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
       return config;
     }
   }
-
 }

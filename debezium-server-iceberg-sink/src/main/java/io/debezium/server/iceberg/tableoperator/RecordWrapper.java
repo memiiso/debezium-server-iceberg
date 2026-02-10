@@ -18,10 +18,9 @@
  */
 package io.debezium.server.iceberg.tableoperator;
 
+import java.util.Map;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.types.Types.StructType;
-
-import java.util.Map;
 
 public class RecordWrapper implements Record {
 

@@ -16,18 +16,16 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
@@ -36,7 +34,7 @@ import java.util.Map;
 @TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
-  final static Long TEST_EPOCH_MS = 1577840461000L;
+  static final Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
   public void testSimpleUpsert() throws Exception {
@@ -86,10 +84,12 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
     Assertions.assertEquals(ds.count(), 3);
-    Assertions.assertEquals(ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
     Assertions.assertEquals(ds.where("id = 4 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 5 ").count(), 0);
-    Assertions.assertEquals(ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
@@ -100,8 +100,8 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
-
+    Assertions.assertEquals(
+        ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
   }
 
   @Test
@@ -143,5 +143,4 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
       return config;
     }
   }
-
 }

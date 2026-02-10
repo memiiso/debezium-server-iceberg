@@ -1,17 +1,16 @@
 package io.debezium.server.iceberg;
 
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
+
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
-import org.apache.iceberg.CatalogProperties;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
+import org.apache.iceberg.CatalogProperties;
 
 @ConfigRoot
 @ConfigMapping
@@ -47,11 +46,11 @@ public interface IcebergConfig {
   String tableMapper();
 
   @WithName("debezium.sink.iceberg.destination-regexp")
-    // @WithDefault("")
+  // @WithDefault("")
   Optional<String> destinationRegexp();
 
   @WithName("debezium.sink.iceberg.destination-regexp-replace")
-    // @WithDefault("")
+  // @WithDefault("")
   Optional<String> destinationRegexpReplace();
 
   @WithName("debezium.sink.iceberg.destination-uppercase-table-names")
@@ -63,7 +62,7 @@ public interface IcebergConfig {
   boolean destinationLowercaseTableNames();
 
   @WithName("debezium.sink.iceberg.table-prefix")
-    // @WithDefault("")
+  // @WithDefault("")
   Optional<String> tablePrefix();
 
   @WithName("debezium.sink.iceberg.table-namespace")
@@ -101,10 +100,7 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
-  /**
-   * Gets the partitionBy value for a given table,
-   * falling back to global if not specified.
-   */
+  /** Gets the partitionBy value for a given table, falling back to global if not specified. */
   default List<String> partitionByForTable(String destination) {
     return partitionBy().orElse(List.of());
   }
