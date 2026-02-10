@@ -16,18 +16,16 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
@@ -36,7 +34,7 @@ import java.util.Map;
 @TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
 public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
 
-  final static Long TEST_EPOCH_MS = 1577840461000L;
+  static final Long TEST_EPOCH_MS = 1577840461000L;
 
   @Test
   public void testSimpleUpsert() throws Exception {
@@ -70,7 +68,7 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     Assertions.assertEquals(ds.where("id = 4 AND __op= 'c'").count(), 1);
 
     records.clear();
-    // incase of duplicate records it should only keep the latest by epoch ts
+    // in case of duplicate records it should only keep the latest one
     records.add(eventFactory.of(dest, 3, "r", "UpdatednameV2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV3", TEST_EPOCH_MS + 2L));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV4", TEST_EPOCH_MS + 3L));
@@ -79,30 +77,19 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     records.add(eventFactory.of(dest, 4, "d", "Updatedname-4-V3", TEST_EPOCH_MS + 6L));
     records.add(eventFactory.of(dest, 5, "d", TEST_EPOCH_MS + 7L));
     records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 8L));
-    records.add(eventFactory.of(dest, 6, "r", TEST_EPOCH_MS + 9L));
-    records.add(eventFactory.of(dest, 6, "u", TEST_EPOCH_MS + 10L));
-    records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 11L));
+    records.add(eventFactory.of(dest, 6, "d", TEST_EPOCH_MS + 8L));
+    records.add(eventFactory.of(dest, 6, "c", TEST_EPOCH_MS + 8L));
+    records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 8L));
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
     Assertions.assertEquals(ds.count(), 3);
-    Assertions.assertEquals(ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 3 AND __op= 'u' AND first_name= 'UpdatednameV4'").count(), 1);
     Assertions.assertEquals(ds.where("id = 4 ").count(), 0);
     Assertions.assertEquals(ds.where("id = 5 ").count(), 0);
-    Assertions.assertEquals(ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
-
-    // in case of duplicate records including epoch ts, its should keep latest one based on operation priority
-    // ("c", 1, "r", 2, "u", 3, "d", 4);
-    records.clear();
-    records.add(eventFactory.of(dest, 3, "d", "UpdatednameV5", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 3, "u", "UpdatednameV6", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 6, "c", "Updatedname-6-V2", TEST_EPOCH_MS + 1L));
-    records.add(eventFactory.of(dest, 6, "r", "Updatedname-6-V3", TEST_EPOCH_MS + 1L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
-    ds = getTableData("testc.inventory.customers_upsert");
-    ds.show();
-    Assertions.assertEquals(ds.where("id = 3 ").count(), 0);
-    Assertions.assertEquals(ds.where("id = 6 AND __op= 'r' AND first_name= 'Updatedname-6-V3'").count(), 1);
+    Assertions.assertEquals(
+        ds.where("id = 6 AND __op= 'u' AND first_name= 'Updatedname-6-V1'").count(), 1);
 
     // if its not standard insert followed by update! should keep latest one
     records.clear();
@@ -113,8 +100,8 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
     consumer.handleBatch(records, TestUtil.getCommitter());
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
-    Assertions.assertEquals(ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
-
+    Assertions.assertEquals(
+        ds.where("id = 7 AND __op= 'u' AND first_name= 'Updatedname-7-V1'").count(), 1);
   }
 
   @Test
@@ -156,5 +143,4 @@ public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest 
       return config;
     }
   }
-
 }

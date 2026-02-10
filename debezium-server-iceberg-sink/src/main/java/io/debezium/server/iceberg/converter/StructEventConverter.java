@@ -14,6 +14,10 @@ import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
@@ -28,15 +32,9 @@ import org.apache.kafka.connect.data.Struct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 /**
- * Converts Debezium Struct events to Iceberg GenericRecord.
- * Uses StructSchemaConverter to derive Iceberg schema.
- * Conversion logic is adapted from Iceberg's RecordConverter.
+ * Converts Debezium Struct events to Iceberg GenericRecord. Uses StructSchemaConverter to derive
+ * Iceberg schema. Conversion logic is adapted from Iceberg's RecordConverter.
  *
  * @author Ismail Simsek
  */
@@ -46,6 +44,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   protected final String destination;
   private final Struct value;
   private final Struct key;
+  private boolean newKey = false;
   private final StructSchemaConverter schemaConverter;
   private static final Serde<Struct> eventSerde = DebeziumSerdes.payloadJson(Struct.class);
   private static final Serializer<Struct> structSerializer = eventSerde.serializer();
@@ -54,18 +53,29 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     super(config);
     this.destination = e.destination();
     if (e.sourceRecord() == null) {
-      throw new DebeziumException("Unexpected event type: " + e.getClass().getName() + " event.sourceRecord() is null!, expected SourceRecord value.");
+      throw new DebeziumException(
+          "Unexpected event type: "
+              + e.getClass().getName()
+              + " event.sourceRecord() is null!, expected SourceRecord value.");
     }
     if (e.sourceRecord().value() != null && !(e.sourceRecord().value() instanceof Struct)) {
-      throw new DebeziumException("Unexpected value type: " + e.sourceRecord().value().getClass().getName() + ", expected Struct.");
+      throw new DebeziumException(
+          "Unexpected value type: "
+              + e.sourceRecord().value().getClass().getName()
+              + ", expected Struct.");
     }
     if (e.sourceRecord().key() != null && !(e.sourceRecord().key() instanceof Struct)) {
-      throw new DebeziumException("Unexpected key type: " + e.sourceRecord().key().getClass().getName() + ", expected Struct.");
+      throw new DebeziumException(
+          "Unexpected key type: "
+              + e.sourceRecord().key().getClass().getName()
+              + ", expected Struct.");
     }
 
     this.key = (Struct) e.sourceRecord().key();
     this.value = (Struct) e.sourceRecord().value();
-    this.schemaConverter = new StructSchemaConverter(e.sourceRecord().valueSchema(), e.sourceRecord().keySchema(), config);
+    this.schemaConverter =
+        new StructSchemaConverter(
+            e.sourceRecord().valueSchema(), e.sourceRecord().keySchema(), config);
   }
 
   @Override
@@ -85,18 +95,28 @@ public class StructEventConverter extends AbstractEventConverter implements Even
 
   @Override
   public Long cdcSourceTsValue() {
-    if (value == null) {
-      throw new DebeziumException("Value is null, cannot extract '" + config.iceberg().cdcSourceTsField() + "'");
+    String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
+    if (cdcSourceTsField.isBlank()) {
+      throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
     }
 
-    Object tsValue = value.get(config.iceberg().cdcSourceTsField());
+    if (value == null) {
+      throw new DebeziumException("Value is null, cannot extract '" + cdcSourceTsField + "'");
+    }
+
+    Object tsValue = value.get(cdcSourceTsField);
     if (tsValue == null) {
-      LOGGER.warn("Field '{}' is null in the event for destination '{}'", config.iceberg().cdcSourceTsField(), destination);
+      LOGGER.warn(
+          "Field '{}' is null in the event for destination '{}'", cdcSourceTsField, destination);
       return null; // Or throw an exception if null is not acceptable
     }
 
     if (!(tsValue instanceof Long)) {
-      throw new DebeziumException("Expected Long type for field '" + config.iceberg().cdcSourceTsField() + "', but found " + tsValue.getClass().getName());
+      throw new DebeziumException(
+          "Expected Long type for field '"
+              + cdcSourceTsField
+              + "', but found "
+              + tsValue.getClass().getName());
     }
 
     return (Long) tsValue;
@@ -105,18 +125,26 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   @Override
   public Operation cdcOpValue() {
     if (value == null) {
-      throw new DebeziumException("Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");
+      throw new DebeziumException(
+          "Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");
     }
 
     Object opValue = value.get(config.iceberg().cdcOpField());
     if (opValue == null) {
       // Defaulting to 'c' (create/insert) if op field is null, adjust as needed
-      LOGGER.warn("Field '{}' is null in the event for destination '{}', defaulting to INSERT operation.", config.iceberg().cdcOpField(), destination);
+      LOGGER.warn(
+          "Field '{}' is null in the event for destination '{}', defaulting to INSERT operation.",
+          config.iceberg().cdcOpField(),
+          destination);
       return Operation.INSERT;
     }
 
     if (!(opValue instanceof String)) {
-      throw new DebeziumException("Expected String type for field '" + config.iceberg().cdcOpField() + "', but found " + opValue.getClass().getName());
+      throw new DebeziumException(
+          "Expected String type for field '"
+              + config.iceberg().cdcOpField()
+              + "', but found "
+              + opValue.getClass().getName());
     }
 
     final String opFieldValue = (String) opValue;
@@ -127,8 +155,23 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case "r" -> Operation.READ; // Read event (snapshot)
       case "c", "i" -> Operation.INSERT; // Create event
       default ->
-          throw new DebeziumException("Unexpected `" + config.iceberg().cdcOpField() + "=" + opFieldValue + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+          throw new DebeziumException(
+              "Unexpected `"
+                  + config.iceberg().cdcOpField()
+                  + "="
+                  + opFieldValue
+                  + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
+  }
+
+  @Override
+  public boolean isNewKey() {
+    return newKey;
+  }
+
+  @Override
+  public void setNewKey(boolean newKey) {
+    this.newKey = newKey;
   }
 
   @Override
@@ -137,19 +180,18 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   }
 
   /**
-   * Checks if the current message represents a schema change event.
-   * For Struct format, schema change events might not be directly represented
-   * in the value Struct after transformations. This method might need
-   * adjustments based on specific connector/transform behavior.
-   * Currently returns false as standard data operations are expected.
+   * Checks if the current message represents a schema change event. For Struct format, schema
+   * change events might not be directly represented in the value Struct after transformations. This
+   * method might need adjustments based on specific connector/transform behavior. Currently returns
+   * false as standard data operations are expected.
    *
    * @return False, assuming data events.
    */
   @Override
   public boolean isSchemaChangeEvent() {
-    return (schemaConverter().valueSchema().field("ddl") != null &&
-        schemaConverter().valueSchema().field("databaseName") != null &&
-        schemaConverter().valueSchema().field("tableChanges") != null);
+    return (schemaConverter().valueSchema().field("ddl") != null
+        && schemaConverter().valueSchema().field("databaseName") != null
+        && schemaConverter().valueSchema().field("tableChanges") != null);
   }
 
   /**
@@ -175,27 +217,29 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   @Override
   public RecordWrapper convertAsAppend(Schema schema) {
     if (value == null) {
-      throw new DebeziumException("Cannot convert null value Struct to Iceberg Record for APPEND operation.");
+      throw new DebeziumException(
+          "Cannot convert null value Struct to Iceberg Record for APPEND operation.");
     }
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
-    return new RecordWrapper(row, Operation.INSERT);
+    return new RecordWrapper(row, Operation.INSERT, true);
   }
 
   @Override
   public RecordWrapper convert(Schema schema) {
     GenericRecord row = convertToIcebergRecord(schema.asStruct(), value);
     Operation op = cdcOpValue();
-    return new RecordWrapper(row, op);
+    return new RecordWrapper(row, op, newKey);
   }
 
   /**
    * Converts a Kafka Connect Struct to an Iceberg GenericRecord based on the target Iceberg schema.
    *
    * @param icebergStructSchema The target Iceberg struct schema.
-   * @param connectStruct       The source Kafka Connect Struct.
+   * @param connectStruct The source Kafka Connect Struct.
    * @return An Iceberg GenericRecord.
    */
-  protected GenericRecord convertToIcebergRecord(Types.StructType icebergStructSchema, Struct connectStruct) {
+  protected GenericRecord convertToIcebergRecord(
+      Types.StructType icebergStructSchema, Struct connectStruct) {
     GenericRecord record = GenericRecord.create(icebergStructSchema);
 
     if (connectStruct == null) {
@@ -217,7 +261,8 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       }
 
       String logicalTypeName = field.schema().name();
-      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name(), logicalTypeName);
+      Object icebergValue =
+          convertValue(connectValue, icebergField.type(), icebergField.name(), logicalTypeName);
       record.setField(icebergField.name(), icebergValue);
     }
 
@@ -225,14 +270,15 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   }
 
   /**
-   * Converts a Kafka Connect value to the corresponding Iceberg type.
-   * Logic adapted from Iceberg's RecordConverter.
+   * Converts a Kafka Connect value to the corresponding Iceberg type. Logic adapted from Iceberg's
+   * RecordConverter.
    *
    * @param connectValue The value from the Kafka Connect Struct field.
-   * @param icebergType  The target Iceberg type.
+   * @param icebergType The target Iceberg type.
    * @return The converted value compatible with Iceberg.
    */
-  private Object convertValue(Object connectValue, Type icebergType, String icebergFieldName, String logicalTypeName) {
+  private Object convertValue(
+      Object connectValue, Type icebergType, String icebergFieldName, String logicalTypeName) {
     if (connectValue == null) {
       return null;
     }
@@ -241,24 +287,32 @@ public class StructEventConverter extends AbstractEventConverter implements Even
 
     switch (icebergType.typeId()) {
       case STRUCT:
-        Preconditions.checkArgument(connectValue instanceof Struct,
-            "Cannot convert to Struct: value is not a Struct: %s", connectValue.getClass().getName());
+        Preconditions.checkArgument(
+            connectValue instanceof Struct,
+            "Cannot convert to Struct: value is not a Struct: %s",
+            connectValue.getClass().getName());
         return convertToIcebergRecord(icebergType.asStructType(), (Struct) connectValue);
 
       case VARIANT:
-        Preconditions.checkArgument(connectValue instanceof Struct,
-            "Cannot convert to Variant: value is not a Struct: %s", connectValue.getClass().getName());
+        Preconditions.checkArgument(
+            connectValue instanceof Struct,
+            "Cannot convert to Variant: value is not a Struct: %s",
+            connectValue.getClass().getName());
         StructVariantObject val = new StructVariantObject((Struct) connectValue);
         return Variant.of(val.metadata(), val);
 
       case LIST:
-        Preconditions.checkArgument(connectValue instanceof List,
-            "Cannot convert to List: value is not a List: %s", connectValue.getClass().getName());
+        Preconditions.checkArgument(
+            connectValue instanceof List,
+            "Cannot convert to List: value is not a List: %s",
+            connectValue.getClass().getName());
         return convertListValue((List<?>) connectValue, icebergType.asListType(), logicalTypeName);
 
       case MAP:
-        Preconditions.checkArgument(connectValue instanceof Map,
-            "Cannot convert to Map: value is not a Map: %s", connectValue.getClass().getName());
+        Preconditions.checkArgument(
+            connectValue instanceof Map,
+            "Cannot convert to Map: value is not a Map: %s",
+            connectValue.getClass().getName());
         return convertMapValue((Map<?, ?>) connectValue, icebergType.asMapType(), logicalTypeName);
 
       case INTEGER: // int32
@@ -285,26 +339,30 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case TIME:
         return convertTimeValue(connectValue, logicalTypeName);
       case TIMESTAMP:
-        return convertTimestampValue(connectValue, (Types.TimestampType) icebergType, icebergFieldName, logicalTypeName);
+        return convertTimestampValue(
+            connectValue, (Types.TimestampType) icebergType, icebergFieldName, logicalTypeName);
       default:
         throw new UnsupportedOperationException("Unsupported Iceberg type: " + icebergType);
     }
   }
 
-
-  protected List<Object> convertListValue(List<?> list, Types.ListType listType, String logicalTypeName) {
+  protected List<Object> convertListValue(
+      List<?> list, Types.ListType listType, String logicalTypeName) {
     Type elementType = listType.elementType();
     return list.stream()
         .map(element -> convertValue(element, elementType, null, null))
         .collect(Collectors.toList());
   }
 
-  protected Map<Object, Object> convertMapValue(Map<?, ?> map, Types.MapType mapType, String logicalTypeName) {
+  protected Map<Object, Object> convertMapValue(
+      Map<?, ?> map, Types.MapType mapType, String logicalTypeName) {
     Type keyType = mapType.keyType();
     Type valueType = mapType.valueType();
     Map<Object, Object> result = new HashMap<>();
-    map.forEach((k, v) -> result.put(convertValue(k, keyType, null, null), convertValue(v, valueType, null, null)));
+    map.forEach(
+        (k, v) ->
+            result.put(
+                convertValue(k, keyType, null, null), convertValue(v, valueType, null, null)));
     return result;
   }
-
 }

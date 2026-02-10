@@ -1,6 +1,8 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.Set;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
@@ -9,9 +11,6 @@ import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.types.TypeUtil;
-
-import java.io.IOException;
-import java.util.Set;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
 
@@ -22,15 +21,16 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   private final boolean keepDeletes;
   private final RecordProjection keyProjection;
 
-  BaseDeltaTaskWriter(PartitionSpec spec,
-                      FileFormat format,
-                      FileAppenderFactory<Record> appenderFactory,
-                      OutputFileFactory fileFactory,
-                      FileIO io,
-                      long targetFileSize,
-                      Schema schema,
-                      Set<Integer> identifierFieldIds,
-                      boolean keepDeletes) {
+  BaseDeltaTaskWriter(
+      PartitionSpec spec,
+      FileFormat format,
+      FileAppenderFactory<Record> appenderFactory,
+      OutputFileFactory fileFactory,
+      FileIO io,
+      long targetFileSize,
+      Schema schema,
+      Set<Integer> identifierFieldIds,
+      boolean keepDeletes) {
     super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(identifierFieldIds));
@@ -46,17 +46,23 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
     return wrapper;
   }
 
-  @Override/**/
+  @Override /**/
   public void write(Record row) throws IOException {
     RowDataDeltaWriter writer = route(row);
     Operation rowOperation = ((RecordWrapper) row).op();
-    if (rowOperation == Operation.INSERT) {
-      // new row
+    boolean isNewKey = ((RecordWrapper) row).isNewKey();
+    if (isNewKey && !keepDeletes && rowOperation != Operation.DELETE) {
+      // Optimization: Pure INSERT (new key) - direct write,
+      // skipping the costly pre-delete since we know no previous version exists.
       writer.write(row);
     } else if (rowOperation == Operation.DELETE && !keepDeletes) {
-      // deletes. doing hard delete. when keepDeletes = FALSE we dont keep deleted record
+      // Hard DELETE: The record is deleted and history is disabled -
+      // remove the key without writing a tombstone.
       writer.deleteKey(keyProjection.wrap(row));
     } else {
+      // Upsert/Update: Key already exists (Update) or Soft Delete -
+      // delete the old version first to ensure uniqueness/deduplication,
+      // then write the new state.
       writer.deleteKey(keyProjection.wrap(row));
       writer.write(row);
     }
