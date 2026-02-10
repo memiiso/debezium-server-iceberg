@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/contributing/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/faq/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/iceberg/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/icebergevents/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/migration/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+    <url>
+         <loc>http://memiiso.github.io/debezium-server-iceberg/python-runner/</loc>
+         <lastmod>2026-02-10</lastmod>
+    </url>
+</urlset>
