@@ -82,9 +82,11 @@ public class StructSchemaConverter implements SchemaConverter {
 
     boolean isPkField = connectKeyField != null;
     boolean isOptional =
-        config.iceberg().preserveRequiredProperty()
-            ? connectField.schema().isOptional()
-            : (!isPkField || (isPkField && config.iceberg().forcePkOptional()));
+        config.iceberg().forceAllFieldsOptional()
+            ? true
+            : (config.iceberg().preserveRequiredProperty()
+                ? connectField.schema().isOptional()
+                : !isPkField);
     LOGGER.trace(
         "Converting field: '{}', Type: '{}', LogicalType: '{}', PK: {}",
         fieldName,
