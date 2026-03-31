@@ -100,6 +100,10 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
+  @WithName("debezium.sink.iceberg.force-pk-optional")
+  @WithDefault("false")
+  boolean forcePkOptional();
+
   /** Gets the partitionBy value for a given table, falling back to global if not specified. */
   default List<String> partitionByForTable(String destination) {
     return partitionBy().orElse(List.of());

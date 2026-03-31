@@ -81,7 +81,10 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     }
 
     boolean isPkField = !(keySchemaNode == null || keySchemaNode.isNull());
-    boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
+    boolean isOptional =
+        config.iceberg().preserveRequiredProperty()
+            ? fieldIsOptional
+            : (!isPkField || (isPkField && config.iceberg().forcePkOptional()));
     switch (fieldType) {
       case "struct":
         if (config.iceberg().nestedAsVariant()) {
