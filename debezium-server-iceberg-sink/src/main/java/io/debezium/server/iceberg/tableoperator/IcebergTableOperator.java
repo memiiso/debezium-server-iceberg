@@ -133,7 +133,6 @@ public class IcebergTableOperator {
             .updateSchema()
             .unionByNameWith(newSchema)
             .setIdentifierFields(newSchema.identifierFieldNames());
-
     Schema newSchemaCombined = us.apply();
 
     // @NOTE avoid committing when there is no schema change. commit creates new commit even when
