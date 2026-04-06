@@ -178,9 +178,11 @@ public class IcebergTableOperator {
           eventsGroupedBySchema.entrySet()) {
         // extend table schema if new fields found
         applyFieldAddition(
-          icebergTable,
-          schemaEvents.getValue().get(0).icebergSchema(config.iceberg().createIdentifierFields())
-         );
+            icebergTable,
+            schemaEvents
+                .getValue()
+                .get(0)
+                .icebergSchema(config.iceberg().createIdentifierFields()));
         // add set of events to table
         addToTablePerSchema(icebergTable, schemaEvents.getValue());
       }
