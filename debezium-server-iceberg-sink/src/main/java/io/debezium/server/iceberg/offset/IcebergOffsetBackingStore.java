@@ -17,9 +17,9 @@ import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.OverwriteFiles;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
@@ -208,10 +208,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
         writer.close();
         WriteResult files = writer.complete();
 
-        Transaction t = offsetTable.newTransaction();
-        t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
-        Arrays.stream(files.dataFiles()).forEach(f -> t.newAppend().appendFile(f).commit());
-        t.commitTransaction();
+        OverwriteFiles overwrite = offsetTable.newOverwrite();
+        overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
+        Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
+        overwrite.commit();
+
         LOG.debug("Successfully saved offset data to iceberg table");
       }
 
