@@ -8,6 +8,9 @@
 
 package io.debezium.server.iceberg.offset;
 
+import static org.apache.iceberg.types.Types.NestedField.optional;
+import static org.apache.iceberg.types.Types.NestedField.required;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,10 +19,26 @@ import io.debezium.config.Configuration;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.OverwriteFiles;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericAppenderFactory;
@@ -42,38 +61,16 @@ import org.apache.kafka.connect.util.SafeObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.iceberg.types.Types.NestedField.optional;
-import static org.apache.iceberg.types.Types.NestedField.required;
-
-/**
- * Implementation of OffsetBackingStore that saves data to Iceberg table.
- */
+/** Implementation of OffsetBackingStore that saves data to Iceberg table. */
 @Dependent
-public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implements OffsetBackingStore {
+public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
+    implements OffsetBackingStore {
 
-  static final Schema OFFSET_STORAGE_TABLE_SCHEMA = new Schema(
-      required(1, "id", Types.StringType.get()),
-      optional(2, "offset_data", Types.StringType.get()),
-      optional(3, "record_insert_ts", Types.TimestampType.withZone()
-      )
-  );
+  static final Schema OFFSET_STORAGE_TABLE_SCHEMA =
+      new Schema(
+          required(1, "id", Types.StringType.get()),
+          optional(2, "offset_data", Types.StringType.get()),
+          optional(3, "record_insert_ts", Types.TimestampType.withZone()));
   protected static final ObjectMapper mapper = new ObjectMapper();
   public static final String CONFIGURATION_FIELD_PREFIX_STRING = "offset.storage.";
   private static final Logger LOG = LoggerFactory.getLogger(IcebergOffsetBackingStore.class);
@@ -87,14 +84,15 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   GenericAppenderFactory appenderFactory;
   OutputFileFactory fileFactory;
 
-  public IcebergOffsetBackingStore() {
-  }
+  public IcebergOffsetBackingStore() {}
 
   @Override
   public void configure(WorkerConfig config) {
     super.configure(config);
 
-    storageConfig = new IcebergOffsetBackingStoreConfig(Configuration.from(config.originalsStrings()), CONFIGURATION_FIELD_PREFIX_STRING);
+    storageConfig =
+        new IcebergOffsetBackingStoreConfig(
+            Configuration.from(config.originalsStrings()), CONFIGURATION_FIELD_PREFIX_STRING);
     icebergCatalog = storageConfig.icebergCatalog();
     tableFullName = storageConfig.tableFullName();
     tableId = storageConfig.tableIdentifier();
@@ -117,17 +115,17 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
     LOG.info("Stopped IcebergOffsetBackingStore table:{}", tableFullName);
   }
 
-
   /**
-   * Shuts down an executor service in two phases, first by calling shutdown to reject incoming tasks,
-   * and then calling shutdownNow, if necessary, to cancel any lingering tasks.
-   * After the timeout/on interrupt, the service is forcefully closed.
+   * Shuts down an executor service in two phases, first by calling shutdown to reject incoming
+   * tasks, and then calling shutdownNow, if necessary, to cancel any lingering tasks. After the
+   * timeout/on interrupt, the service is forcefully closed.
+   *
    * @param executorService The service to shut down.
    * @param timeout The timeout of the shutdown.
    * @param timeUnit The time unit of the shutdown timeout.
    */
-  public static void shutdownExecutorServiceQuietly(ExecutorService executorService,
-                                                    long timeout, TimeUnit timeUnit) {
+  public static void shutdownExecutorServiceQuietly(
+      ExecutorService executorService, long timeout, TimeUnit timeUnit) {
     executorService.shutdown(); // Disable new tasks from being submitted
     try {
       // Wait a while for existing tasks to terminate
@@ -151,7 +149,8 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       offsetTable = icebergCatalog.loadTable(tableId);
     } else {
       LOG.debug("Creating table {} to store offset", tableFullName);
-      offsetTable = IcebergUtil.createIcebergTable(icebergCatalog, tableId, OFFSET_STORAGE_TABLE_SCHEMA);
+      offsetTable =
+          IcebergUtil.createIcebergTable(icebergCatalog, tableId, OFFSET_STORAGE_TABLE_SCHEMA);
       if (!icebergCatalog.tableExists(tableId)) {
         throw new DebeziumException("Failed to create table " + tableId + " to store offset");
       }
@@ -168,7 +167,8 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   }
 
   private void loadFileOffset(File file) {
-    try (SafeObjectInputStream is = new SafeObjectInputStream(Files.newInputStream(file.toPath()))) {
+    try (SafeObjectInputStream is =
+        new SafeObjectInputStream(Files.newInputStream(file.toPath()))) {
       Object obj = is.readObject();
 
       if (!(obj instanceof HashMap))
@@ -178,7 +178,8 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       Map<byte[], byte[]> raw = (Map<byte[], byte[]>) obj;
       for (Map.Entry<byte[], byte[]> mapEntry : raw.entrySet()) {
         ByteBuffer key = (mapEntry.getKey() != null) ? ByteBuffer.wrap(mapEntry.getKey()) : null;
-        ByteBuffer value = (mapEntry.getValue() != null) ? ByteBuffer.wrap(mapEntry.getValue()) : null;
+        ByteBuffer value =
+            (mapEntry.getValue() != null) ? ByteBuffer.wrap(mapEntry.getValue()) : null;
         data.put(fromByteBuffer(key), fromByteBuffer(value));
       }
     } catch (IOException | ClassNotFoundException e) {
@@ -197,21 +198,29 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       OffsetDateTime currentTs = OffsetDateTime.now(ZoneOffset.UTC);
 
       GenericRecord record = GenericRecord.create(OFFSET_STORAGE_TABLE_SCHEMA);
-      Record row = record.copy(
-          "id", UUID.randomUUID().toString(),
-          "offset_data", dataJson,
-          "record_insert_ts", currentTs);
+      Record row =
+          record.copy(
+              "id", UUID.randomUUID().toString(),
+              "offset_data", dataJson,
+              "record_insert_ts", currentTs);
 
-      try (BaseTaskWriter<Record> writer = new UnpartitionedWriter<>(
-          offsetTable.spec(), format, appenderFactory, fileFactory, offsetTable.io(), Long.MAX_VALUE)) {
+      try (BaseTaskWriter<Record> writer =
+          new UnpartitionedWriter<>(
+              offsetTable.spec(),
+              format,
+              appenderFactory,
+              fileFactory,
+              offsetTable.io(),
+              Long.MAX_VALUE)) {
         writer.write(row);
         writer.close();
         WriteResult files = writer.complete();
 
-        Transaction t = offsetTable.newTransaction();
-        t.newDelete().deleteFromRowFilter(Expressions.alwaysTrue()).commit();
-        Arrays.stream(files.dataFiles()).forEach(f -> t.newAppend().appendFile(f).commit());
-        t.commitTransaction();
+        OverwriteFiles overwrite = offsetTable.newOverwrite();
+        overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
+        Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
+        overwrite.commit();
+
         LOG.debug("Successfully saved offset data to iceberg table");
       }
 
@@ -225,8 +234,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
       String dataJsonString = null;
 
       int rowNum = 0;
-      try (CloseableIterable<Record> rs = IcebergGenerics.read(offsetTable)
-          .build()) {
+      try (CloseableIterable<Record> rs = IcebergGenerics.read(offsetTable).build()) {
         for (Record row : rs) {
           dataJsonString = (String) row.getField("offset_data");
           rowNum++;
@@ -235,51 +243,54 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
         throw new RuntimeException(e);
       }
       if (rowNum > 1) {
-        throw new DebeziumException("Failed recover offset data from iceberg, Found multiple offset row!");
+        throw new DebeziumException(
+            "Failed recover offset data from iceberg, Found multiple offset row!");
       }
 
       if (dataJsonString != null) {
-        this.data = mapper.readValue(dataJsonString, new TypeReference<>() {
-        });
+        this.data = mapper.readValue(dataJsonString, new TypeReference<>() {});
         LOG.debug("Loaded offset data {}", dataJsonString);
       }
     } catch (JsonProcessingException e) {
-//      e.printStackTrace();
+      //      e.printStackTrace();
       throw new DebeziumException("Failed recover offset data from iceberg", e);
     }
   }
 
   @Override
-  public Future<Void> set(final Map<ByteBuffer, ByteBuffer> values,
-                          final Callback<Void> callback) {
-    return executor.submit(() -> {
-      for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
-        if (entry.getKey() == null) {
-          continue;
-        }
-        data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
-      }
-      save();
-      if (callback != null) {
-        callback.onCompletion(null, null);
-      }
-      return null;
-    });
+  public Future<Void> set(final Map<ByteBuffer, ByteBuffer> values, final Callback<Void> callback) {
+    return executor.submit(
+        () -> {
+          for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
+            if (entry.getKey() == null) {
+              continue;
+            }
+            data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
+          }
+          save();
+          if (callback != null) {
+            callback.onCompletion(null, null);
+          }
+          return null;
+        });
   }
 
   @Override
   public Future<Map<ByteBuffer, ByteBuffer>> get(final Collection<ByteBuffer> keys) {
-    return executor.submit(() -> {
-      Map<ByteBuffer, ByteBuffer> result = new HashMap<>();
-      for (ByteBuffer key : keys) {
-        result.put(key, toByteBuffer(data.get(fromByteBuffer(key))));
-      }
-      return result;
-    });
+    return executor.submit(
+        () -> {
+          Map<ByteBuffer, ByteBuffer> result = new HashMap<>();
+          for (ByteBuffer key : keys) {
+            result.put(key, toByteBuffer(data.get(fromByteBuffer(key))));
+          }
+          return result;
+        });
   }
 
   public static String fromByteBuffer(ByteBuffer data) {
-    return (data != null) ? String.valueOf(StandardCharsets.UTF_8.decode(data.asReadOnlyBuffer())) : null;
+    return (data != null)
+        ? String.valueOf(StandardCharsets.UTF_8.decode(data.asReadOnlyBuffer()))
+        : null;
   }
 
   public static ByteBuffer toByteBuffer(String data) {
@@ -289,6 +300,4 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore implemen
   public Set<Map<String, Object>> connectorPartitions(String connectorName) {
     return null;
   }
-
-
 }
