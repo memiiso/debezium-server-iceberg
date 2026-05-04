@@ -10,6 +10,10 @@ package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
+import io.debezium.connector.common.DebeziumTaskState;
+import io.debezium.openlineage.ConnectorContext;
+import io.debezium.openlineage.DebeziumOpenLineageEmitter;
+import io.debezium.openlineage.dataset.DatasetMetadata;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.SchemaConverter;
@@ -47,6 +51,8 @@ public class IcebergTableOperator {
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
   @Inject IcebergTableWriterFactory writerFactory;
   @Inject GlobalConfig config;
+
+  private volatile ConnectorContext openLineageContext;
 
   protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
 
@@ -230,5 +236,39 @@ public class IcebergTableOperator {
     }
 
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
+
+    // Emit OpenLineage output dataset metadata after successful commit
+    try {
+      emitOpenLineageEvent(icebergTable);
+    } catch (Exception e) {
+      LOGGER.debug("OpenLineage emission failed (non-critical): {}", e.getMessage());
+    }
+  }
+
+  private ConnectorContext getOpenLineageContext() {
+    if (openLineageContext == null) {
+      openLineageContext =
+          new ConnectorContext(
+              "debezium-server-iceberg", "iceberg", "0", "1.0.0", java.util.Map.of());
+    }
+    return openLineageContext;
+  }
+
+  private void emitOpenLineageEvent(Table icebergTable) {
+    List<DatasetMetadata.FieldDefinition> fields =
+        icebergTable.schema().columns().stream()
+            .map(f -> new DatasetMetadata.FieldDefinition(f.name(), f.type().toString(), ""))
+            .toList();
+
+    DatasetMetadata metadata =
+        new DatasetMetadata(
+            icebergTable.name(),
+            DatasetMetadata.DatasetKind.OUTPUT,
+            DatasetMetadata.TABLE_DATASET_TYPE,
+            DatasetMetadata.DataStore.DATABASE,
+            fields);
+
+    DebeziumOpenLineageEmitter.emit(
+        getOpenLineageContext(), DebeziumTaskState.RUNNING, List.of(metadata));
   }
 }
