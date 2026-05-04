@@ -8,10 +8,27 @@
 
 package io.debezium.server.iceberg;
 
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
+import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
+import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
+
+import com.google.common.base.Splitter;
 import com.google.common.primitives.Ints;
 import io.debezium.DebeziumException;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
@@ -31,31 +48,15 @@ import org.eclipse.microprofile.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT;
-import static org.apache.iceberg.TableProperties.DEFAULT_FILE_FORMAT_DEFAULT;
-import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
-
 /**
  * @author Ismail Simsek
  */
 public class IcebergUtil {
   protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergUtil.class);
-  protected static final DateTimeFormatter dtFormater = DateTimeFormatter.ofPattern("yyyyMMdd")
-      .withZone(ZoneOffset.UTC);
+  protected static final DateTimeFormatter dtFormater =
+      DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
   private static final Pattern TRANSFORM_REGEX = Pattern.compile("(\\w+)\\((.+)\\)");
+  private static final Splitter DOT_SPLITTER = Splitter.on('.');
 
   public static Map<String, String> getConfigSubset(Config config, String prefix) {
     final Map<String, String> ret = new HashMap<>();
@@ -74,41 +75,70 @@ public class IcebergUtil {
     Instance<T> instance = instances.select(NamedLiteral.of(name));
     String className = instance.getClass().getName();
     if (instance.isAmbiguous()) {
-      throw new DebeziumException("Multiple '" + className + "' class instances named '" + name + "' were found");
+      throw new DebeziumException(
+          "Multiple '" + className + "' class instances named '" + name + "' were found");
     } else if (instance.isUnsatisfied()) {
-      throw new DebeziumException("No '" + className + "' class instance named '" + name + "' is available");
+      throw new DebeziumException(
+          "No '" + className + "' class instance named '" + name + "' is available");
     }
 
     LOGGER.info("Using {}", className);
     return instance.get();
   }
 
-  public static void createNamespaceIfNotExists(Catalog icebergCatalog, Namespace namespace) {
+  public static Namespace parseNamespace(String namespace) {
+    if (namespace == null || namespace.isEmpty()) {
+      return Namespace.of("default");
+    }
+    return Namespace.of(DOT_SPLITTER.splitToList(namespace).toArray(new String[0]));
+  }
 
-    if (!((SupportsNamespaces) icebergCatalog).namespaceExists(namespace)) {
-      try {
-        ((SupportsNamespaces) icebergCatalog).createNamespace(namespace);
-        LOGGER.warn("Created namespace:'{}'", namespace);
-      } catch (AlreadyExistsException e) {
-        // ignore
+  public static void createNamespaceIfNotExists(Catalog icebergCatalog, Namespace namespace) {
+    SupportsNamespaces nsCatalog = (SupportsNamespaces) icebergCatalog;
+
+    // For nested namespaces, create parent levels first
+    String[] levels = namespace.levels();
+    for (int i = 1; i <= levels.length; i++) {
+      String[] partial = new String[i];
+      System.arraycopy(levels, 0, partial, 0, i);
+      Namespace ns = Namespace.of(partial);
+      if (!nsCatalog.namespaceExists(ns)) {
+        try {
+          nsCatalog.createNamespace(ns);
+          LOGGER.warn("Created namespace:'{}'", ns);
+        } catch (AlreadyExistsException e) {
+          // ignore
+        }
       }
     }
   }
 
-  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema) {
+  public static Table createIcebergTable(
+      Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema) {
     createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
 
     return icebergCatalog.createTable(tableIdentifier, schema);
   }
 
-  public static Table createIcebergTable(Catalog icebergCatalog, TableIdentifier tableIdentifier, Schema schema,
-      PartitionSpec partitionSpec, SortOrder sortOrder, String writeFormat, String formatVersion) {
+  public static Table createIcebergTable(
+      Catalog icebergCatalog,
+      TableIdentifier tableIdentifier,
+      Schema schema,
+      PartitionSpec partitionSpec,
+      SortOrder sortOrder,
+      String writeFormat,
+      String formatVersion) {
 
-    LOGGER.warn("Creating table:'{}'\nschema:{}\nrowIdentifier:{}\npartitionSpec: {}", tableIdentifier, schema,
-        schema.identifierFieldNames(), partitionSpec);
+    LOGGER.warn(
+        "Creating table:'{}'\nschema:{}\nrowIdentifier:{}\npartitionSpec: {}",
+        tableIdentifier,
+        schema,
+        schema.identifierFieldNames(),
+        partitionSpec);
     createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
 
-    return icebergCatalog.buildTable(tableIdentifier, schema)
+    return icebergCatalog
+        .buildTable(tableIdentifier, schema)
         .withProperty(FORMAT_VERSION, formatVersion)
         .withProperty(DEFAULT_FILE_FORMAT, writeFormat.toLowerCase(Locale.ENGLISH))
         .withSortOrder(sortOrder)
@@ -126,7 +156,8 @@ public class IcebergUtil {
   }
 
   public static FileFormat getTableFileFormat(Table icebergTable) {
-    String formatAsString = icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
+    String formatAsString =
+        icebergTable.properties().getOrDefault(DEFAULT_FILE_FORMAT, DEFAULT_FILE_FORMAT_DEFAULT);
     return FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
   }
 
@@ -134,26 +165,21 @@ public class IcebergUtil {
     final Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
     if (identifierFieldIds == null || identifierFieldIds.isEmpty()) {
       return new GenericAppenderFactory(
-          icebergTable.schema(),
-          icebergTable.spec(),
-          null,
-          null,
-          null)
+              icebergTable.schema(), icebergTable.spec(), null, null, null)
           .setAll(icebergTable.properties());
     } else {
       return new GenericAppenderFactory(
-          icebergTable.schema(),
-          icebergTable.spec(),
-          Ints.toArray(identifierFieldIds),
-          TypeUtil.select(icebergTable.schema(), Sets.newHashSet(identifierFieldIds)),
-          null)
+              icebergTable.schema(),
+              icebergTable.spec(),
+              Ints.toArray(identifierFieldIds),
+              TypeUtil.select(icebergTable.schema(), Sets.newHashSet(identifierFieldIds)),
+              null)
           .setAll(icebergTable.properties());
     }
   }
 
   public static OutputFileFactory getTableOutputFileFactory(Table icebergTable, FileFormat format) {
-    return OutputFileFactory.builderFor(icebergTable,
-        IcebergUtil.partitionId(), 1L)
+    return OutputFileFactory.builderFor(icebergTable, IcebergUtil.partitionId(), 1L)
         .defaultSpec(icebergTable.spec())
         .operationId(UUID.randomUUID().toString())
         .format(format)
@@ -165,23 +191,19 @@ public class IcebergUtil {
   }
 
   /**
-   * Creates an Iceberg {@link PartitionSpec} based on the provided schema and
-   * partitioning expressions.
+   * Creates an Iceberg {@link PartitionSpec} based on the provided schema and partitioning
+   * expressions.
    *
-   * <p>
-   * The partitioning expressions in the {@code partitionBy} list can be simple
-   * field names (for identity partitioning)
-   * or transform expressions such as {@code year(field)}, {@code month(field)},
-   * {@code day(field)}, {@code hour(field)},
-   * {@code bucket(field, N)}, or {@code truncate(field, N)}.
-   * </p>
+   * <p>The partitioning expressions in the {@code partitionBy} list can be simple field names (for
+   * identity partitioning) or transform expressions such as {@code year(field)}, {@code
+   * month(field)}, {@code day(field)}, {@code hour(field)}, {@code bucket(field, N)}, or {@code
+   * truncate(field, N)}.
    *
-   * @param schema      the Iceberg schema to partition
+   * @param schema the Iceberg schema to partition
    * @param partitionBy a list of partitioning expressions or field names
    * @return a {@link PartitionSpec} representing the partitioning strategy
-   * @throws UnsupportedOperationException if an unsupported transform is
-   *                                       specified
-   * @throws IllegalArgumentException      if transform arguments are invalid
+   * @throws UnsupportedOperationException if an unsupported transform is specified
+   * @throws IllegalArgumentException if transform arguments are invalid
    */
   public static PartitionSpec createPartitionSpec(
       org.apache.iceberg.Schema schema, List<String> partitionBy) {
@@ -212,16 +234,18 @@ public class IcebergUtil {
               case "hours":
                 specBuilder.hour(matcher.group(2));
                 break;
-              case "bucket": {
-                Pair<String, Integer> args = transformArgPair(matcher.group(2));
-                specBuilder.bucket(args.first(), args.second());
-                break;
-              }
-              case "truncate": {
-                Pair<String, Integer> args = transformArgPair(matcher.group(2));
-                specBuilder.truncate(args.first(), args.second());
-                break;
-              }
+              case "bucket":
+                {
+                  Pair<String, Integer> args = transformArgPair(matcher.group(2));
+                  specBuilder.bucket(args.first(), args.second());
+                  break;
+                }
+              case "truncate":
+                {
+                  Pair<String, Integer> args = transformArgPair(matcher.group(2));
+                  specBuilder.truncate(args.first(), args.second());
+                  break;
+                }
               default:
                 throw new UnsupportedOperationException("Unsupported transform: " + transform);
             }
@@ -239,5 +263,4 @@ public class IcebergUtil {
     }
     return Pair.of(parts[0].trim(), Integer.parseInt(parts[1].trim()));
   }
-
 }
