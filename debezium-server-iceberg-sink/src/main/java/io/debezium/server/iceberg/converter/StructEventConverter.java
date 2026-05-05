@@ -129,6 +129,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
           "Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");
     }
 
+    // Snapshot events don't pass through the unwrap transform, so __op field
+    // may not exist in the schema. Check schema first to avoid DataException.
+    if (value.schema().field(config.iceberg().cdcOpField()) == null) {
+      return Operation.READ;
+    }
+
     Object opValue = value.get(config.iceberg().cdcOpField());
     if (opValue == null) {
       // Defaulting to 'c' (create/insert) if op field is null, adjust as needed
