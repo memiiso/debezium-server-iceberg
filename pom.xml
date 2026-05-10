@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.debezium</groupId>
         <artifactId>debezium-build-parent</artifactId>
-        <version>3.3.1.Final</version>
+        <version>3.5.0.Final</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>debezium-server-iceberg</artifactId>
@@ -25,7 +25,7 @@
         <!-- NOTE: this is overridden by release process using CLI argument -->
         <revision>1.0.0-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
-        <version.debezium>3.3.1.Final</version.debezium>
+        <version.debezium>3.6.0-SNAPSHOT</version.debezium>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -81,11 +81,29 @@
     </distributionManagement>
     <dependencyManagement>
         <dependencies>
+            <!-- Override Kafka clients to align with connect-runtime 4.2.0 from debezium-bom 3.6.0-SNAPSHOT.
+                 debezium-server-bom 3.5.0.Final pins kafka-clients to 4.1.1 which is missing
+                 ConfigDef$ValidList.anyNonDuplicateValues(boolean, boolean) called by connect-runtime 4.2.0.
+                 Must be declared BEFORE the BOM imports below to win Maven's first-declaration-wins resolution. -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>4.2.0</version>
+            </dependency>
+            <!-- Force single httpclient5 version to avoid classpath duplication (5.4.3 + 5.5 from
+                 conflicting transitive dependencies). 5.4.3 is the version Iceberg 1.10.0 is tested
+                 against and avoids HEAD-request format issues observed with 5.5 against some
+                 REST catalogs (e.g. Lakekeeper). -->
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>5.4.3</version>
+            </dependency>
             <!-- debezium server -->
             <dependency>
                 <groupId>io.debezium</groupId>
                 <artifactId>debezium-server-bom</artifactId>
-                <version>${version.debezium}</version>
+                <version>3.5.0.Final</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

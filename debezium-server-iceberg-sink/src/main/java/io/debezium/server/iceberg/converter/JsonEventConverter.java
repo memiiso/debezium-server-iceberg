@@ -186,6 +186,25 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
     return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
   }
 
+  @Override
+  public boolean isSnapshotEvent() {
+    String snapshot = readSnapshotMarker();
+    return "true".equals(snapshot) || "last".equals(snapshot) || "incremental".equals(snapshot)
+        || "last_in_data_collection".equals(snapshot) || "first_in_data_collection".equals(snapshot);
+  }
+
+  private String readSnapshotMarker() {
+    if (value() == null) {
+      return null;
+    }
+    JsonNode sourceNode = value().get("source");
+    if (sourceNode == null) {
+      return null;
+    }
+    JsonNode snapshotNode = sourceNode.get("snapshot");
+    return snapshotNode == null ? null : snapshotNode.asText();
+  }
+
   /**
    * Converts the Kafka Connect schema to an Iceberg schema.
    *

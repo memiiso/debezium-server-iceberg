@@ -116,7 +116,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer implements D
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
     icebergCatalog = CatalogUtil.buildIcebergCatalog(config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(config.iceberg().namespace()), TABLE_NAME);
+    TableIdentifier tableIdentifier = TableIdentifier.of(IcebergUtil.parseNamespace(config.iceberg().namespace()), TABLE_NAME);
 
     // create table if not exists
     if (!icebergCatalog.tableExists(tableIdentifier)) {

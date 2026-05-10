@@ -17,6 +17,7 @@ import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
@@ -49,6 +50,14 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   private static final Serde<Struct> eventSerde = DebeziumSerdes.payloadJson(Struct.class);
   private static final Serializer<Struct> structSerializer = eventSerde.serializer();
 
+  /**
+   * Cache of resolved field mappings per Connect schema.
+   * Maps (connectSchema) -> (icebergFieldName -> connectField).
+   * Avoids repeated HashMap lookups for every field of every row when the schema is identical.
+   */
+  private static final Map<org.apache.kafka.connect.data.Schema,
+      Map<String, Field>> fieldMappingCache = new ConcurrentHashMap<>();
+
   public StructEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     super(config);
     this.destination = e.destination();
@@ -76,6 +85,27 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     this.schemaConverter =
         new StructSchemaConverter(
             e.sourceRecord().valueSchema(), e.sourceRecord().keySchema(), config);
+  }
+
+  /**
+   * Constructor that accepts a pre-built StructSchemaConverter.
+   * Used for snapshot chunks where all rows share the same schema,
+   * avoiding 20K redundant StructSchemaConverter allocations per chunk.
+   */
+  public StructEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config,
+                               StructSchemaConverter sharedSchemaConverter) {
+    super(config);
+    this.destination = e.destination();
+    if (e.sourceRecord() == null) {
+      throw new DebeziumException(
+          "Unexpected event type: "
+              + e.getClass().getName()
+              + " event.sourceRecord() is null!, expected SourceRecord value.");
+    }
+
+    this.key = (e.sourceRecord().key() instanceof Struct) ? (Struct) e.sourceRecord().key() : null;
+    this.value = (e.sourceRecord().value() instanceof Struct) ? (Struct) e.sourceRecord().value() : null;
+    this.schemaConverter = sharedSchemaConverter;
   }
 
   @Override
@@ -127,6 +157,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     if (value == null) {
       throw new DebeziumException(
           "Value is null, cannot extract '" + config.iceberg().cdcOpField() + "'");
+    }
+
+    // Snapshot events don't pass through the unwrap transform, so __op field
+    // may not exist in the schema. Check schema first to avoid DataException.
+    if (value.schema().field(config.iceberg().cdcOpField()) == null) {
+      return Operation.READ;
     }
 
     Object opValue = value.get(config.iceberg().cdcOpField());
@@ -194,6 +230,25 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         && schemaConverter().valueSchema().field("tableChanges") != null);
   }
 
+  @Override
+  public boolean isSnapshotEvent() {
+    String snapshot = readSnapshotMarker();
+    return "true".equals(snapshot) || "last".equals(snapshot) || "incremental".equals(snapshot)
+        || "last_in_data_collection".equals(snapshot) || "first_in_data_collection".equals(snapshot);
+  }
+
+  private String readSnapshotMarker() {
+    if (value == null) {
+      return null;
+    }
+    Object sourceValue = value.get("source");
+    if (!(sourceValue instanceof Struct)) {
+      return null;
+    }
+    Object snapshotValue = ((Struct) sourceValue).get("snapshot");
+    return snapshotValue == null ? null : snapshotValue.toString();
+  }
+
   /**
    * Returns the derived Iceberg schema.
    *
@@ -238,6 +293,22 @@ public class StructEventConverter extends AbstractEventConverter implements Even
    * @param connectStruct The source Kafka Connect Struct.
    * @return An Iceberg GenericRecord.
    */
+  /**
+   * Gets or builds a cached mapping of field names to Connect Field objects for the given schema.
+   * This avoids repeated HashMap lookups in Schema.field(name) for every field of every row.
+   */
+  private Map<String, Field> getFieldMapping(org.apache.kafka.connect.data.Schema connectSchema) {
+    return fieldMappingCache.computeIfAbsent(connectSchema, schema -> {
+      Map<String, Field> mapping = new HashMap<>();
+      if (schema != null && schema.fields() != null) {
+        for (Field f : schema.fields()) {
+          mapping.put(f.name(), f);
+        }
+      }
+      return mapping;
+    });
+  }
+
   protected GenericRecord convertToIcebergRecord(
       Types.StructType icebergStructSchema, Struct connectStruct) {
     GenericRecord record = GenericRecord.create(icebergStructSchema);
@@ -246,9 +317,12 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       return record;
     }
 
+    // Use cached field mapping to avoid per-field HashMap lookups
+    Map<String, Field> fieldMapping = getFieldMapping(connectStruct.schema());
+
     for (Types.NestedField icebergField : icebergStructSchema.fields()) {
 
-      Field field = connectStruct.schema().field(icebergField.name());
+      Field field = fieldMapping.get(icebergField.name());
       if (field == null) {
         record.setField(icebergField.name(), null);
         continue;

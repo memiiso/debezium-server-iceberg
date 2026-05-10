@@ -125,10 +125,12 @@
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-connector-oracle</artifactId>
                 </dependency>
+                <!-- DB2 connector not available in Debezium 3.6.0-SNAPSHOT
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-connector-db2</artifactId>
                 </dependency>
+                -->
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-scripting</artifactId>

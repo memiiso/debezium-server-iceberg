@@ -79,6 +79,14 @@ public interface EventConverter {
   boolean isSchemaChangeEvent();
 
   /**
+   * Indicates whether this event is part of a snapshot (initial or incremental).
+   * Checks the source.snapshot field for values: "true", "last", or "incremental".
+   *
+   * @return true if it's a snapshot event, false otherwise.
+   */
+  boolean isSnapshotEvent();
+
+  /**
    * Gets the Iceberg {@link Schema} that corresponds to the data payload (`value()`) of this
    * specific event, potentially derived from schema information embedded within the event. This
    * might differ from the target table's schema if schema evolution is occurring. Returns null if
