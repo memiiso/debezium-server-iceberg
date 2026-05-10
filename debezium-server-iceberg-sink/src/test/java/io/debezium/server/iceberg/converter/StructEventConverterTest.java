@@ -1,5 +1,6 @@
 package io.debezium.server.iceberg.converter;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
@@ -45,6 +47,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -582,5 +587,71 @@ class StructEventConverterTest {
     assertNotNull(sortOrder, "Sort order should not be null");
     assertEquals(
         2, sortOrder.fields().size(), "Sort order should have 2 fields (id and tenant_db)");
+  }
+
+  /**
+   * Scenarios for {@link #testCdcOpValue}:
+   *
+   * <ul>
+   *   <li>{@code missing} — value schema does NOT declare an {@code __op} field (e.g. snapshot rows
+   *       that have already been unwrapped, or sources that never produce a Debezium envelope).
+   *       Before the fix this threw a Kafka Connect {@code DataException}; the fix returns {@code
+   *       READ}.
+   *   <li>{@code null-value} — schema declares {@code __op} but the value is {@code null}.
+   *       Pre-existing behavior: defaults to {@code INSERT} with a warning log. Included here to
+   *       guarantee the fix does not change this path.
+   *   <li>{@code c}, {@code i}, {@code u}, {@code d}, {@code r} — schema declares {@code __op} and
+   *       the value is one of the standard Debezium op codes. Standard mapping (regression check).
+   * </ul>
+   */
+  static Stream<Arguments> cdcOpValueScenarios() {
+    return Stream.of(
+        // schemaHasOpField, opValue, expected
+        Arguments.of(false, null, Operation.READ), // missing — the fix
+        Arguments.of(true, null, Operation.INSERT), // present, null -> default INSERT
+        Arguments.of(true, "c", Operation.INSERT),
+        Arguments.of(true, "i", Operation.INSERT),
+        Arguments.of(true, "u", Operation.UPDATE),
+        Arguments.of(true, "d", Operation.DELETE),
+        Arguments.of(true, "r", Operation.READ));
+  }
+
+  @ParameterizedTest(name = "schemaHasOpField={0}, opValue={1} -> {2}")
+  @MethodSource("cdcOpValueScenarios")
+  void testCdcOpValue(boolean schemaHasOpField, String opValue, Operation expected) {
+    SchemaBuilder builder =
+        SchemaBuilder.struct()
+            .name("CdcOpValueScenarioValue")
+            .field("id", Schema.INT32_SCHEMA)
+            .field("name", Schema.OPTIONAL_STRING_SCHEMA);
+    if (schemaHasOpField) {
+      builder.field(CDC_OP_FIELD, Schema.OPTIONAL_STRING_SCHEMA);
+    }
+    org.apache.kafka.connect.data.Schema valueSchema = builder.build();
+
+    Struct valueStruct = new Struct(valueSchema).put("id", TEST_INT).put("name", TEST_STRING);
+    if (schemaHasOpField && opValue != null) {
+      valueStruct.put(CDC_OP_FIELD, opValue);
+    }
+
+    EmbeddedEngineChangeEvent event = createMockChangeEvent(createTestKeyStruct(), valueStruct);
+    StructEventConverter converter = new StructEventConverter(event, config);
+
+    Operation actual =
+        assertDoesNotThrow(
+            converter::cdcOpValue,
+            "cdcOpValue() must not throw for schemaHasOpField="
+                + schemaHasOpField
+                + ", opValue="
+                + opValue);
+    assertEquals(
+        expected,
+        actual,
+        "cdcOpValue() must return "
+            + expected
+            + " for schemaHasOpField="
+            + schemaHasOpField
+            + ", opValue="
+            + opValue);
   }
 }
