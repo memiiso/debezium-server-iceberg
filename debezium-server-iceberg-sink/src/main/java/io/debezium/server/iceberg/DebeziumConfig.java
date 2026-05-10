@@ -89,6 +89,17 @@ public interface DebeziumConfig {
   @WithName("debezium.transforms")
   Map<String, String> transformsConfigs();
 
+  @WithName("debezium.predicates")
+  @WithDefault("")
+  String predicates();
+
+  @WithName("debezium.predicates")
+  Map<String, String> predicatesConfigs();
+
+  @WithName("debezium.source.topic.prefix")
+  @WithDefault("cdc")
+  String topicPrefix();
+
   @WithName("debezium.source.topic.heartbeat.prefix")
   @WithDefault("__debezium-heartbeat")
   String topicHeartbeatPrefix();
@@ -96,6 +107,17 @@ public interface DebeziumConfig {
   @WithName("debezium.source.topic.heartbeat.skip-consuming")
   @WithDefault("true")
   boolean topicHeartbeatSkipConsuming();
+
+  /**
+   * Topic on which Debezium core emits notifications via SinkNotificationChannel.
+   * Default is enabled with a fixed identifier — the value is a logical label
+   * inside the in-process ChangeEventQueue, not a real Kafka topic, so the
+   * same name is safe to reuse across N installations. Set to empty string to
+   * disable notification routing entirely.
+   */
+  @WithName("debezium.notification.sink.topic.name")
+  @WithDefault("__debezium-notifications")
+  String notificationTopic();
 
   default boolean isIsoStringTemporalMode() {
     return temporalPrecisionMode() == TemporalPrecisionMode.ISOSTRING;

@@ -37,5 +37,32 @@ public interface BatchConfig {
   @WithDefault("60")
   int concurrentUploadsTimeoutMinutes();
 
+  @WithName("debezium.sink.batch.buffer-per-table.enabled")
+  @WithDefault("false")
+  Boolean bufferPerTableEnabled();
+
+  @WithName("debezium.sink.batch.buffer-per-table.flush-interval-ms")
+  @WithDefault("30000")
+  Long bufferPerTableFlushIntervalMs();
+
+  @WithName("debezium.sink.batch.buffer-per-table.threshold")
+  @WithDefault("1000")
+  Integer bufferPerTableThreshold();
+
+  @WithName("debezium.sink.batch.buffer-per-table.max-tables")
+  @WithDefault("100")
+  Integer bufferPerTableMaxTables();
+
+  @WithName("debezium.sink.batch.buffer-per-table.retry.max-attempts")
+  @WithDefault("3")
+  Integer bufferPerTableRetryMaxAttempts();
+
+  @WithName("debezium.sink.batch.buffer-per-table.retry.initial-delay-ms")
+  @WithDefault("1000")
+  Long bufferPerTableRetryInitialDelayMs();
+
+  @WithName("debezium.sink.batch.buffer-per-table.retry.max-delay-ms")
+  @WithDefault("60000")
+  Long bufferPerTableRetryMaxDelayMs();
 
 }

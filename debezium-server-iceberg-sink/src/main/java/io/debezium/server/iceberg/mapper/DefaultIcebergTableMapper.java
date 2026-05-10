@@ -1,6 +1,7 @@
 package io.debezium.server.iceberg.mapper;
 
 import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.IcebergUtil;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -19,12 +20,13 @@ public class DefaultIcebergTableMapper implements IcebergTableMapper {
                 .replaceAll(config.iceberg().destinationRegexp().orElse(""), config.iceberg().destinationRegexpReplace().orElse(""))
                 .replace(".", "_");
 
+        Namespace ns = IcebergUtil.parseNamespace(config.iceberg().namespace());
         if (config.iceberg().destinationUppercaseTableNames()) {
-            return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toUpperCase());
+            return TableIdentifier.of(ns, (config.iceberg().tablePrefix().orElse("") + tableName).toUpperCase());
         } else if (config.iceberg().destinationLowercaseTableNames()) {
-            return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), (config.iceberg().tablePrefix().orElse("") + tableName).toLowerCase());
+            return TableIdentifier.of(ns, (config.iceberg().tablePrefix().orElse("") + tableName).toLowerCase());
         } else {
-            return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), config.iceberg().tablePrefix().orElse("") + tableName);
+            return TableIdentifier.of(ns, config.iceberg().tablePrefix().orElse("") + tableName);
         }
     }
 }
