@@ -27,6 +27,11 @@
             <artifactId>debezium-server-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-openlineage-api</artifactId>
+            <version>${version.debezium}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
         </dependency>
