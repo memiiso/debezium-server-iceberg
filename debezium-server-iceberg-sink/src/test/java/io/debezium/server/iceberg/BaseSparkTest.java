@@ -8,9 +8,12 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.S3Minio;
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
+
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.debezium.server.iceberg.testresources.TestUtil;
+import java.util.Map;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -23,11 +26,6 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.util.Map;
-
-import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
-import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
-
 /**
  * Integration test that uses spark to consumer data is consumed.
  *
@@ -35,9 +33,8 @@ import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_WAREHOUSE_S3A;
  */
 public class BaseSparkTest extends BaseTest {
 
-  protected static final SparkConf sparkconf = new SparkConf()
-      .setAppName("CDC-S3-Batch-Spark-Sink")
-      .setMaster("local[2]");
+  protected static final SparkConf sparkconf =
+      new SparkConf().setAppName("CDC-S3-Batch-Spark-Sink").setMaster("local[2]");
   protected static SparkSession spark;
 
   @BeforeAll
@@ -48,8 +45,11 @@ public class BaseSparkTest extends BaseTest {
         .set("spark.eventLog.enabled", "false")
         .set("spark.hadoop.fs.s3a.connection.establish.timeout", "30")
         // enable iceberg SQL Extensions and Catalog
-        .set("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-        .set("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") // Iceberg catalog
+        .set(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .set(
+            "spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") // Iceberg catalog
         .set("spark.sql.defaultCatalog", "iceberg")
         // For spark to read iceberg tables using Hadoop file IO
         // .set("spark.hadoop.fs.s3a.endpoint", S3Minio.container.getS3URL())
@@ -61,15 +61,14 @@ public class BaseSparkTest extends BaseTest {
         // testing
         .set("spark.sql.session.timeZone", "Europe/Berlin");
     // take current settings and use them for sparkconf
-    Map<String, String> catalogConf = IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), "debezium.sink.iceberg.");
-    catalogConf.forEach((key, value) -> {
-      sparkconf.set("spark.sql.catalog.iceberg." + key, value);
-    });
+    Map<String, String> catalogConf =
+        IcebergUtil.getConfigSubset(ConfigProvider.getConfig(), "debezium.sink.iceberg.");
+    catalogConf.forEach(
+        (key, value) -> {
+          sparkconf.set("spark.sql.catalog.iceberg." + key, value);
+        });
 
-    BaseSparkTest.spark = SparkSession
-        .builder()
-        .config(BaseSparkTest.sparkconf)
-        .getOrCreate();
+    BaseSparkTest.spark = SparkSession.builder().config(BaseSparkTest.sparkconf).getOrCreate();
 
     // System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
   }
@@ -101,12 +100,13 @@ public class BaseSparkTest extends BaseTest {
 
   public static void PGCreateTestDataTable() throws Exception {
     // create test table
-    String sql = "" +
-        "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n" +
-        "            c_id INTEGER ,\n" +
-        "            c_text TEXT,\n" +
-        "            c_varchar VARCHAR" +
-        "          );";
+    String sql =
+        ""
+            + "        CREATE TABLE IF NOT EXISTS inventory.test_data (\n"
+            + "            c_id INTEGER ,\n"
+            + "            c_text TEXT,\n"
+            + "            c_varchar VARCHAR"
+            + "          );";
     SourcePostgresqlDB.runSQL(sql);
   }
 
@@ -114,25 +114,40 @@ public class BaseSparkTest extends BaseTest {
     int numInsert = 0;
     do {
 
-      new Thread(() -> {
-        try {
-          if (addRandomDelay) {
-            Thread.sleep(TestUtil.randomInt(20000, 100000));
-          }
-          String sql = "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " +
-              "VALUES ";
-          StringBuilder values = new StringBuilder("\n(" + TestUtil.randomInt(15, 32) + ", '"
-              + TestUtil.randomString(524) + "', '" + TestUtil.randomString(524) + "')");
-          for (int i = 0; i < 100; i++) {
-            values.append("\n,(").append(TestUtil.randomInt(15, 32)).append(", '").append(TestUtil.randomString(524))
-                .append("', '").append(TestUtil.randomString(524)).append("')");
-          }
-          SourcePostgresqlDB.runSQL(sql + values);
-          SourcePostgresqlDB.runSQL("COMMIT;");
-        } catch (Exception e) {
-          Thread.currentThread().interrupt();
-        }
-      }).start();
+      new Thread(
+              () -> {
+                try {
+                  if (addRandomDelay) {
+                    Thread.sleep(TestUtil.randomInt(20000, 100000));
+                  }
+                  String sql =
+                      "INSERT INTO inventory.test_data (c_id, c_text, c_varchar ) " + "VALUES ";
+                  StringBuilder values =
+                      new StringBuilder(
+                          "\n("
+                              + TestUtil.randomInt(15, 32)
+                              + ", '"
+                              + TestUtil.randomString(524)
+                              + "', '"
+                              + TestUtil.randomString(524)
+                              + "')");
+                  for (int i = 0; i < 100; i++) {
+                    values
+                        .append("\n,(")
+                        .append(TestUtil.randomInt(15, 32))
+                        .append(", '")
+                        .append(TestUtil.randomString(524))
+                        .append("', '")
+                        .append(TestUtil.randomString(524))
+                        .append("')");
+                  }
+                  SourcePostgresqlDB.runSQL(sql + values);
+                  SourcePostgresqlDB.runSQL("COMMIT;");
+                } catch (Exception e) {
+                  Thread.currentThread().interrupt();
+                }
+              })
+          .start();
 
       numInsert += 100;
     } while (numInsert <= numRows);
@@ -144,7 +159,7 @@ public class BaseSparkTest extends BaseTest {
   }
 
   public Dataset<Row> getTableData(String namespace, String table) {
-    table = namespace + "." + table.replace(".", "_");
+    table = IcebergUtil.parseNamespace(namespace) + "." + table.replace(".", "_");
     // printSparkTables();
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
@@ -167,5 +182,4 @@ public class BaseSparkTest extends BaseTest {
     }
     return null;
   }
-
 }
