@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.tableoperator;
 
 import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
+import io.debezium.Module;
 import io.debezium.connector.common.DebeziumTaskState;
 import io.debezium.openlineage.ConnectorContext;
 import io.debezium.openlineage.DebeziumOpenLineageEmitter;
@@ -238,18 +239,29 @@ public class IcebergTableOperator {
     LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
 
     // Emit OpenLineage output dataset metadata after successful commit
-    try {
-      emitOpenLineageEvent(icebergTable);
-    } catch (Exception e) {
-      LOGGER.debug("OpenLineage emission failed (non-critical): {}", e.getMessage());
+    if (config.iceberg().openlineageEnabled()) {
+      try {
+        emitOpenLineageEvent(icebergTable);
+      } catch (Exception e) {
+        LOGGER.debug("OpenLineage emission failed (non-critical)", e);
+      }
     }
   }
 
   private ConnectorContext getOpenLineageContext() {
     if (openLineageContext == null) {
-      openLineageContext =
-          new ConnectorContext(
-              "debezium-server-iceberg", "iceberg", "0", "1.0.0", java.util.Map.of());
+      synchronized (this) {
+        if (openLineageContext == null) {
+          openLineageContext =
+              new ConnectorContext(
+                  "debezium-server-iceberg",
+                  "iceberg",
+                  "0",
+                  Module.version(),
+                  java.util.Map.of()
+              );
+        }
+      }
     }
     return openLineageContext;
   }
