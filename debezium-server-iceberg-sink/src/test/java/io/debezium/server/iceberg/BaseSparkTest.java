@@ -144,7 +144,7 @@ public class BaseSparkTest extends BaseTest {
   }
 
   public Dataset<Row> getTableData(String namespace, String table) {
-    table = namespace + "." + table.replace(".", "_");
+    table = IcebergUtil.parseNamespace(namespace) + "." + table.replace(".", "_");
     // printSparkTables();
     return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
   }

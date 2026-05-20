@@ -226,7 +226,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   public void initializeStorage() {
     if (!storageExists()) {
       try {
-        LOG.debug("Creating table {} to store database history", tableFullName);
+        LOG.info("Creating table {} to store database history", tableFullName);
         historyTable = IcebergUtil.createIcebergTable(icebergCatalog, tableId, DATABASE_HISTORY_TABLE_SCHEMA);
         LOG.warn("Created database history storage table {} to store history", tableFullName);
 

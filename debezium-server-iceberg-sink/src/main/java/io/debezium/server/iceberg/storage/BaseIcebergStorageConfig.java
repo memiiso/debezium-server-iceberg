@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.eclipse.microprofile.config.ConfigProvider;
 
@@ -29,8 +30,8 @@ public abstract class BaseIcebergStorageConfig {
     return this.config.getProperty("catalog-name", "default");
   }
 
-  public String tableNamespace() {
-    return this.config.getProperty("table-namespace", "default");
+  public Namespace tableNamespace() {
+    return IcebergUtil.parseNamespace(this.config.getProperty("table-namespace", "default"));
   }
 
   public abstract String tableName();
@@ -56,6 +57,6 @@ public abstract class BaseIcebergStorageConfig {
   }
 
   public TableIdentifier tableIdentifier() {
-    return TableIdentifier.of(IcebergUtil.parseNamespace(this.tableNamespace()), this.tableName());
+    return TableIdentifier.of(this.tableNamespace(), this.tableName());
   }
 }

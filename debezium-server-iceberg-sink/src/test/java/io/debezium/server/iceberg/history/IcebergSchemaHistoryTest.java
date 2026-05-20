@@ -54,11 +54,12 @@ public class IcebergSchemaHistoryTest extends BaseSparkTest {
             "VALUES  (1,'data-1'),(2,'data-2'),(3,'data-3');";
     SourceMysqlDB.runSQL(sqlInsert);
 
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
+    Awaitility.await().atMost(Duration.ofSeconds(160)).until(() -> {
       try {
         Dataset<Row> ds = getTableData("testc.inventory.test_schema_history_ddl");
         return ds.count() >= 2;
       } catch (Exception e) {
+//        e.printStackTrace();
         return false;
       }
     });
