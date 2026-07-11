@@ -1,10 +1,10 @@
 # Python Runner for Debezium Server
 
-It's possible to use python to run,operate debezium server
+It's possible to use Python to run and operate Debezium Server.
 
 For convenience this project additionally provides Python scripts to automate the startup, shutdown, and configuration
 of Debezium Server.
-Using Python, you can do various Debezium Server operation and take programmatic, dynamic, debezium configuration.
+Using Python, you can perform various Debezium Server operations and use programmatic, dynamic Debezium configurations.
 example:
 
 ```commandline
@@ -29,8 +29,8 @@ import os
 from debezium import DebeziumRunAsyn
 
 java_args = []
-# using python we can dynamically influence debezium 
-# by chaning its config within python
+# using Python we can dynamically influence Debezium 
+# by changing its config within Python
 if my_custom_condition_check is True:
     # Option 1: set config using java arg
     java_args.append("-Dsnapshot.mode=always")
