@@ -421,6 +421,7 @@
                 <version>3.5.2</version>
                 <configuration>
                     <argLine>
+                        -Djava.security.manager=allow
                         --add-opens=java.base/java.lang=ALL-UNNAMED
                         --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
                         --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
