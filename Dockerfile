@@ -19,7 +19,7 @@ RUN microdnf clean all
 
 USER jboss
 
-COPY --from=builder /app/appdist/debezium-server-iceberg $SERVER_HOME
+COPY --from=builder --chown=185 /app/appdist/debezium-server-iceberg $SERVER_HOME
 
 # Set the working directory to the Debezium Server home directory
 WORKDIR $SERVER_HOME
