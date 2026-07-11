@@ -1,7 +1,7 @@
 #!/bin/bash
 # To enable JMX functionality, export the JMX_HOST and JMX_PORT environment variables.
 # Modify the jmxremote.access and jmxremote.password files accordingly.
-if [ -n "${JMX_HOST}" -a -n "${JMX_PORT}" ]; then
+if [ -n "${JMX_HOST}" ] && [ -n "${JMX_PORT}" ]; then
      export JAVA_OPTS="-Dcom.sun.management.jmxremote.ssl=false \
      -Dcom.sun.management.jmxremote.port=${JMX_PORT} \
      -Dcom.sun.management.jmxremote.rmi.port=${JMX_PORT} \
