@@ -24,7 +24,7 @@ To handle such a change, you need to perform a manual migration step on your Ice
 
 ### Migration Steps
 
-Let's use the example of a column `order_created_ts_ms` changing from `long` to `timestamp`. Migrating consumer from 0.8.x to 0.9.x.
+Let's use the example of a column `order_created_ts_ms` changing from `long` to `timestamp`, such as when migrating the consumer from 0.8.x to 0.9.x.
 
 1.  **Stop the Debezium Server** to prevent further write attempts.
 
@@ -74,7 +74,7 @@ After this process, your table will have both columns:
 
 This approach preserves all your data while allowing the schema to evolve to accommodate the new data type. You can later decide to backfill the data and consolidate it into a single column if needed.
 
-or you can simply could use COALESCE and read consolidated data
+Alternatively, you can use COALESCE to read consolidated data:
 ```sql
 SELECT COALESCE(timestamp_millis(order_created_ts_ms_legacy), order_created_ts_ms) AS order_created_ts_ms FROM my_catalog.my_db.my_table
 ```
