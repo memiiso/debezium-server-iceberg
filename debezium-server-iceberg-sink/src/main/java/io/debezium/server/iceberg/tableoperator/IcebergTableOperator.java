@@ -254,7 +254,12 @@ public class IcebergTableOperator {
         if (openLineageContext == null) {
           openLineageContext =
               new ConnectorContext(
-                  "debezium-server-iceberg", "iceberg", "0", Module.version(), java.util.Map.of());
+                  "debezium-server-iceberg",
+                  "iceberg",
+                  "0",
+                  Module.version(),
+                  java.util.UUID.randomUUID(),
+                  java.util.Map.of());
         }
       }
     }
