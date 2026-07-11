@@ -15,9 +15,9 @@ services:
       - ./config/application.properties:/debezium/config/application.properties
     command: >
       bash -c "
-      mvn dependency:copy -Dartifact=org.apache.iceberg:iceberg-nessie:1.10.0:jar -DoutputDirectory=/debezium/lib/ \ 
-      && mvn dependency:copy -Dartifact=org.projectnessie.nessie:nessie-client:0.104.5:jar -DoutputDirectory=/debezium/lib/ \ 
-      && mvn dependency:copy -Dartifact=org.projectnessie.nessie:nessie-model:0.104.5:jar -DoutputDirectory=/debezium/lib/ \ 
+      curl -f -SL -o /debezium/lib/iceberg-nessie-1.10.0.jar https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar \
+      && curl -f -SL -o /debezium/lib/nessie-client-0.104.5.jar https://repo1.maven.org/maven2/org/projectnessie/nessie/nessie-client/0.104.5/nessie-client-0.104.5.jar \
+      && curl -f -SL -o /debezium/lib/nessie-model-0.104.5.jar https://repo1.maven.org/maven2/org/projectnessie/nessie/nessie-model/0.104.5/nessie-model-0.104.5.jar \
       && /debezium/run.sh
       "
     environment:
