@@ -26,7 +26,7 @@ d.run(*java_args)
 
 ```python
 import os
-from debezium import DebeziumRunAsyn
+from debezium import DebeziumRunAsync
 
 java_args = []
 # using Python we can dynamically influence Debezium 
@@ -39,7 +39,7 @@ if my_custom_condition_check is True:
 
 java_args.append("-Dquarkus.log.file.enable=true")
 java_args.append("-Dquarkus.log.file.path=/logs/dbz_logfile.log")
-d = DebeziumRunAsyn(debezium_dir="/dbz/server/dir", java_home='/java/home/dir', java_args=java_args)
+d = DebeziumRunAsync(debezium_dir="/dbz/server/dir", java_home='/java/home/dir', java_args=java_args)
 d.run()
 d.join()
 ```
