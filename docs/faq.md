@@ -21,7 +21,7 @@
 
 ???+ question "How can I replicate only specific tables from my source database?"
 
-    By default, the Debezium connector replicates all tables in the database, which can result in unnecessary load. To avoid replicating tables you don't need, configure the `debezium.source.table.include.list` property to specify the exact tables to replicate. This will streamline your data pipeline and reduce overhead. For more details, refer to the [Debezium server source](https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-table-include-list documentation.
+    By default, the Debezium connector replicates all tables in the database, which can result in unnecessary load. To avoid replicating tables you don't need, configure the `debezium.source.table.include.list` property to specify the exact tables to replicate. This will streamline your data pipeline and reduce overhead. For more details, refer to the [Debezium server source documentation](https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-table-include-list).
 
 ???+ question "How do I configure AWS S3 credentials?"
 
