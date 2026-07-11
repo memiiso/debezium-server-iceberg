@@ -1,9 +1,9 @@
 # Contributing
 
-Debezium Iceberg consumer is a very young project and looking for new maintainers. There are definitively many small/big
-improvements to do, including documentation, adding new features to submitting bug reports.
+Debezium Iceberg consumer is a very young project and looking for new maintainers. There are definitely many small/big
+improvements to do, including documentation, adding new features, or submitting bug reports.
 
-Please feel free to send pull request, report bugs or open feature request.
+Please feel free to send pull requests, report bugs, or open feature requests.
 
 ## License
 

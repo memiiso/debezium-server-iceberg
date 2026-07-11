@@ -3,7 +3,7 @@ import jnius_config
 import logging
 import os
 import sys
-#####  loggger
+#####  logger
 import threading
 from pathlib import Path
 
@@ -47,12 +47,12 @@ class Debezium():
             self.conf_dir.as_posix()]
         self.add_classpath(*DEBEZIUM_CLASSPATH)
 
-    def add_classpath(self, *claspath):
+    def add_classpath(self, *classpath):
         if jnius_config.vm_running:
             raise ValueError(
                 "VM is already running, can't set classpath/options; VM started at %s" % jnius_config.vm_started_at)
 
-        jnius_config.add_classpath(*claspath)
+        jnius_config.add_classpath(*classpath)
         log.info("VM Classpath: %s" % jnius_config.get_classpath())
 
     def java_home(self, java_home: str):
@@ -79,7 +79,7 @@ class Debezium():
             detach()
 
 
-class DebeziumRunAsyn(threading.Thread):
+class DebeziumRunAsync(threading.Thread):
     def __init__(self, debezium_dir: str, java_args: list, java_home: str = None):
         threading.Thread.__init__(self)
         self.debezium_dir = debezium_dir

@@ -34,7 +34,7 @@ debezium.sink.iceberg.s3.path-style-access=true
 # debezium.sink.hive.metastore.sasl.enabled=false
 # debezium.sink.iceberg.hive.metastore.sasl.enabled=false
 
-### using mino as S3
+### using minio as S3
 # debezium.sink.iceberg.s3.endpoint=http://localhost:9000;
 ## S3FileIO
 # debezium.sink.iceberg.io-impl=org.apache.iceberg.io.ResolvingFileIO
@@ -93,7 +93,7 @@ debezium.transforms.unwrap.drop.tombstones=true
 ## mongodb event flattening
 # debezium.transforms.unwrap.type=io.debezium.connector.mongodb.transforms.ExtractNewDocumentState
 # debezium.transforms=unwrap,renamekeyfield
-## IMPORTANT FIX: rename key filed name "id"=>"_id" to align it with payload key field name.
+## IMPORTANT FIX: rename key field name "id"=>"_id" to align it with payload key field name.
 # debezium.transforms.renamekeyfield.type=org.apache.kafka.connect.transforms.ReplaceField$Key
 # debezium.transforms.renamekeyfield.renames=id:_id
 ## For mongodb and debezium 2.7.X onward only

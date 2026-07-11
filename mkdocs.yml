@@ -1,5 +1,5 @@
 site_name: Debezium Server Iceberg Consumer
-site_url: http://memiiso.github.io/debezium-server-iceberg
+site_url: https://memiiso.github.io/debezium-server-iceberg
 repo_url: https://github.com/memiiso/debezium-server-iceberg
 theme:
   name: material
@@ -13,8 +13,8 @@ theme:
     - content.tabs.link
 nav:
   - Home: index.md
-  - iceberg Consumer: iceberg.md
-  - icebergevents Consumer: icebergevents.md
+  - Iceberg Consumer: iceberg.md
+  - IcebergEvents Consumer: icebergevents.md
   - Python Runner: python-runner.md
   - Migration Guideline: migration.md
   - FAQ: faq.md

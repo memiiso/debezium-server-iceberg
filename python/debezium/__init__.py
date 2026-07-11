@@ -99,7 +99,7 @@ class Debezium(LoggerClass):
             detach()
 
 
-class DebeziumRunAsyn(threading.Thread):
+class DebeziumRunAsync(threading.Thread):
     def __init__(self, debezium_dir: str, java_args: list, java_home: str = None):
         threading.Thread.__init__(self)
         self.debezium_dir = debezium_dir
