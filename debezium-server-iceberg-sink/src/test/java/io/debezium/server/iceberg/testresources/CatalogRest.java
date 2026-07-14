@@ -9,23 +9,24 @@
 package io.debezium.server.iceberg.testresources;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class CatalogRest implements QuarkusTestResourceLifecycleManager {
   public static final int REST_CATALOG_PORT = 8181;
   public static final String REST_CATALOG_IMAGE = "apache/iceberg-rest-fixture";
 
-  public static final GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(REST_CATALOG_IMAGE))
-      .withExposedPorts(REST_CATALOG_PORT)
-      .waitingFor(Wait.forLogMessage(".*Started Server.*", 1));
+  public static final GenericContainer<?> container =
+      new GenericContainer<>(DockerImageName.parse(REST_CATALOG_IMAGE))
+          .withExposedPorts(REST_CATALOG_PORT)
+          .waitingFor(Wait.forLogMessage(".*Started.*Server.*", 1));
 
   public static String getHostUrl() {
-    return String.format("http://%s:%s", container.getHost(), container.getMappedPort(REST_CATALOG_PORT));
+    return String.format(
+        "http://%s:%s", container.getHost(), container.getMappedPort(REST_CATALOG_PORT));
   }
 
   @Override
@@ -43,7 +44,6 @@ public class CatalogRest implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public void stop() {
-      container.stop();
+    container.stop();
   }
-
 }

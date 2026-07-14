@@ -571,7 +571,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
       config.put("debezium.sink.iceberg.write.format.default", "orc");
       config.put("debezium.sink.iceberg.destination-regexp", "\\d");
       config.put("debezium.source.hstore.handling.mode", "map");
-      config.put("debezium.sink.iceberg.partition-by", "id");
+      config.put("debezium.sink.iceberg.partition-by.testc.inventory.customers", "id");
       return config;
     }
   }
