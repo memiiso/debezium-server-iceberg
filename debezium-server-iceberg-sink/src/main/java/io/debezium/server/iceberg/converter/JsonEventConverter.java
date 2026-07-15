@@ -19,8 +19,6 @@ import io.debezium.time.IsoDate;
 import io.debezium.time.IsoTime;
 import io.debezium.time.ZonedTime;
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -257,15 +255,40 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         return node.asDouble();
       case DECIMAL:
         {
-          BigDecimal decimalVal = null;
-          try {
-            int scale = ((Types.DecimalType) field.type()).scale();
-            decimalVal = new BigDecimal(new BigInteger(node.binaryValue()), scale);
-          } catch (IOException e) {
-            throw new RuntimeException(
-                "Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+          Object decimalObj;
+          if (node.isNumber()) {
+            decimalObj = node.decimalValue();
+          } else if (node.isTextual()) {
+            // When decimal.handling.mode=precise, Debezium JSON format sends decimals as
+            // base64-encoded byte strings. Try binaryValue() first (Jackson decodes base64
+            // from text nodes), then fall back to treating as numeric string.
+            try {
+              byte[] bytes = node.binaryValue();
+              if (bytes != null && bytes.length > 0) {
+                decimalObj = bytes;
+              } else {
+                decimalObj = node.textValue();
+              }
+            } catch (IOException e) {
+              // Not valid base64, treat as numeric string
+              decimalObj = node.textValue();
+            }
+          } else {
+            try {
+              decimalObj = node.binaryValue();
+            } catch (IOException e) {
+              throw new RuntimeException(
+                  "Failed to convert decimal value to iceberg value, field: " + field.name(), e);
+            }
+            if (decimalObj == null) {
+              throw new RuntimeException(
+                  "Failed to convert decimal value to iceberg value, field: "
+                      + field.name()
+                      + " unsupported node type: "
+                      + node.getNodeType());
+            }
           }
-          return decimalVal;
+          return convertDecimal(decimalObj, (Types.DecimalType) field.type(), null);
         }
       case BOOLEAN:
         return node.asBoolean();

@@ -8,11 +8,24 @@
 
 package io.debezium.server.iceberg.converter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.quarkus.test.junit.QuarkusTest;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Types;
@@ -22,31 +35,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
-
 @QuarkusTest
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterTest extends BaseTest {
-  final String serdeWithSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
-  final String unwrapWithSchema = Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
-  final String unwrapWithGeomSchema = Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
-  final String unwrapWithArraySchema = Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
-  final String unwrapWithArraySchema2 = Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
+  final String serdeWithSchema =
+      Files.readString(Path.of("src/test/resources/json/serde-with-schema.json"));
+  final String unwrapWithSchema =
+      Files.readString(Path.of("src/test/resources/json/unwrap-with-schema.json"));
+  final String unwrapWithGeomSchema =
+      Files.readString(Path.of("src/test/resources/json/serde-with-schema_geom.json"));
+  final String unwrapWithArraySchema =
+      Files.readString(Path.of("src/test/resources/json/serde-with-array.json"));
+  final String unwrapWithArraySchema2 =
+      Files.readString(Path.of("src/test/resources/json/serde-with-array2.json"));
 
-
-  JsonEventConverterTest() throws IOException {
-  }
+  JsonEventConverterTest() throws IOException {}
 
   @BeforeAll
   static void setup() {
@@ -64,7 +67,9 @@ class JsonEventConverterTest extends BaseTest {
     JsonEventConverter e = new JsonEventConverter("test", serdeWithSchema, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema.toString());
-    assertEquals(schema.toString(), ("""
+    assertEquals(
+        schema.toString(),
+        ("""
         table {
           1: before: optional struct<2: id: optional int, 3: first_name: optional string, 4: last_name: optional string, 5: email: optional string>
           6: after: optional struct<7: id: optional int, 8: first_name: optional string, 9: last_name: optional string, 10: email: optional string>
@@ -82,7 +87,9 @@ class JsonEventConverterTest extends BaseTest {
     RecordWrapper record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(LocalDate.parse("2016-02-19"), record.getField("order_date"));
-    assertEquals(schema.toString(), """
+    assertEquals(
+        schema.toString(),
+        """
         table {
           1: id: optional int
           2: order_date: optional date
@@ -109,7 +116,8 @@ class JsonEventConverterTest extends BaseTest {
     RecordWrapper record = e.convert(schema);
     assertEquals("orders", record.getField("__table").toString());
     assertEquals(LocalDate.parse("2016-02-19"), record.getField("order_date"));
-    assertEquals("""
+    assertEquals(
+        """
         table {
           1: id: required int
           2: order_date: required date
@@ -132,7 +140,9 @@ class JsonEventConverterTest extends BaseTest {
     JsonEventConverter e = new JsonEventConverter("test", unwrapWithArraySchema, null, config);
 
     Schema schema = e.icebergSchema();
-    assertEquals(schema.toString(), """
+    assertEquals(
+        schema.toString(),
+        """
         table {
           1: name: optional string
           2: pay_by_quarter: optional list<int>
@@ -144,10 +154,12 @@ class JsonEventConverterTest extends BaseTest {
           12: __deleted: optional string
         }""");
     assertEquals(schema.identifierFieldIds(), Set.of());
-    assertEquals(schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
-    assertEquals(schema.findField("schedule").type().asListType().elementType().toString(), "string");
+    assertEquals(
+        schema.findField("pay_by_quarter").type().asListType().elementType().toString(), "int");
+    assertEquals(
+        schema.findField("schedule").type().asListType().elementType().toString(), "string");
     RecordWrapper record = e.convert(schema);
-    //System.out.println(record);
+    // System.out.println(record);
     assertTrue(record.toString().contains("[10000, 10001, 10002, 10003]"));
   }
 
@@ -156,7 +168,9 @@ class JsonEventConverterTest extends BaseTest {
     JsonEventConverter e = new JsonEventConverter("test", unwrapWithArraySchema2, null, config);
     Schema schema = e.icebergSchema();
     System.out.println(schema);
-    assertEquals(schema.toString(), """
+    assertEquals(
+        schema.toString(),
+        """
         table {
           1: source: optional struct<2: version: optional string, 3: connector: optional string, 4: name: optional string, 5: ts_ms: optional long, 6: snapshot: optional string, 7: db: optional string, 8: sequence: optional string, 9: table: optional string, 10: server_id: optional long, 11: gtid: optional string, 12: file: optional string, 13: pos: optional long, 14: row: optional int, 15: thread: optional long, 16: query: optional string>
           17: databaseName: optional string
@@ -172,7 +186,9 @@ class JsonEventConverterTest extends BaseTest {
     JsonEventConverter e = new JsonEventConverter("test", unwrapWithGeomSchema, null, config);
     Schema schema = e.icebergSchema();
     RecordWrapper record = e.convert(schema);
-    assertEquals(schema.toString(), """
+    assertEquals(
+        schema.toString(),
+        """
         table {
           1: id: optional int
           2: g: optional struct<3: wkb: optional string, 4: srid: optional int>
@@ -186,7 +202,8 @@ class JsonEventConverterTest extends BaseTest {
     assertEquals(schema.identifierFieldIds(), Set.of());
     GenericRecord g = (GenericRecord) record.getField("g");
     GenericRecord h = (GenericRecord) record.getField("h");
-    assertEquals("AQEAAAAAAAAAAADwPwAAAAAAAPA/", g.get(0, Types.StringType.get().typeId().javaClass()));
+    assertEquals(
+        "AQEAAAAAAAAAAADwPwAAAAAAAPA/", g.get(0, Types.StringType.get().typeId().javaClass()));
     assertEquals(123, g.get(1, Types.IntegerType.get().typeId().javaClass()));
     assertNull(h);
   }
@@ -196,7 +213,8 @@ class JsonEventConverterTest extends BaseTest {
     // testing Debezium deserializer
     final Serde<JsonNode> valueSerde = DebeziumSerdes.payloadJson(JsonNode.class);
     valueSerde.configure(Collections.emptyMap(), false);
-    JsonNode deserializedData = valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
+    JsonNode deserializedData =
+        valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
     assertEquals(deserializedData.getClass().getSimpleName(), "ObjectNode");
     assertTrue(deserializedData.has("after"));
     assertTrue(deserializedData.has("op"));
@@ -205,24 +223,27 @@ class JsonEventConverterTest extends BaseTest {
     assertFalse(deserializedData.has("payload"));
 
     valueSerde.configure(Collections.singletonMap("from.field", "schema"), false);
-    JsonNode deserializedSchema = valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
+    JsonNode deserializedSchema =
+        valueSerde.deserializer().deserialize("xx", serdeWithSchema.getBytes());
     assertFalse(deserializedSchema.has("schema"));
-
   }
 
   @Test
   public void testIcebergSchemaConverterWithKey() {
-    final JsonEventConverter t1 = eventBuilder
-        .destination("destination")
-        .addKeyField("id", 1)
-        .addKeyField("first_name", "name")
-        .addField("__op", "u")
-        .addField("__source_ts_ms", 2L)
-        .addField("__deleted", false)
-        .build();
+    final JsonEventConverter t1 =
+        eventBuilder
+            .destination("destination")
+            .addKeyField("id", 1)
+            .addKeyField("first_name", "name")
+            .addField("__op", "u")
+            .addField("__source_ts_ms", 2L)
+            .addField("__deleted", false)
+            .build();
 
     Schema schema = t1.icebergSchema();
-    assertEquals(schema.toString(), """
+    assertEquals(
+        schema.toString(),
+        """
         table {
           1: id: required int (id)
           2: first_name: required string (id)
@@ -233,4 +254,61 @@ class JsonEventConverterTest extends BaseTest {
     assertEquals(schema.identifierFieldIds(), Set.of(1, 2));
   }
 
+  @Test
+  public void testDecimalMissingParameters() throws Exception {
+    String schemaWithDecimalNoParams =
+        """
+        {
+          "schema": {
+            "type": "struct",
+            "fields": [
+              {
+                "type": "bytes",
+                "optional": true,
+                "field": "dec_field",
+                "name": "org.apache.kafka.connect.data.Decimal"
+              }
+            ]
+          },
+          "payload": {
+            "dec_field": "base64bytes"
+          }
+        }
+        """;
+    JsonEventConverter e = new JsonEventConverter("test", schemaWithDecimalNoParams, null, config);
+    Schema schema = e.icebergSchema();
+    assertNotNull(schema.findField("dec_field"));
+    assertEquals(Types.DecimalType.of(38, 10), schema.findField("dec_field").type());
+  }
+
+  @Test
+  public void testDecimalValueFormats() throws Exception {
+    String schemaWithDecimal =
+        """
+        {
+          "schema": {
+            "type": "struct",
+            "fields": [
+              {
+                "type": "bytes",
+                "optional": true,
+                "field": "dec_field",
+                "name": "org.apache.kafka.connect.data.Decimal",
+                "parameters": {
+                  "scale": "2",
+                  "connect.decimal.precision": "5"
+                }
+              }
+            ]
+          },
+          "payload": {
+            "dec_field": 12.34
+          }
+        }
+        """;
+    JsonEventConverter e = new JsonEventConverter("test", schemaWithDecimal, null, config);
+    Schema schema = e.icebergSchema();
+    RecordWrapper record = e.convertAsAppend(schema);
+    assertEquals(new java.math.BigDecimal("12.34"), record.getField("dec_field"));
+  }
 }

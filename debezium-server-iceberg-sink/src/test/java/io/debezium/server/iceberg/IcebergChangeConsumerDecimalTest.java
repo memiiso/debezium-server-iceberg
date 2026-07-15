@@ -8,6 +8,8 @@
 
 package io.debezium.server.iceberg;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -15,20 +17,19 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
+ * destination.
  *
  * @author Ismail Simsek
  */
@@ -39,32 +40,52 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @TestProfile(IcebergChangeConsumerDecimalTest.TestProfile.class)
 public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
 
+  @BeforeAll
+  public static void setup() {
+    if (spark != null) {
+      try {
+        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_data_types");
+      } catch (Exception e) {
+        LOGGER.warn("Failed to drop tables in setup: {}", e.getMessage());
+      }
+    }
+  }
+
   @Test
   public void testConsumingNumerics() throws Exception {
     assertEquals(sinkType, "iceberg");
-    String sql = "\n" +
-        "        DROP TABLE IF EXISTS inventory.data_types;\n" +
-        "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n" +
-        "            c_id INTEGER ,\n" +
-        "            c_decimal DECIMAL(18,6)\n" +
-        "          );";
+    String sql =
+        "\n"
+            + "        DROP TABLE IF EXISTS inventory.data_types;\n"
+            + "        CREATE TABLE IF NOT EXISTS inventory.data_types (\n"
+            + "            c_id INTEGER ,\n"
+            + "            c_decimal DECIMAL(18,6)\n"
+            + "          );";
     SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.data_types (c_id, c_decimal) " +
-        "VALUES (1, '1234566.34456'::decimal)";
+    sql =
+        "INSERT INTO inventory.data_types (c_id, c_decimal) "
+            + "VALUES (1, '1234566.34456'::decimal)";
     SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(false);
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(320))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> df = getTableData("testc.inventory.data_types");
+                df.show(false);
 
-        Assertions.assertEquals(1, df.count());
-        Assertions.assertEquals(1, df.filter("c_id = 1 AND c_decimal = CAST('1234566.344560' AS DECIMAL(18,6))").count(), "c_decimal not matching");
-        return true;
-      } catch (Exception | AssertionError e) {
-        e.printStackTrace();
-        return false;
-      }
-    });
+                Assertions.assertEquals(1, df.count());
+                Assertions.assertEquals(
+                    1,
+                    df.filter("c_id = 1 AND c_decimal = CAST('1234566.344560' AS DECIMAL(18,6))")
+                        .count(),
+                    "c_decimal not matching");
+                return true;
+              } catch (Exception | AssertionError e) {
+                e.printStackTrace();
+                return false;
+              }
+            });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -76,5 +97,4 @@ public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
       return config;
     }
   }
-
 }

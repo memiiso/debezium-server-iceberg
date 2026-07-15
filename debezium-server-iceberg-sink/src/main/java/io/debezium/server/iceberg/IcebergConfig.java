@@ -106,6 +106,21 @@ public interface IcebergConfig {
 
   /** Gets the partitionBy value for a given table, falling back to global if not specified. */
   default List<String> partitionByForTable(String destination) {
+    String tableKey = PROP_PREFIX + ".partition-by." + destination;
+    Optional<List<String>> tableVal =
+        org.eclipse.microprofile.config.ConfigProvider.getConfig()
+            .getOptionalValues(tableKey, String.class);
+    if (tableVal.isPresent()) {
+      return tableVal.get();
+    }
     return partitionBy().orElse(List.of());
+  }
+
+  /** Checks if partitioning is explicitly configured for the table. */
+  default boolean isPartitionByTableSpecific(String destination) {
+    String tableKey = PROP_PREFIX + ".partition-by." + destination;
+    return org.eclipse.microprofile.config.ConfigProvider.getConfig()
+        .getOptionalValues(tableKey, String.class)
+        .isPresent();
   }
 }

@@ -207,6 +207,11 @@ public class IcebergUtil {
    */
   public static PartitionSpec createPartitionSpec(
       org.apache.iceberg.Schema schema, List<String> partitionBy) {
+    return createPartitionSpec(schema, partitionBy, true);
+  }
+
+  public static PartitionSpec createPartitionSpec(
+      org.apache.iceberg.Schema schema, List<String> partitionBy, boolean strictMode) {
     if (partitionBy.isEmpty()) {
       return PartitionSpec.unpartitioned();
     }
@@ -214,7 +219,36 @@ public class IcebergUtil {
     PartitionSpec.Builder specBuilder = PartitionSpec.builderFor(schema);
     partitionBy.forEach(
         partitionField -> {
+          String sourceColumn;
           Matcher matcher = TRANSFORM_REGEX.matcher(partitionField);
+          if (matcher.matches()) {
+            String transform = matcher.group(1);
+            String field = matcher.group(2);
+            if (transform.equals("bucket") || transform.equals("truncate")) {
+              Pair<String, Integer> args = transformArgPair(field);
+              sourceColumn = args.first();
+            } else {
+              sourceColumn = field;
+            }
+          } else {
+            sourceColumn = partitionField;
+          }
+
+          if (schema.findField(sourceColumn) == null) {
+            if (strictMode) {
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Partition field '%s' (source column '%s') not found in schema.",
+                      partitionField, sourceColumn));
+            } else {
+              LOGGER.warn(
+                  "Partition field '{}' (source column '{}') not found in schema. Skipping partitioning for this field.",
+                  partitionField,
+                  sourceColumn);
+              return;
+            }
+          }
+
           if (matcher.matches()) {
             String transform = matcher.group(1);
             switch (transform) {

@@ -352,10 +352,34 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         // as byte arrays. We want to write them out as Iceberg decimals.
         if (fieldTypeName.equals("org.apache.kafka.connect.data.Decimal")) {
           JsonNode params = fieldSchema.get("parameters");
-          if (!params.isNull() && !params.isEmpty()) {
-            int precision = params.get("connect.decimal.precision").asInt();
-            int scale = params.get("scale").asInt();
+          if (params != null && !params.isNull() && !params.isEmpty()) {
+            int scale = params.has("scale") ? params.get("scale").asInt() : 10;
+            int precision =
+                params.has("connect.decimal.precision")
+                    ? params.get("connect.decimal.precision").asInt()
+                    : 38;
+            // Basic validation
+            if (precision <= 0) {
+              LOGGER.warn(
+                  "Invalid precision {} found for Decimal field '{}', using default 38.",
+                  precision,
+                  fieldName);
+              precision = 38;
+            }
+            if (scale < 0 || scale > precision) {
+              LOGGER.warn(
+                  "Invalid scale {} found for Decimal field '{}' with precision {}, using default 10.",
+                  scale,
+                  fieldName,
+                  precision);
+              scale = Math.min(10, precision);
+            }
             return Types.DecimalType.of(precision, scale);
+          } else {
+            LOGGER.warn(
+                "Decimal logical type for field '{}' is missing parameters. Defaulting to Decimal(38, 10).",
+                fieldName);
+            return Types.DecimalType.of(38, 10);
           }
         }
         return Types.BinaryType.get();

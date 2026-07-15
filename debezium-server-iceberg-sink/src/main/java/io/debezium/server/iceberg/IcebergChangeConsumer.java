@@ -360,7 +360,10 @@ public class IcebergChangeConsumer
 
       final List<String> partitionByOptions =
           config.iceberg().partitionByForTable(sampleEvent.destination());
-      PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions);
+      final boolean isTableSpecific =
+          config.iceberg().isPartitionByTableSpecific(sampleEvent.destination());
+      PartitionSpec spec =
+          IcebergUtil.createPartitionSpec(schema, partitionByOptions, isTableSpecific);
 
       // for backward compatibility, to be removed and set to "3" with one of the next
       // releases
