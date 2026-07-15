@@ -197,13 +197,7 @@
             <version>${version.debezium}</version>
             <scope>test</scope>
         </dependency>
-<!-- Fix for spark variant tests @TODO remove when spark migrates to parquert 1.16 -->
-        <dependency>
-            <groupId>org.apache.parquet</groupId>
-            <artifactId>parquet-format-structures</artifactId>
-            <version>1.16.0</version>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>org.apache.iceberg</groupId>
             <artifactId>iceberg-spark-${version.spark.major}_${version.spark.scala}</artifactId>
@@ -332,6 +326,10 @@
                     <groupId>org.apache.arrow</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.apache.parquet</groupId>
+                    <artifactId>parquet-format-structures</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -436,6 +434,9 @@
                         --add-opens=java.base/sun.security.action=ALL-UNNAMED
                         --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
                     </argLine>
+                    <environmentVariables>
+                        <SPARK_USER>test</SPARK_USER>
+                    </environmentVariables>
                     <systemPropertyVariables>
                         <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
@@ -475,6 +476,24 @@
                 <configuration>
                     <skipTests>${skipITs}</skipTests>
                     <enableAssertions>true</enableAssertions>
+                    <argLine>
+                        --add-opens=java.base/java.lang=ALL-UNNAMED
+                        --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+                        --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens=java.base/java.io=ALL-UNNAMED
+                        --add-opens=java.base/java.net=ALL-UNNAMED
+                        --add-opens=java.base/java.nio=ALL-UNNAMED
+                        --add-opens=java.base/java.util=ALL-UNNAMED
+                        --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+                        --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+                        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                        --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+                        --add-opens=java.base/sun.security.action=ALL-UNNAMED
+                        --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+                    </argLine>
+                    <environmentVariables>
+                        <SPARK_USER>test</SPARK_USER>
+                    </environmentVariables>
                     <systemPropertyVariables>
                         <test.type>IT</test.type>
                     </systemPropertyVariables>
