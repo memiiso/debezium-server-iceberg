@@ -20,5 +20,12 @@ jobs:
         with:
           python-version: 3.x
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ env.cache_id }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - run: pip install mkdocs-material
       - run: mkdocs gh-deploy --force

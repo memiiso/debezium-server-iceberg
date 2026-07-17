@@ -100,6 +100,8 @@ jobs:
           build-args: |
             RELEASE_VERSION=${{ env.RELEASE_VERSION }}
           tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:${{ env.RELEASE_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Delete Untagged Docker Images
         uses: dylanratcliffe/delete-untagged-containers@main
