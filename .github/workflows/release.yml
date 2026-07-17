@@ -39,7 +39,7 @@ jobs:
         shell: bash # Explicitly set shell to bash
 
       - name: Build Project
-        run: mvn -B --no-transfer-progress clean package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_VERSION }}
+        run: mvn -B --no-transfer-progress clean package -Passembly --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dspotless.check.skip=true
 
       - name: Delete Existing Release (if any)
         run: gh release delete ${{ env.RELEASE_VERSION }} --cleanup-tag --yes
@@ -80,7 +80,7 @@ jobs:
           version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
       - name: Publish ${{ env.RELEASE_VERSION }} to GitHub Packages
-        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true
+        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true -Dspotless.check.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

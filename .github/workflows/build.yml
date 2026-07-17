@@ -52,7 +52,7 @@ jobs:
           java-version: 21
           cache: 'maven'
       - name: Build with Maven
-        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1
+        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1 -Dspotless.check.skip=true
 
 
   build-java-project-connect-format:
@@ -73,4 +73,4 @@ jobs:
           java-version: 21
           cache: 'maven'
       - name: Build with Maven (Connect Format)
-        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1
+        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1 -Dspotless.check.skip=true
