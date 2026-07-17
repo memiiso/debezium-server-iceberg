@@ -31,8 +31,10 @@ public class CatalogRest implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    container.start();
-    System.out.println("Rest Catalog started: " + getHostUrl());
+    if (!container.isRunning()) {
+      container.start();
+      System.out.println("Rest Catalog started: " + getHostUrl());
+    }
 
     Map<String, String> config = new ConcurrentHashMap<>();
 
@@ -44,6 +46,6 @@ public class CatalogRest implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public void stop() {
-    container.stop();
+    // Keep container running for reuse across test classes
   }
 }

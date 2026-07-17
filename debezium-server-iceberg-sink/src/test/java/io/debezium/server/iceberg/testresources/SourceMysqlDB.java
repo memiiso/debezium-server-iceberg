@@ -28,7 +28,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String MYSQL_PASSWORD = "mysqlpw";
   public static final String MYSQL_DEBEZIUM_USER = "debezium";
   public static final String MYSQL_DEBEZIUM_PASSWORD = "dbz";
-  public static final String MYSQL_IMAGE = "debezium/example-mysql:3.6.0.Final";
+  public static final String MYSQL_IMAGE = "quay.io/debezium/example-mysql:3.6.0.Final";
   public static final String MYSQL_HOST = "127.0.0.1";
   public static final String MYSQL_DATABASE = "inventory";
   public static final Integer MYSQL_PORT_DEFAULT = 3306;
@@ -66,7 +66,9 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    container.start();
+    if (!container.isRunning()) {
+      container.start();
+    }
 
     Map<String, String> params = new ConcurrentHashMap<>();
     params.put("%mysql.debezium.source.database.hostname", MYSQL_HOST);
@@ -81,8 +83,6 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public void stop() {
-    if (container != null) {
-      container.stop();
-    }
+    // Keep container running for reuse across test classes
   }
 }
