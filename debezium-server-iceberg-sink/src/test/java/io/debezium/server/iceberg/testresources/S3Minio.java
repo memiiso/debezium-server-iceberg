@@ -16,13 +16,14 @@ import io.minio.Result;
 import io.minio.messages.Bucket;
 import io.minio.messages.Item;
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
@@ -30,10 +31,9 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   static final String DEFAULT_IMAGE = "minio/minio:RELEASE.2025-04-08T15-41-24Z";
   public static MinioClient client;
 
-  public static final MinIOContainer container =
-      new MinIOContainer(DockerImageName.parse(DEFAULT_IMAGE))
-          .withUserName(TestConfigSource.S3_MINIO_ACCESS_KEY)
-          .withPassword(TestConfigSource.S3_MINIO_SECRET_KEY);
+  static public final MinIOContainer container = new MinIOContainer(DockerImageName.parse(DEFAULT_IMAGE))
+      .withUserName(TestConfigSource.S3_MINIO_ACCESS_KEY)
+      .withPassword(TestConfigSource.S3_MINIO_SECRET_KEY);
 
   public static void listFiles() {
     LOGGER.info("-----------------------------------------------------------------");
@@ -41,24 +41,22 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
       List<Bucket> bucketList = client.listBuckets();
       for (Bucket bucket : bucketList) {
         System.out.printf("Bucket:%s ROOT\n", bucket.name());
-        Iterable<Result<Item>> results =
-            client.listObjects(
-                ListObjectsArgs.builder().bucket(bucket.name()).recursive(true).build());
+        Iterable<Result<Item>> results = client.listObjects(ListObjectsArgs.builder().bucket(bucket.name()).recursive(true).build());
         for (Result<Item> result : results) {
           Item item = result.get();
-          System.out.printf(
-              "Bucket:%s Item:%s Size:%s\n", bucket.name(), item.objectName(), item.size());
+          System.out.printf("Bucket:%s Item:%s Size:%s\n", bucket.name(), item.objectName(), item.size());
         }
       }
     } catch (Exception e) {
       LOGGER.info("Failed listing bucket");
     }
     LOGGER.info("-----------------------------------------------------------------");
+
   }
 
   @Override
   public void stop() {
-    // Keep container running for reuse across test classes
+    container.stop();
   }
 
   public static String getS3WebURL() {
@@ -67,33 +65,23 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    if (!container.isRunning()) {
-      container.start();
-      client =
-          MinioClient.builder()
-              .endpoint(container.getS3URL())
-              .credentials(container.getUserName(), container.getPassword())
-              .build();
+    container.start();
+    client = MinioClient
+        .builder()
+        .endpoint(container.getS3URL())
+        .credentials(container.getUserName(), container.getPassword())
+        .build();
 
-      try {
-        client.ignoreCertCheck();
-        client.makeBucket(
-            MakeBucketArgs.builder()
-                .region(TestConfigSource.S3_REGION)
-                .bucket(TestConfigSource.S3_BUCKET_NAME)
-                .build());
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-      LOGGER.info(
-          "Minio Started\nMinio UI: {}\nMinio S3 URL: {}", getS3WebURL(), container.getS3URL());
-    } else if (client == null) {
-      client =
-          MinioClient.builder()
-              .endpoint(container.getS3URL())
-              .credentials(container.getUserName(), container.getPassword())
-              .build();
+    try {
+      client.ignoreCertCheck();
+      client.makeBucket(MakeBucketArgs.builder()
+          .region(TestConfigSource.S3_REGION)
+          .bucket(TestConfigSource.S3_BUCKET_NAME)
+          .build());
+    } catch (Exception e) {
+      e.printStackTrace();
     }
+    LOGGER.info("Minio Started\nMinio UI: {}\nMinio S3 URL: {}", getS3WebURL(), container.getS3URL());
     Map<String, String> config = new ConcurrentHashMap<>();
     // FOR JDBC CATALOG
     config.put("debezium.sink.iceberg.s3.endpoint", container.getS3URL());
@@ -105,4 +93,6 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
     return config;
   }
+
+
 }

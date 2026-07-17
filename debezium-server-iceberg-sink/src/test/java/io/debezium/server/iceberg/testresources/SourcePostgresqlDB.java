@@ -26,7 +26,7 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String POSTGRES_USER = "postgres";
   public static final String POSTGRES_PASSWORD = "postgres";
   public static final String POSTGRES_DBNAME = "postgres";
-  public static final String POSTGRES_IMAGE = "quay.io/debezium/example-postgres:3.6.0.Final";
+  public static final String POSTGRES_IMAGE = "debezium/example-postgres:3.6.0.Final";
   public static final String POSTGRES_HOST = "localhost";
   public static final Integer POSTGRES_PORT_DEFAULT = 5432;
   private static final Logger LOGGER = LoggerFactory.getLogger(SourcePostgresqlDB.class);
@@ -65,13 +65,11 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
-    if (!container.isRunning()) {
-      container.start();
-      try {
-        SourcePostgresqlDB.runSQL("CREATE EXTENSION hstore;");
-      } catch (SQLException | ClassNotFoundException e) {
-        throw new RuntimeException(e);
-      }
+    container.start();
+    try {
+      SourcePostgresqlDB.runSQL("CREATE EXTENSION hstore;");
+    } catch (SQLException | ClassNotFoundException e) {
+      throw new RuntimeException(e);
     }
 
     Map<String, String> params = new ConcurrentHashMap<>();
@@ -86,6 +84,8 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public void stop() {
-    // Keep container running for reuse across test classes
+    if (container != null) {
+      container.stop();
+    }
   }
 }
