@@ -11,6 +11,7 @@ package io.debezium.server.iceberg;
 import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
@@ -18,6 +19,7 @@ import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
+import io.quarkus.arc.ClientProxy;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
@@ -541,7 +543,8 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
         TableIdentifier.of(Namespace.of(namespace), "debeziumcdc_table"),
         consumer.mapDestination("table2"));
     // test
-    when(consumer.config.iceberg()).thenReturn(icebergConfig);
+    GlobalConfig configSpy = (GlobalConfig) ClientProxy.unwrap(consumer.config);
+    doReturn(icebergConfig).when(configSpy).iceberg();
     when(icebergConfig.destinationUppercaseTableNames()).thenReturn(true);
     when(icebergConfig.destinationLowercaseTableNames()).thenReturn(false);
     assertEquals(
@@ -553,7 +556,7 @@ public class IcebergChangeConsumerTest extends BaseSparkTest {
     assertEquals(
         TableIdentifier.of(Namespace.of(namespace), "DEBEZIUMCDC_TABLE_NAME"),
         consumer.mapDestination("TABLE_NAME"));
-    when(consumer.config.iceberg()).thenReturn(icebergConfig);
+    doReturn(icebergConfig).when(configSpy).iceberg();
     when(icebergConfig.destinationUppercaseTableNames()).thenReturn(false);
     when(icebergConfig.destinationLowercaseTableNames()).thenReturn(true);
     assertEquals(

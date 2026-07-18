@@ -48,10 +48,10 @@ import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
@@ -204,7 +204,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
   private void commitBatch(ArrayList<Record> icebergRecords) {
 
     FileFormat format = IcebergUtil.getTableFileFormat(eventTable);
-    GenericAppenderFactory appenderFactory = IcebergUtil.getTableAppender(eventTable);
+    FileWriterFactory<Record> fileWriterFactory = IcebergUtil.getTableWriterFactory(eventTable);
     int partitionId = Integer.parseInt(dtFormater.format(Instant.now()));
     OutputFileFactory fileFactory =
         OutputFileFactory.builderFor(eventTable, partitionId, 1L)
@@ -216,7 +216,7 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
         new PartitionedAppendWriter(
             eventTable.spec(),
             format,
-            appenderFactory,
+            fileWriterFactory,
             fileFactory,
             eventTable.io(),
             Long.MAX_VALUE,

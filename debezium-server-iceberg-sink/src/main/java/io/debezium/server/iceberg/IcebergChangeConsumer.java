@@ -368,7 +368,8 @@ public class IcebergChangeConsumer
       // for backward compatibility, to be removed and set to "3" with one of the next
       // releases
       // Format 3 will be used when variant data type is used
-      final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : "2";
+      final String tableFormatVersion =
+          config.iceberg().nestedAsVariant() ? "3" : config.iceberg().formatVersion();
       return IcebergUtil.createIcebergTable(
           icebergCatalog,
           tableId,

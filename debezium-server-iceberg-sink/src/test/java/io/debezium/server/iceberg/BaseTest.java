@@ -8,34 +8,34 @@
 
 package io.debezium.server.iceberg;
 
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+import static org.mockito.Mockito.doReturn;
+
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.converter.EventFactory;
 import io.debezium.server.iceberg.converter.JsonBuilder;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
+import io.quarkus.arc.ClientProxy;
 import jakarta.inject.Inject;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.types.Types;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.types.Types;
 import org.awaitility.Awaitility;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
-import static org.mockito.Mockito.when;
 
 /**
  * Integration test that uses spark to consumer data is consumed.
@@ -45,22 +45,17 @@ import static org.mockito.Mockito.when;
 public class BaseTest {
   protected static final Logger LOGGER = LoggerFactory.getLogger(BaseTest.class);
 
-  @Inject
-  public IcebergChangeConsumer consumer;
-  @Inject
-  public IcebergConfig icebergConfig;
-  @Inject
-  public DebeziumConfig debeziumConfig;
-  @Inject
-  public GlobalConfig config;
-  @Inject
-  public JsonBuilder eventBuilder;
-  @Inject
-  public EventFactory eventFactory;
-  @Inject
-  public IcebergTableOperator icebergTableOperator;
+  @Inject public IcebergChangeConsumer consumer;
+  @Inject public IcebergConfig icebergConfig;
+  @Inject public DebeziumConfig debeziumConfig;
+  @Inject public GlobalConfig config;
+  @Inject public JsonBuilder eventBuilder;
+  @Inject public EventFactory eventFactory;
+  @Inject public IcebergTableOperator icebergTableOperator;
+
   @ConfigProperty(name = "debezium.sink.type")
   public String sinkType;
+
   @ConfigProperty(name = "debezium.sink.iceberg.table-namespace", defaultValue = "default")
   public String namespace;
 
@@ -68,13 +63,14 @@ public class BaseTest {
   static void setupBase() {
     LOGGER.debug("Setup Base Test");
     Awaitility.setDefaultTimeout(Duration.ofMinutes(3));
-    Awaitility.setDefaultPollInterval(Duration.ofSeconds(6));
+    Awaitility.setDefaultPollInterval(Duration.ofSeconds(2));
   }
 
   @BeforeEach
   void setupBaseBeforeEach() {
-    when(consumer.config.debezium()).thenReturn(debeziumConfig);
-    when(consumer.config.iceberg()).thenReturn(icebergConfig);
+    GlobalConfig configSpy = (GlobalConfig) ClientProxy.unwrap(consumer.config);
+    doReturn(debeziumConfig).when(configSpy).debezium();
+    doReturn(icebergConfig).when(configSpy).iceberg();
   }
 
   public CloseableIterable<Record> getTableDataV2(String table) throws InterruptedException {
@@ -92,9 +88,10 @@ public class BaseTest {
 
       // Get schema from the first record
       Types.StructType schema = recordList.get(0).struct();
-      List<String> headers = schema.fields().stream()
-          .map(field -> String.format("%s (%s)", field.name(), field.type()))
-          .collect(Collectors.toList());
+      List<String> headers =
+          schema.fields().stream()
+              .map(field -> String.format("%s (%s)", field.name(), field.type()))
+              .collect(Collectors.toList());
 
       // Calculate column widths
       List<Integer> columnWidths = new ArrayList<>();
@@ -139,12 +136,14 @@ public class BaseTest {
     }
   }
 
-  public CloseableIterable<Record> getTableDataV2(String catalog, String table) throws InterruptedException {
+  public CloseableIterable<Record> getTableDataV2(String catalog, String table)
+      throws InterruptedException {
     String tableName = "debeziumcdc_" + table.replace(".", "_");
     return getTableDataV2(TableIdentifier.of(catalog, tableName));
   }
 
-  public CloseableIterable<Record> getTableDataV2(TableIdentifier table) throws InterruptedException {
+  public CloseableIterable<Record> getTableDataV2(TableIdentifier table)
+      throws InterruptedException {
     Table iceTable = consumer.loadIcebergTable(table, null);
     return IcebergGenerics.read(iceTable).build();
   }
@@ -168,5 +167,4 @@ public class BaseTest {
     }
     return allDataFiles;
   }
-
 }
