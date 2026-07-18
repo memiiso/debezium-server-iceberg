@@ -436,6 +436,8 @@
                     </argLine>
                     <environmentVariables>
                         <SPARK_USER>test</SPARK_USER>
+                        <PYSPARK_PYTHON>/nonexistent/python</PYSPARK_PYTHON>
+                        <PYSPARK_DRIVER_PYTHON>/nonexistent/python</PYSPARK_DRIVER_PYTHON>
                     </environmentVariables>
                     <systemPropertyVariables>
                         <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
