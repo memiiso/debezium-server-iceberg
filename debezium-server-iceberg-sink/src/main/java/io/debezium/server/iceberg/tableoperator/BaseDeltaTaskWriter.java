@@ -6,10 +6,12 @@ import java.util.Set;
 import org.apache.iceberg.*;
 import org.apache.iceberg.data.InternalRecordWrapper;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.deletes.DeleteGranularity;
 import org.apache.iceberg.io.BaseTaskWriter;
-import org.apache.iceberg.io.FileAppenderFactory;
 import org.apache.iceberg.io.FileIO;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
+import org.apache.iceberg.io.PartitioningDVWriter;
 import org.apache.iceberg.types.TypeUtil;
 
 abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
@@ -24,14 +26,15 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   BaseDeltaTaskWriter(
       PartitionSpec spec,
       FileFormat format,
-      FileAppenderFactory<Record> appenderFactory,
+      FileWriterFactory<Record> fileWriterFactory,
       OutputFileFactory fileFactory,
       FileIO io,
       long targetFileSize,
       Schema schema,
       Set<Integer> identifierFieldIds,
-      boolean keepDeletes) {
-    super(spec, format, appenderFactory, fileFactory, io, targetFileSize);
+      boolean keepDeletes,
+      boolean useDv) {
+    super(spec, format, fileWriterFactory, fileFactory, io, targetFileSize, useDv);
     this.schema = schema;
     this.deleteSchema = TypeUtil.select(schema, Sets.newHashSet(identifierFieldIds));
     this.wrapper = new InternalRecordWrapper(schema.asStruct());
@@ -69,8 +72,8 @@ abstract class BaseDeltaTaskWriter extends BaseTaskWriter<Record> {
   }
 
   public class RowDataDeltaWriter extends BaseEqualityDeltaWriter {
-    RowDataDeltaWriter(PartitionKey partition) {
-      super(partition, schema, deleteSchema);
+    RowDataDeltaWriter(PartitionKey partition, PartitioningDVWriter<Record> dvFileWriter) {
+      super(partition, schema, deleteSchema, DeleteGranularity.PARTITION, dvFileWriter);
     }
 
     @Override

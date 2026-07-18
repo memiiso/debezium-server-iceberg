@@ -100,6 +100,10 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
+  @WithName("debezium.sink.iceberg.format-version")
+  @WithDefault("3")
+  String formatVersion();
+
   @WithName("debezium.sink.iceberg.openlineage-enabled")
   @WithDefault("false")
   boolean openlineageEnabled();

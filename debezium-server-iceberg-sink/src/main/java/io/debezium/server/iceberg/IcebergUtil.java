@@ -38,8 +38,10 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.SupportsNamespaces;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.data.GenericAppenderFactory;
+import org.apache.iceberg.data.GenericFileWriterFactory;
+import org.apache.iceberg.data.Record;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.relocated.com.google.common.collect.Sets;
 import org.apache.iceberg.types.TypeUtil;
@@ -161,21 +163,25 @@ public class IcebergUtil {
     return FileFormat.valueOf(formatAsString.toUpperCase(Locale.ROOT));
   }
 
-  public static GenericAppenderFactory getTableAppender(Table icebergTable) {
+  public static FileWriterFactory<Record> getTableWriterFactory(Table icebergTable) {
     final Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
-    if (identifierFieldIds == null || identifierFieldIds.isEmpty()) {
-      return new GenericAppenderFactory(
-              icebergTable.schema(), icebergTable.spec(), null, null, null)
-          .setAll(icebergTable.properties());
-    } else {
-      return new GenericAppenderFactory(
-              icebergTable.schema(),
-              icebergTable.spec(),
-              Ints.toArray(identifierFieldIds),
-              TypeUtil.select(icebergTable.schema(), Sets.newHashSet(identifierFieldIds)),
-              null)
-          .setAll(icebergTable.properties());
+    FileFormat format = getTableFileFormat(icebergTable);
+
+    GenericFileWriterFactory.Builder builder =
+        new GenericFileWriterFactory.Builder(icebergTable)
+            .dataFileFormat(format)
+            .dataSchema(icebergTable.schema())
+            .writerProperties(icebergTable.properties());
+
+    if (identifierFieldIds != null && !identifierFieldIds.isEmpty()) {
+      builder
+          .deleteFileFormat(format)
+          .equalityFieldIds(Ints.toArray(identifierFieldIds))
+          .equalityDeleteRowSchema(
+              TypeUtil.select(icebergTable.schema(), Sets.newHashSet(identifierFieldIds)));
     }
+
+    return builder.build();
   }
 
   public static OutputFileFactory getTableOutputFileFactory(Table icebergTable, FileFormat format) {

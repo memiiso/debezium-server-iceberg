@@ -95,6 +95,9 @@ public class TestConfigSource implements ConfigSource {
     config.put("%postgresql.debezium.source.replica.identity.autoset.values", "inventory.*:FULL");
 
     config.put("quarkus.devservices.enabled", "false");
+    config.put("quarkus.http.test-port", "0");
+    config.put("quarkus.management.enabled", "false");
+    config.put("quarkus.management.test-port", "0");
     config.put("quarkus.log.level", "WARN");
     config.put("quarkus.log.category.\"io.debezium.server.iceberg\".level", "INFO");
     config.put("quarkus.log.category.\"org.apache.spark\".level", "WARN");
@@ -102,6 +105,11 @@ public class TestConfigSource implements ConfigSource {
     config.put("quarkus.log.category.\"org.apache.parquet\".level", "WARN");
     config.put("quarkus.log.category.\"org.eclipse.jetty\".level", "WARN");
     config.put("quarkus.log.category.\"org.apache.iceberg\".level", "ERROR");
+  }
+
+  @Override
+  public int getOrdinal() {
+    return 300;
   }
 
   @Override

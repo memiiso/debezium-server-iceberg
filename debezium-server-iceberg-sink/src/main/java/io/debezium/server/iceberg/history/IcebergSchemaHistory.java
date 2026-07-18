@@ -24,6 +24,7 @@ import io.debezium.relational.history.SchemaHistory;
 import io.debezium.relational.history.SchemaHistoryException;
 import io.debezium.relational.history.SchemaHistoryListener;
 import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.tableoperator.UnpartitionedAppendWriter;
 import io.debezium.util.FunctionalReadWriteLock;
 import io.debezium.util.Strings;
 import java.io.BufferedReader;
@@ -43,14 +44,13 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
-import org.apache.iceberg.io.UnpartitionedWriter;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
@@ -81,7 +81,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
   private TableIdentifier tableId;
   private Table historyTable;
   FileFormat format;
-  GenericAppenderFactory appenderFactory;
+  FileWriterFactory<Record> fileWriterFactory;
   OutputFileFactory fileFactory;
 
   @Override
@@ -122,7 +122,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
 
     historyTable = icebergCatalog.loadTable(tableId);
     format = IcebergUtil.getTableFileFormat(historyTable);
-    appenderFactory = IcebergUtil.getTableAppender(historyTable);
+    fileWriterFactory = IcebergUtil.getTableWriterFactory(historyTable);
     fileFactory = IcebergUtil.getTableOutputFileFactory(historyTable, format);
   }
 
@@ -154,10 +154,10 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
                     "record_insert_ts", currentTs);
 
             try (BaseTaskWriter<Record> writer =
-                new UnpartitionedWriter<>(
+                new UnpartitionedAppendWriter(
                     historyTable.spec(),
                     format,
-                    appenderFactory,
+                    fileWriterFactory,
                     fileFactory,
                     historyTable.io(),
                     Long.MAX_VALUE)) {

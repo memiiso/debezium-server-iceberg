@@ -215,6 +215,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
       Map<String, String> config = new HashMap<>();
       config.put("debezium.sink.iceberg.upsert", "true");
       config.put("debezium.sink.iceberg.upsert-keep-deletes", "true");
+      config.put("debezium.sink.iceberg.format-version", "2");
       return config;
     }
   }

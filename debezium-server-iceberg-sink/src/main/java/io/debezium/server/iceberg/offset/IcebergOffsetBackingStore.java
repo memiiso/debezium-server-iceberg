@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
 import io.debezium.server.iceberg.IcebergUtil;
+import io.debezium.server.iceberg.tableoperator.UnpartitionedAppendWriter;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
 import java.io.File;
@@ -41,15 +42,14 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.apache.iceberg.data.GenericAppenderFactory;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
-import org.apache.iceberg.io.UnpartitionedWriter;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -81,7 +81,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   private Table offsetTable;
   IcebergOffsetBackingStoreConfig storageConfig;
   FileFormat format;
-  GenericAppenderFactory appenderFactory;
+  FileWriterFactory<Record> fileWriterFactory;
   OutputFileFactory fileFactory;
 
   public IcebergOffsetBackingStore() {}
@@ -162,7 +162,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     }
 
     format = IcebergUtil.getTableFileFormat(offsetTable);
-    appenderFactory = IcebergUtil.getTableAppender(offsetTable);
+    fileWriterFactory = IcebergUtil.getTableWriterFactory(offsetTable);
     fileFactory = IcebergUtil.getTableOutputFileFactory(offsetTable, format);
   }
 
@@ -205,10 +205,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
               "record_insert_ts", currentTs);
 
       try (BaseTaskWriter<Record> writer =
-          new UnpartitionedWriter<>(
+          new UnpartitionedAppendWriter(
               offsetTable.spec(),
               format,
-              appenderFactory,
+              fileWriterFactory,
               fileFactory,
               offsetTable.io(),
               Long.MAX_VALUE)) {
