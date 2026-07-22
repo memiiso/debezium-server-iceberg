@@ -20,7 +20,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalog.CatalogMetadata;
 import org.apache.spark.sql.catalog.Database;
-import org.apache.spark.sql.catalog.Table;
 import org.apache.spark.sql.types.StructField;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.AfterAll;
@@ -33,23 +32,26 @@ import org.junit.jupiter.api.BeforeAll;
  */
 public class BaseSparkTest extends BaseTest {
 
-  protected static final SparkConf sparkconf =
-      new SparkConf().setAppName("CDC-S3-Batch-Spark-Sink").setMaster("local[2]");
   protected static SparkSession spark;
 
   @BeforeAll
   public static void setupSpark() {
     LOGGER.debug("Setup Spark Test");
+    SparkConf sparkconf =
+        new SparkConf().setAppName("CDC-S3-Batch-Spark-Sink").setMaster("local[2]");
     sparkconf
         .set("spark.ui.enabled", "false")
         .set("spark.eventLog.enabled", "false")
         .set("spark.hadoop.fs.s3a.connection.establish.timeout", "30")
+        .set("spark.pyspark.python", "/nonexistent/python")
+        .set("spark.pyspark.driver.python", "/nonexistent/python")
         // enable iceberg SQL Extensions and Catalog
         .set(
             "spark.sql.extensions",
             "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
         .set(
             "spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") // Iceberg catalog
+        .set("spark.sql.catalog.iceberg.cache-enabled", "false")
         .set("spark.sql.defaultCatalog", "iceberg")
         // For spark to read iceberg tables using Hadoop file IO
         // .set("spark.hadoop.fs.s3a.endpoint", S3Minio.container.getS3URL())
@@ -68,7 +70,18 @@ public class BaseSparkTest extends BaseTest {
           sparkconf.set("spark.sql.catalog.iceberg." + key, value);
         });
 
-    BaseSparkTest.spark = SparkSession.builder().config(BaseSparkTest.sparkconf).getOrCreate();
+    if (BaseSparkTest.spark != null) {
+      try {
+        BaseSparkTest.spark.close();
+      } catch (Exception e) {
+        // ignore
+      }
+      BaseSparkTest.spark = null;
+    }
+    SparkSession.clearActiveSession();
+    SparkSession.clearDefaultSession();
+
+    BaseSparkTest.spark = SparkSession.builder().config(sparkconf).getOrCreate();
 
     // System.out.println(BaseSparkTest.spark.sparkContext().getConf().toDebugString());
   }
@@ -161,7 +174,7 @@ public class BaseSparkTest extends BaseTest {
   public Dataset<Row> getTableData(String namespace, String table) {
     table = IcebergUtil.parseNamespace(namespace) + "." + table.replace(".", "_");
     // printSparkTables();
-    return spark.newSession().sql("SELECT *, input_file_name() as input_file FROM " + table);
+    return spark.sql("SELECT *, input_file_name() as input_file FROM " + table);
   }
 
   public void printSparkTables() {
@@ -170,8 +183,11 @@ public class BaseSparkTest extends BaseTest {
     catalogs.show(false);
     Dataset<Database> dbs = spark.catalog().listDatabases();
     dbs.show(false);
-    Dataset<Table> tables = spark.catalog().listTables();
-    tables.show(false);
+    try {
+      spark.sql("SHOW TABLES IN debeziumevents").show(false);
+    } catch (Exception e) {
+      System.out.println("Failed to show tables in debeziumevents: " + e.getMessage());
+    }
   }
 
   public static StructField getSchemaField(Dataset<Row> df, String colName) {

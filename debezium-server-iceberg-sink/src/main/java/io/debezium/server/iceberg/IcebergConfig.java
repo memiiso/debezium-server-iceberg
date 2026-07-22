@@ -38,6 +38,9 @@ public interface IcebergConfig {
   @WithDefault("true")
   boolean keepDeletes();
 
+  @WithName("debezium.sink.iceberg.upsert-use-dv")
+  Optional<Boolean> useDv();
+
   @WithName("debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation();
 
@@ -99,6 +102,10 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg.nested-as-variant")
   @WithDefault("false")
   boolean nestedAsVariant();
+
+  @WithName("debezium.sink.iceberg.format-version")
+  @WithDefault("3")
+  String formatVersion();
 
   @WithName("debezium.sink.iceberg.openlineage-enabled")
   @WithDefault("false")
