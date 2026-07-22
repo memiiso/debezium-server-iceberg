@@ -38,6 +38,9 @@ public interface IcebergConfig {
   @WithDefault("true")
   boolean keepDeletes();
 
+  @WithName("debezium.sink.iceberg.upsert-use-dv")
+  Optional<Boolean> useDv();
+
   @WithName("debezium.sink.iceberg." + CatalogProperties.WAREHOUSE_LOCATION)
   String warehouseLocation();
 

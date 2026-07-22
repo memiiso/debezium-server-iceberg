@@ -96,7 +96,7 @@ public class IcebergTableWriterFactory {
 
     Set<Integer> identifierFieldIds = icebergTable.schema().identifierFieldIds();
     int formatVersion = TableUtil.formatVersion(icebergTable);
-    boolean useDv = formatVersion > 2;
+    boolean useDv = config.iceberg().useDv().orElse(formatVersion > 2);
 
     GenericFileWriterFactory fileWriterFactory =
         new GenericFileWriterFactory.Builder(icebergTable)
