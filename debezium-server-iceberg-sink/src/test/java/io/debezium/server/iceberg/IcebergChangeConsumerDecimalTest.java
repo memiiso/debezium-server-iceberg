@@ -24,7 +24,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,17 +38,6 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerDecimalTest.TestProfile.class)
 public class IcebergChangeConsumerDecimalTest extends BaseSparkTest {
-
-  @BeforeAll
-  public static void setup() {
-    if (spark != null) {
-      try {
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_data_types");
-      } catch (Exception e) {
-        LOGGER.warn("Failed to drop tables in setup: {}", e.getMessage());
-      }
-    }
-  }
 
   @Test
   public void testConsumingNumerics() throws Exception {

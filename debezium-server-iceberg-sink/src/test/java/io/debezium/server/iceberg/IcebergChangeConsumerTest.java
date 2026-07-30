@@ -37,7 +37,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -52,26 +51,6 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @TestProfile(IcebergChangeConsumerTest.TestProfile.class)
 public class IcebergChangeConsumerTest extends BaseSparkTest {
-
-  @BeforeAll
-  public static void setup() {
-    if (spark != null) {
-      try {
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_customers");
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_geom");
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_products");
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_orders");
-        spark.sql(
-            "DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_products_on_hand");
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_data_types");
-        spark.sql("DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_array_data");
-        spark.sql(
-            "DROP TABLE IF EXISTS debeziumevents.debeziumcdc_testc_inventory_data_type_changes");
-      } catch (Exception e) {
-        LOGGER.warn("Failed to drop tables in setup: {}", e.getMessage());
-      }
-    }
-  }
 
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
