@@ -100,6 +100,20 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
+          # Push a plain single-arch manifest, not an OCI image index.
+          #
+          # With attestations enabled (the default once a buildx builder is set up), the push
+          # produces an index whose children are UNTAGGED: the linux/amd64 image plus an
+          # unknown/unknown attestation manifest. The "Delete Untagged Docker Images" step below
+          # then deletes every untagged version, including those children, leaving the release tag
+          # pointing at an index whose members no longer exist. The tag still resolves, so the
+          # breakage is invisible in the UI, but any `docker pull` fails with
+          # "failed to copy: httpReadSeeker: failed open: content at ... not found".
+          #
+          # This restores the manifest shape of pre-buildx releases such as 1.0.0.Final, which are
+          # still pullable today, while keeping the GHA build cache above.
+          provenance: false
+          sbom: false
           build-args: |
             RELEASE_VERSION=${{ env.RELEASE_VERSION }}
           tags: ghcr.io/${{ github.repository_owner }}/debezium-server-iceberg:${{ env.RELEASE_VERSION }}
