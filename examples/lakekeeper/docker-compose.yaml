@@ -66,7 +66,7 @@ services:
       - iceberg_lakekeeper_net
 
   postgresqlsourcedb:
-    image: debezium/example-postgres:2.5
+    image: quay.io/debezium/example-postgres:3.6.3.Final
     container_name: postgresql-source-db
     environment:
       - POSTGRES_USER=postgres
@@ -113,7 +113,7 @@ services:
       - iceberg_lakekeeper_net
 
   minio:
-    image: minio/minio
+    image: alpine/minio:RELEASE.2025-10-15T17-29-55Z
     container_name: minio
     environment:
       - MINIO_ROOT_USER=admin
