@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.debezium</groupId>
         <artifactId>debezium-build-parent</artifactId>
-        <version>3.6.0.Final</version>
+        <version>3.6.3.Final</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>debezium-server-iceberg</artifactId>
@@ -25,7 +25,7 @@
         <!-- NOTE: this is overridden by release process using CLI argument -->
         <revision>1.0.0-SNAPSHOT</revision>
         <!-- Debezium Version! NOTE: keep same as parent.version above! -->
-        <version.debezium>3.6.0.Final</version.debezium>
+        <version.debezium>3.6.3.Final</version.debezium>
 
         <!-- Instruct the build to use only UTF-8 encoding for source code -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -189,7 +189,7 @@
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>3.4.0</version>
+                <version>3.8.0</version>
                 <configuration>
                     <!-- optional: limit format enforcement to just the files changed by this feature branch -->
                     <ratchetFrom>refs/remotes/origin/master</ratchetFrom>
