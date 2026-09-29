@@ -11,6 +11,9 @@ package io.debezium.server.iceberg;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.DebeziumEngine;
+import io.debezium.runtime.BatchEvent;
+import io.debezium.runtime.CapturingEvents;
+import io.debezium.server.api.DebeziumServerConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
@@ -60,8 +63,7 @@ import org.slf4j.LoggerFactory;
  */
 @Named("iceberg")
 @Dependent
-public class IcebergChangeConsumer
-    implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
+public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEvents<BatchEvent>> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
@@ -132,6 +134,42 @@ public class IcebergChangeConsumer
   }
 
   @Override
+  public void handle(CapturingEvents<BatchEvent> events) throws InterruptedException {
+    Instant start = Instant.now();
+
+    // group events by destination (per iceberg table)
+    Map<String, List<EventConverter>> result =
+        events.records().stream()
+            .map(
+                (BatchEvent e) -> {
+                  return switch (keyValueChangeEventFormat) {
+                    case "json" -> new JsonEventConverter(e, config);
+                    case "connect" -> new StructEventConverter(e, config);
+                    default ->
+                        throw new DebeziumException(
+                            "Unsupported format:" + keyValueChangeEventFormat);
+                  };
+                })
+            .collect(Collectors.groupingBy(EventConverter::destination));
+
+    // consume list of events for each destination table
+    if (numConcurrentUploads > 1) {
+      this.processTablesInParallel(result);
+    } else {
+      this.processTablesSequentially(result);
+    }
+
+    for (BatchEvent record : events.records()) {
+      LOGGER.trace("Processed event '{}'", record);
+      record.commit();
+    }
+    this.logConsumerProgress(events.records().size());
+
+    // waiting to group events as batches
+    batchSizeWait.waitMs(
+        events.records().size(), (int) Duration.between(start, Instant.now()).toMillis());
+  }
+
   public void handleBatch(
       List<EmbeddedEngineChangeEvent> records,
       DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)

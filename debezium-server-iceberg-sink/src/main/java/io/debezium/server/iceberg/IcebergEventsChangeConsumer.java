@@ -16,8 +16,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.engine.DebeziumEngine;
+import io.debezium.runtime.BatchEvent;
+import io.debezium.runtime.CapturingEvents;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.BaseChangeConsumer;
+import io.debezium.server.api.DebeziumServerConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.tableoperator.PartitionedAppendWriter;
 import jakarta.annotation.PostConstruct;
@@ -69,7 +72,7 @@ import org.slf4j.LoggerFactory;
 @Dependent
 @Deprecated
 public class IcebergEventsChangeConsumer extends BaseChangeConsumer
-    implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
+    implements DebeziumServerConsumer<CapturingEvents<BatchEvent>> {
 
   protected static final DateTimeFormatter dtFormater =
       DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
@@ -146,24 +149,27 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
     LOGGER.info("Using {}", batchSizeWait.getClass().getName());
   }
 
+  public GenericRecord getIcebergRecord(BatchEvent record, OffsetDateTime batchTime) {
+    return getIcebergRecord(record.destination(), record.value(), record.key(), batchTime);
+  }
+
   public GenericRecord getIcebergRecord(
       EmbeddedEngineChangeEvent record, OffsetDateTime batchTime) {
+    return getIcebergRecord(record.destination(), record.value(), record.key(), batchTime);
+  }
 
+  private GenericRecord getIcebergRecord(
+      String destination, Object value, Object key, OffsetDateTime batchTime) {
     try {
       // deserialize
-      JsonNode valueSchema =
-          record.value() == null ? null : mapper.readTree(getBytes(record.value())).get("schema");
-      JsonNode valuePayload =
-          valDeserializer.deserialize(record.destination(), getBytes(record.value()));
+      JsonNode valueSchema = value == null ? null : mapper.readTree(getBytes(value)).get("schema");
+      JsonNode valuePayload = valDeserializer.deserialize(destination, getBytes(value));
       JsonNode keyPayload =
-          record.key() == null
-              ? null
-              : keyDeserializer.deserialize(record.destination(), getBytes(record.key()));
-      JsonNode keySchema =
-          record.key() == null ? null : mapper.readTree(getBytes(record.key())).get("schema");
+          key == null ? null : keyDeserializer.deserialize(destination, getBytes(key));
+      JsonNode keySchema = key == null ? null : mapper.readTree(getBytes(key)).get("schema");
       // convert to GenericRecord
       GenericRecord rec = GenericRecord.create(TABLE_SCHEMA.asStruct());
-      rec.setField("event_destination", record.destination());
+      rec.setField("event_destination", destination);
       rec.setField("event_key_schema", mapper.writeValueAsString(keySchema));
       rec.setField("event_key_payload", mapper.writeValueAsString(keyPayload));
       rec.setField("event_value_schema", mapper.writeValueAsString(valueSchema));
@@ -178,6 +184,24 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
   }
 
   @Override
+  public void handle(CapturingEvents<BatchEvent> events) throws InterruptedException {
+    Instant start = Instant.now();
+
+    OffsetDateTime batchTime = OffsetDateTime.now(ZoneOffset.UTC);
+    ArrayList<Record> icebergRecords =
+        events.records().stream()
+            .map(e -> getIcebergRecord(e, batchTime))
+            .collect(Collectors.toCollection(ArrayList::new));
+    commitBatch(icebergRecords);
+
+    for (BatchEvent record : events.records()) {
+      LOGGER.trace("Processed event '{}'", record);
+      record.commit();
+    }
+    batchSizeWait.waitMs(
+        events.records().size(), (int) Duration.between(start, Instant.now()).toMillis());
+  }
+
   public void handleBatch(
       List<EmbeddedEngineChangeEvent> records,
       DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
