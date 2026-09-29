@@ -27,7 +27,7 @@ import org.testcontainers.utility.DockerImageName;
 public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(S3Minio.class);
-  static final String DEFAULT_IMAGE = "alpine/minio:RELEASE.2025-10-15T17-29-55Z";
+  static final String DEFAULT_IMAGE = "pgsty/silo:RELEASE.2026-09-16T00-00-00Z";
   public static MinioClient client;
 
   public static final MinIOContainer container =
