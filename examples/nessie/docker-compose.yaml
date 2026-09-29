@@ -53,7 +53,7 @@ services:
       - NESSIE_CLIENT_API_VERSION=2
 
   postgresqlsourcedb:
-    image: debezium/example-postgres:2.5
+    image: quay.io/debezium/example-postgres:3.6.3.Final
     container_name: postgresql-source-db
     environment:
       - POSTGRES_USER=postgres
@@ -68,7 +68,7 @@ services:
 
   # storage
   minio:
-    image: minio/minio
+    image: alpine/minio:RELEASE.2025-10-15T17-29-55Z
     container_name: minio
     environment:
       - MINIO_ROOT_USER=admin
