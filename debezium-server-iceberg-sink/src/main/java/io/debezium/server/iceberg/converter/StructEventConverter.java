@@ -253,7 +253,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         record.setField(icebergField.name(), null);
         continue;
       }
-      Object connectValue = connectStruct.get(field);
+      Object connectValue = connectStruct.getWithoutDefault(field.name());
 
       if (connectValue == null) {
         record.setField(icebergField.name(), null);

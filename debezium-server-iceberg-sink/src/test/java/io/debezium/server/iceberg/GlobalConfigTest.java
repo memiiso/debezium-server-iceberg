@@ -30,6 +30,9 @@ public class GlobalConfigTest extends BaseTest {
     Assertions.assertTrue(config.iceberg().icebergConfigs().containsKey("catalog-name"));
     Assertions.assertTrue(config.iceberg().icebergConfigs().containsValue(ICEBERG_CATALOG_NAME));
     Assertions.assertEquals(Logger.Level.ERROR, config.quarkusLogLevel());
+    Assertions.assertEquals(
+        "false",
+        config.debezium().transformsConfigs().get("unwrap.replace.null.with.default"));
   }
 
   public static class TestProfile implements QuarkusTestProfile {
