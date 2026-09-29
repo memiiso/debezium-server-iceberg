@@ -58,6 +58,7 @@ jobs:
           body: Release ${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: true
+          files: debezium-server-iceberg-dist/target/debezium-server-iceberg-dist-*.zip
       - name: Delete Maven Package from Github
         uses: paulushcgcj/delete-github-package@1.0.0
         with:
