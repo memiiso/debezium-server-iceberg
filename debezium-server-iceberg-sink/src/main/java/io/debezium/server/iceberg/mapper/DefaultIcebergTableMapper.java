@@ -5,6 +5,7 @@ import io.debezium.server.iceberg.IcebergUtil;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Locale;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 
@@ -15,22 +16,22 @@ public class DefaultIcebergTableMapper implements IcebergTableMapper {
 
   @Override
   public TableIdentifier mapDestination(String destination) {
-    final String tableName =
-        destination
-            .replaceAll(
-                config.iceberg().destinationRegexp().orElse(""),
-                config.iceberg().destinationRegexpReplace().orElse(""))
-            .replace(".", "_");
+    String tableName = destination;
+    String regexp = config.iceberg().destinationRegexp().orElse("");
+    if (!regexp.isEmpty()) {
+      tableName =
+          tableName.replaceAll(regexp, config.iceberg().destinationRegexpReplace().orElse(""));
+    }
+    tableName = tableName.replace(".", "_");
+
+    String finalTableName = config.iceberg().tablePrefix().orElse("") + tableName;
+    if (config.iceberg().destinationUppercaseTableNames()) {
+      finalTableName = finalTableName.toUpperCase(Locale.ROOT);
+    } else if (config.iceberg().destinationLowercaseTableNames()) {
+      finalTableName = finalTableName.toLowerCase(Locale.ROOT);
+    }
 
     Namespace ns = IcebergUtil.parseNamespace(config.iceberg().namespace());
-    if (config.iceberg().destinationUppercaseTableNames()) {
-      return TableIdentifier.of(
-          ns, (config.iceberg().tablePrefix().orElse("") + tableName).toUpperCase());
-    } else if (config.iceberg().destinationLowercaseTableNames()) {
-      return TableIdentifier.of(
-          ns, (config.iceberg().tablePrefix().orElse("") + tableName).toLowerCase());
-    } else {
-      return TableIdentifier.of(ns, config.iceberg().tablePrefix().orElse("") + tableName);
-    }
+    return TableIdentifier.of(ns, finalTableName);
   }
 }
