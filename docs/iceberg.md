@@ -76,7 +76,7 @@ The `debezium.sink.iceberg.upsert-dedup-column` property can be used to specify 
 
 When two records with the same key and value of the specified column are received,
 the record with the higher priority operation type is retained and added to the destination table, while the duplicate record is discarded.
-Operation type priorities are as follows: `c` (create) > `r` (read) > `u` (update) > `d` (delete).
+Operation type priorities are as follows: `d` (delete) > `u` (update) > `r` (read) > `c` (create).
 
 #### Upsert Mode, Keeping Deleted Records
 

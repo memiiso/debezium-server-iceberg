@@ -1,6 +1,13 @@
 Dockerfile
 **/target/
 
+.git/
+.gemini/
 .idea/
 .github/
 .run/
+.vscode/
+python/
+examples/
+spark-warehouse/
+*.log
