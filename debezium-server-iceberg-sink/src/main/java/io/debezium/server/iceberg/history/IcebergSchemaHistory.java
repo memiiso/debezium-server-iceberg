@@ -281,6 +281,8 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
           } catch (IOException e) {
             logger.error(
                 "Failed to migrate history record from history file at {}", file.toPath(), e);
+            throw new DebeziumException(
+                "Failed to migrate history record from history file at " + file.toPath(), e);
           }
         });
     LOG.warn(
