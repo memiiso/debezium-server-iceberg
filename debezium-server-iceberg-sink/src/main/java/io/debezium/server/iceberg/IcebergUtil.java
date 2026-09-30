@@ -96,6 +96,9 @@ public class IcebergUtil {
   }
 
   public static void createNamespaceIfNotExists(Catalog icebergCatalog, Namespace namespace) {
+    if (!(icebergCatalog instanceof SupportsNamespaces)) {
+      return;
+    }
     SupportsNamespaces nsCatalog = (SupportsNamespaces) icebergCatalog;
 
     // For nested namespaces, create parent levels first

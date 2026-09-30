@@ -6,8 +6,6 @@
 package io.debezium.server.iceberg.converter;
 
 import io.debezium.time.Conversions;
-import org.apache.iceberg.util.DateTimeUtil;
-
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,16 +19,15 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
+import org.apache.iceberg.util.DateTimeUtil;
 
 public class DateTimeUtils {
 
-  private DateTimeUtils() {
-  }
+  private DateTimeUtils() {}
 
   public static Instant toInstantFromNanos(long epochNanos) {
-    final long epochSeconds = TimeUnit.NANOSECONDS.toSeconds(epochNanos);
-    final long adjustment = TimeUnit.NANOSECONDS.toNanos(epochNanos % TimeUnit.SECONDS.toNanos(1));
+    final long epochSeconds = Math.floorDiv(epochNanos, 1_000_000_000L);
+    final long adjustment = Math.floorMod(epochNanos, 1_000_000_000L);
     return Instant.ofEpochSecond(epochSeconds, adjustment);
   }
 

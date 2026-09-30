@@ -190,7 +190,8 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
       ObjectNode nestedKeySchema = mapper.createObjectNode();
       nestedKeySchema.put("type", "struct");
-      nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
+      ObjectNode keySchemaCopy = ((ObjectNode) keySchema).deepCopy();
+      nestedKeySchema.putArray("fields").add(keySchemaCopy.put("field", "after"));
       return nestedKeySchema;
     }
     return keySchema;
