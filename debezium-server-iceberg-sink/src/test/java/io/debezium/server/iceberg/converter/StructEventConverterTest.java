@@ -421,6 +421,24 @@ class StructEventConverterTest {
   }
 
   @Test
+  void testReplaceNullWithDefault() {
+    when(icebergConfig.replaceNullWithDefault()).thenReturn(true);
+    Struct valueStruct =
+        new Struct(valueConnectSchema)
+            .put("id", 1)
+            .put("col_string_default", null)
+            .put(CDC_OP_FIELD, "i")
+            .put(CDC_TS_MS_FIELD, TEST_TS_MS);
+    StructEventConverter converter =
+        new StructEventConverter(createMockChangeEvent(createTestKeyStruct(), valueStruct), config);
+
+    RecordWrapper icebergRecord = converter.convert(converter.icebergSchema());
+
+    assertEquals("default", icebergRecord.getField("col_string_default"));
+    assertNull(icebergRecord.getField("col_string"));
+  }
+
+  @Test
   void testConvertWithNullValueStruct() {
     Struct keyStruct = createTestKeyStruct();
     SourceRecord mockSourceRecord = Mockito.mock(SourceRecord.class);
