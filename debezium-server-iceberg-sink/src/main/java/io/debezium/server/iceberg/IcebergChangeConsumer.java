@@ -203,7 +203,8 @@ public class IcebergChangeConsumer
    * @param eventsByDestination A map where keys are destination table names and values are lists of
    *     events for that table.
    */
-  private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination) {
+  private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination)
+      throws InterruptedException {
     List<Callable<Void>> tasks = new ArrayList<>();
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
 
@@ -214,6 +215,7 @@ public class IcebergChangeConsumer
 
       tasks.add(
           () -> {
+            boolean acquired = false;
             try {
               // Acquire a permit from the Semaphore to enforce the concurrency limit.
               LOGGER.trace(
@@ -221,6 +223,7 @@ public class IcebergChangeConsumer
                   tableEvents.getKey(),
                   concurrencyLimiter.availablePermits());
               concurrencyLimiter.acquire();
+              acquired = true;
               LOGGER.debug(
                   "Task for destination '{}' acquired permit. Starting processing.",
                   tableEvents.getKey());
@@ -233,18 +236,20 @@ public class IcebergChangeConsumer
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt(); // Restore interrupted status
               LOGGER.warn("Task for destination '{}' was interrupted.", tableEvents.getKey(), e);
-              return null;
+              throw e;
             } catch (Exception e) {
               // Log and rethrow. This will be wrapped in an ExecutionException by the Future.
               LOGGER.error("Task for destination '{}' failed.", tableEvents.getKey(), e);
               throw e;
             } finally {
-              // Always release the permit, even if an exception occurred.
-              concurrencyLimiter.release();
-              LOGGER.trace(
-                  "Task for destination '{}' released permit. Available: {}",
-                  tableEvents.getKey(),
-                  concurrencyLimiter.availablePermits());
+              // Always release the permit if acquired, even if an exception occurred.
+              if (acquired) {
+                concurrencyLimiter.release();
+                LOGGER.trace(
+                    "Task for destination '{}' released permit. Available: {}",
+                    tableEvents.getKey(),
+                    concurrencyLimiter.availablePermits());
+              }
             }
           });
     }
@@ -303,6 +308,7 @@ public class IcebergChangeConsumer
     } catch (InterruptedException e) {
       LOGGER.warn("Main thread interrupted while waiting for tasks to complete.", e);
       Thread.currentThread().interrupt();
+      throw e;
     }
   }
 
