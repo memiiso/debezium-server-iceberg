@@ -20,7 +20,6 @@ import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.SchemaConverter;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -111,7 +110,18 @@ public class IcebergTableOperator {
       return -1;
     }
 
-    int result = Long.compare(lhs.cdcSourceTsValue(), rhs.cdcSourceTsValue());
+    Long lhsTs = lhs.cdcSourceTsValue();
+    Long rhsTs = rhs.cdcSourceTsValue();
+    int result;
+    if (lhsTs == null && rhsTs == null) {
+      result = 0;
+    } else if (lhsTs == null) {
+      result = -1;
+    } else if (rhsTs == null) {
+      result = 1;
+    } else {
+      result = Long.compare(lhsTs, rhsTs);
+    }
 
     if (result == 0) {
       // return (x < y) ? -1 : ((x == y) ? 0 : 1);
@@ -226,11 +236,11 @@ public class IcebergTableOperator {
         Arrays.stream(files.dataFiles()).forEach(appendFiles::appendFile);
         appendFiles.commit();
       }
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       try {
         writer.abort();
-      } catch (IOException e) {
-        // pass
+      } catch (Exception e) {
+        LOGGER.warn("Failed to abort writer for table:`{}`", icebergTable.name(), e);
       }
       throw new DebeziumException(
           "Failed to write data to table:`" + icebergTable.name() + "`", ex);

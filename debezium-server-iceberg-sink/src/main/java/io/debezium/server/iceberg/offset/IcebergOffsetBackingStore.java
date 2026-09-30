@@ -261,15 +261,23 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   public Future<Void> set(final Map<ByteBuffer, ByteBuffer> values, final Callback<Void> callback) {
     return executor.submit(
         () -> {
-          for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
-            if (entry.getKey() == null) {
-              continue;
+          try {
+            for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
+              if (entry.getKey() == null) {
+                continue;
+              }
+              data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
             }
-            data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
-          }
-          save();
-          if (callback != null) {
-            callback.onCompletion(null, null);
+            save();
+            if (callback != null) {
+              callback.onCompletion(null, null);
+            }
+          } catch (Throwable e) {
+            LOG.error("Failed to save offset data to iceberg table", e);
+            if (callback != null) {
+              callback.onCompletion(e, null);
+            }
+            throw e;
           }
           return null;
         });
