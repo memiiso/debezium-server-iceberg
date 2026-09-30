@@ -159,6 +159,9 @@ class StructEventConverterTest {
             .field("col_struct", nestedConnectSchema)
             .field(CDC_OP_FIELD, Schema.STRING_SCHEMA)
             .field(CDC_TS_MS_FIELD, Schema.INT64_SCHEMA)
+            .field(
+                "col_string_default",
+                SchemaBuilder.string().optional().defaultValue("default").build())
             .build();
 
     // Define Key Connect Schema
@@ -380,6 +383,9 @@ class StructEventConverterTest {
     // Put null for the optional struct field
     valueStruct.put("col_int", null);
     valueStruct.put("col_string", null);
+    valueStruct.put("col_string_default", null);
+    // Connect's regular getter substitutes the schema default for an explicit null.
+    assertEquals("default", valueStruct.get("col_string_default"));
 
     EmbeddedEngineChangeEvent event = createMockChangeEvent(keyStruct, valueStruct);
     StructEventConverter converter = new StructEventConverter(event, config);
@@ -394,6 +400,7 @@ class StructEventConverterTest {
     assertNull(icebergRecord.getField("col_double"));
     assertNull(icebergRecord.getField("col_bool"));
     assertNull(icebergRecord.getField("col_string"));
+    assertNull(icebergRecord.getField("col_string_default"));
     assertNull(icebergRecord.getField("col_bytes"));
     assertNull(icebergRecord.getField("col_decimal"));
     assertNull(icebergRecord.getField("col_uuid"));
@@ -411,6 +418,24 @@ class StructEventConverterTest {
     LocalDateTime tsMsVal =
         LocalDateTime.ofInstant(Instant.ofEpochMilli(TEST_TS_MS), ZoneOffset.UTC);
     assertEquals(tsMsVal + "Z", icebergRecord.getField(CDC_TS_MS_FIELD) + "");
+  }
+
+  @Test
+  void testReplaceNullWithDefault() {
+    when(icebergConfig.replaceNullWithDefault()).thenReturn(true);
+    Struct valueStruct =
+        new Struct(valueConnectSchema)
+            .put("id", 1)
+            .put("col_string_default", null)
+            .put(CDC_OP_FIELD, "i")
+            .put(CDC_TS_MS_FIELD, TEST_TS_MS);
+    StructEventConverter converter =
+        new StructEventConverter(createMockChangeEvent(createTestKeyStruct(), valueStruct), config);
+
+    RecordWrapper icebergRecord = converter.convert(converter.icebergSchema());
+
+    assertEquals("default", icebergRecord.getField("col_string_default"));
+    assertNull(icebergRecord.getField("col_string"));
   }
 
   @Test

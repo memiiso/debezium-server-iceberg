@@ -125,4 +125,12 @@ class IcebergConfigTest {
     assertTrue(disabledConfig.useDv().isPresent());
     assertFalse(disabledConfig.useDv().get());
   }
+
+  @Test
+  void testReplaceNullWithDefaultConfig() {
+    assertFalse(getIcebergConfig(Collections.emptyMap()).replaceNullWithDefault());
+    assertTrue(
+        getIcebergConfig(Map.of("debezium.sink.iceberg.replace-null-with-default", "true"))
+            .replaceNullWithDefault());
+  }
 }
