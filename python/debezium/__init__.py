@@ -85,7 +85,7 @@ class Debezium(LoggerClass):
 
     # pylint: disable=no-name-in-module
     def run(self, *java_args: str):
-        jnius_config = self._jnius_config(java_args)
+        jnius_config = self._jnius_config(*java_args)
         try:
             __jvm_options: list = [self._sanitize(p) for p in jnius_config.get_options()]
             self.log.info("Configured jvm options:%s" % __jvm_options)

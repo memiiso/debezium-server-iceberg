@@ -38,6 +38,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -166,7 +167,9 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
               WriteResult files = writer.complete();
 
               Transaction t = historyTable.newTransaction();
-              Arrays.stream(files.dataFiles()).forEach(f -> t.newAppend().appendFile(f).commit());
+              AppendFiles append = t.newAppend();
+              Arrays.stream(files.dataFiles()).forEach(append::appendFile);
+              append.commit();
               t.commitTransaction();
               LOG.trace("Successfully saved history data to Iceberg table");
             }
@@ -191,7 +194,7 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
               for (Record row : rs) {
                 String line = (String) row.getField("history_data");
                 if (line == null) {
-                  break;
+                  continue;
                 }
                 if (!line.isEmpty()) {
                   records.accept(new HistoryRecord(reader.read(line)));

@@ -88,6 +88,17 @@
             <includes>
                 <include>**/*</include>
             </includes>
+            <excludes>
+                <exclude>**/*.sh</exclude>
+            </excludes>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/resources/distro</directory>
+            <outputDirectory>${project.parent.artifactId}</outputDirectory>
+            <includes>
+                <include>**/*.sh</include>
+            </includes>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>

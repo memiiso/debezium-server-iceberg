@@ -22,7 +22,7 @@
 
     <properties>
         <assembly.descriptor>server-distribution</assembly.descriptor>
-        <quarkus.package.type>legacy-jar</quarkus.package.type>
+        <quarkus.package.jar.type>legacy-jar</quarkus.package.jar.type>
     </properties>
 
     <dependencies>
@@ -50,6 +50,7 @@
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.version.runtime}</version>
+                <extensions>true</extensions>
                 <configuration>
                     <systemProperties>
                         <quarkus.kubernetes-config.secrets.enabled>true</quarkus.kubernetes-config.secrets.enabled>
@@ -146,6 +147,10 @@
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-server-iceberg-sink</artifactId>
                     <version>${revision}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.iceberg</groupId>
+                    <artifactId>iceberg-nessie</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>io.quarkus</groupId>
