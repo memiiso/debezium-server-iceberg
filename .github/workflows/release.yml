@@ -81,7 +81,7 @@ jobs:
           version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
       - name: Publish ${{ env.RELEASE_VERSION }} to GitHub Packages
-        run: mvn --batch-mode clean package -Passembly deploy --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true -Dspotless.check.skip=true
+        run: mvn --batch-mode deploy -Passembly --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true -Dspotless.check.skip=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -101,18 +101,7 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          # Push a plain single-arch manifest, not an OCI image index.
-          #
-          # With attestations enabled (the default once a buildx builder is set up), the push
-          # produces an index whose children are UNTAGGED: the linux/amd64 image plus an
-          # unknown/unknown attestation manifest. The "Delete Untagged Docker Images" step below
-          # then deletes every untagged version, including those children, leaving the release tag
-          # pointing at an index whose members no longer exist. The tag still resolves, so the
-          # breakage is invisible in the UI, but any `docker pull` fails with
-          # "failed to copy: httpReadSeeker: failed open: content at ... not found".
-          #
-          # This restores the manifest shape of pre-buildx releases such as 1.0.0.Final, which are
-          # still pullable today, while keeping the GHA build cache above.
+          # Push a plain single-arch manifest, not an OCI image index to avoid issues with untagged cleanup
           provenance: false
           sbom: false
           build-args: |
@@ -122,7 +111,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Delete Untagged Docker Images
-        uses: dylanratcliffe/delete-untagged-containers@main
+        uses: dylanratcliffe/delete-untagged-containers@v1
         with:
           package_name: debezium-server-iceberg
           token: ${{ secrets.GITHUB_TOKEN }}
