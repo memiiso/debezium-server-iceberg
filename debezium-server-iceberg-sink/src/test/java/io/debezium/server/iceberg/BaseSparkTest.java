@@ -40,6 +40,8 @@ public class BaseSparkTest extends BaseTest {
     SparkConf sparkconf =
         new SparkConf().setAppName("CDC-S3-Batch-Spark-Sink").setMaster("local[2]");
     sparkconf
+        .set("spark.driver.bindAddress", "127.0.0.1")
+        .set("spark.driver.host", "127.0.0.1")
         .set("spark.ui.enabled", "false")
         .set("spark.eventLog.enabled", "false")
         .set("spark.hadoop.fs.s3a.connection.establish.timeout", "30")

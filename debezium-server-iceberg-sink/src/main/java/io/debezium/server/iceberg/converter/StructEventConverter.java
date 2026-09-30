@@ -10,6 +10,7 @@ package io.debezium.server.iceberg.converter;
 
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
+import io.debezium.runtime.BatchEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.tableoperator.Operation;
@@ -29,6 +30,7 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,32 +52,35 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   private static final Serializer<Struct> structSerializer = eventSerde.serializer();
 
   public StructEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+    this(e.destination(), e.sourceRecord(), config);
+  }
+
+  public StructEventConverter(BatchEvent e, GlobalConfig config) {
+    this(e.destination(), e.record(), config);
+  }
+
+  public StructEventConverter(String destination, SourceRecord sourceRecord, GlobalConfig config) {
     super(config);
-    this.destination = e.destination();
-    if (e.sourceRecord() == null) {
+    this.destination = destination;
+    if (sourceRecord == null) {
       throw new DebeziumException(
-          "Unexpected event type: "
-              + e.getClass().getName()
-              + " event.sourceRecord() is null!, expected SourceRecord value.");
+          "Unexpected event type: sourceRecord is null!, expected SourceRecord value.");
     }
-    if (e.sourceRecord().value() != null && !(e.sourceRecord().value() instanceof Struct)) {
+    if (sourceRecord.value() != null && !(sourceRecord.value() instanceof Struct)) {
       throw new DebeziumException(
           "Unexpected value type: "
-              + e.sourceRecord().value().getClass().getName()
+              + sourceRecord.value().getClass().getName()
               + ", expected Struct.");
     }
-    if (e.sourceRecord().key() != null && !(e.sourceRecord().key() instanceof Struct)) {
+    if (sourceRecord.key() != null && !(sourceRecord.key() instanceof Struct)) {
       throw new DebeziumException(
-          "Unexpected key type: "
-              + e.sourceRecord().key().getClass().getName()
-              + ", expected Struct.");
+          "Unexpected key type: " + sourceRecord.key().getClass().getName() + ", expected Struct.");
     }
 
-    this.key = (Struct) e.sourceRecord().key();
-    this.value = (Struct) e.sourceRecord().value();
+    this.key = (Struct) sourceRecord.key();
+    this.value = (Struct) sourceRecord.value();
     this.schemaConverter =
-        new StructSchemaConverter(
-            e.sourceRecord().valueSchema(), e.sourceRecord().keySchema(), config);
+        new StructSchemaConverter(sourceRecord.valueSchema(), sourceRecord.keySchema(), config);
   }
 
   @Override
