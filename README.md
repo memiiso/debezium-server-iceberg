@@ -19,7 +19,7 @@ The following table details version compatibility across all releases and tags, 
 
 | Release / Tag | Release Date | Debezium Version | Iceberg Version | Spark Runtime | Java | Key Capabilities & Highlights |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`1.2.0.Final`** *(master)* | *Upcoming* | `3.6.3.Final` | `1.11.0` | `4.0.3` | `21` | Iceberg v3 Deletion Vectors (#720), parallel upload safety (#754), nullable field defaults (#749) |
+| **`1.2.0.Final`** | 2026-10-04 | `3.6.3.Final` | `1.11.0` | `4.0.3` | `21` | Iceberg v3 Deletion Vectors (#720), parallel upload safety (#754), nullable field defaults (#749), queue byte limit (#762) |
 | **`1.1.1.Final`** | 2026-09-29 | `3.6.3.Final` | `1.10.2` | `4.0.3` | `21` | Upgraded to Debezium 3.6.3.Final |
 | **`1.1.0.Final`** | 2026-07-18 | `3.6.0.Final` | `1.10.2` | `4.0.3` | `21` | Debezium 3.6 baseline, Spark 4.0.3 runtime |
 | **`1.0.0.Final`** | 2025-11-26 | `3.3.1.Final` | `1.10.0` | `4.0.0` | `21` | Java 21 migration, Iceberg 1.10.0 production GA |
