@@ -49,7 +49,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.of(dest, 1, "c"));
     records.add(eventFactory.of(dest, 2, "c"));
     records.add(eventFactory.of(dest, 3, "c"));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert");
     Assertions.assertEquals(ds.count(), 3);
@@ -61,7 +61,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.of(dest, 2, "d"));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV1"));
     records.add(eventFactory.of(dest, 4, "c"));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
 
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
@@ -85,7 +85,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.of(dest, 6, "d", TEST_EPOCH_MS + 8L));
     records.add(eventFactory.of(dest, 6, "c", TEST_EPOCH_MS + 8L));
     records.add(eventFactory.of(dest, 6, "u", "Updatedname-6-V1", TEST_EPOCH_MS + 8L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
     ds = getTableData("testc.inventory.customers_upsert");
     ds.sort("id").show(false);
     Assertions.assertEquals(ds.count(), 6);
@@ -103,7 +103,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.of(dest, 7, "u", TEST_EPOCH_MS + 2L));
     records.add(eventFactory.of(dest, 7, "r", TEST_EPOCH_MS + 3L));
     records.add(eventFactory.of(dest, 7, "u", "Updatedname-7-V1", TEST_EPOCH_MS + 4L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
     ds = getTableData("testc.inventory.customers_upsert");
     ds.show();
     Assertions.assertEquals(
@@ -120,7 +120,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.ofCompositeKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofCompositeKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
     records.add(eventFactory.ofCompositeKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
@@ -129,7 +129,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
 
     records.clear();
     records.add(eventFactory.ofCompositeKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
     ds = getTableData("testc.inventory.customers_upsert_compositekey");
     ds.show();
     Assertions.assertEquals(ds.count(), 2);
@@ -150,7 +150,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.ofNoKey(dest, 1, "c", "user1", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofNoKey(dest, 1, "u", "user1", TEST_EPOCH_MS + 2L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();
     Assertions.assertEquals(ds.count(), 3);
@@ -160,7 +160,7 @@ public class IcebergChangeConsumerUpsertTest extends BaseSparkTest {
     records.add(eventFactory.ofNoKey(dest, 1, "c", "user2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofNoKey(dest, 1, "u", "user2", TEST_EPOCH_MS + 1L));
     records.add(eventFactory.ofNoKey(dest, 1, "r", "user1", TEST_EPOCH_MS + 3L));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
     ds = getTableData("testc.inventory.customers_upsert_nokey");
     ds.show();
     Assertions.assertEquals(ds.count(), 6);
