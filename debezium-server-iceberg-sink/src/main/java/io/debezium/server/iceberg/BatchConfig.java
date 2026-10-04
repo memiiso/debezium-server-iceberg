@@ -17,6 +17,14 @@ public interface BatchConfig {
   @WithDefault(CommonConnectorConfig.DEFAULT_MAX_BATCH_SIZE + "")
   int sourceMaxBatchSize();
 
+  @WithName("debezium.source.max.queue.size.in.bytes")
+  @WithDefault(CommonConnectorConfig.DEFAULT_MAX_QUEUE_SIZE_IN_BYTES + "")
+  long sourceMaxQueueSizeInBytes();
+
+  @WithName("debezium.sink.batch.batch-size-wait.queue-size-in-bytes-ratio")
+  @WithDefault("0.9")
+  double batchSizeWaitQueueSizeInBytesRatio();
+
   @WithName("debezium.sink.batch.batch-size-wait.max-wait-ms")
   @WithDefault("300000")
   int batchSizeWaitMaxWaitMs();
@@ -36,6 +44,4 @@ public interface BatchConfig {
   @WithName("debezium.sink.batch.concurrent-uploads.timeout-minutes")
   @WithDefault("60")
   int concurrentUploadsTimeoutMinutes();
-
-
 }

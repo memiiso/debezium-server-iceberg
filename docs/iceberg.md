@@ -114,19 +114,25 @@ This is default configuration by default consumer will not use any wait. All the
 #### MaxBatchSizeWait
 
 The MaxBatchSizeWait strategy leverages Debezium metrics to optimize batch size. It periodically checks the streaming
-queue size and waits until it reaches the specified `debezium.source.max.batch.size` or
-`debezium.sink.batch.batch-size-wait.max-wait-ms`. The maximum wait time and check interval are controlled by the
-`debezium.sink.batch.batch-size-wait.max-wait-ms` and `debezium.sink.batch.batch-size-wait.wait-interval-ms` properties,
-respectively.
+queue size and waits until it reaches the specified `debezium.source.max.batch.size`, reaches the queue byte capacity threshold
+(if `debezium.source.max.queue.size.in.bytes` is configured), or reaches `debezium.sink.batch.batch-size-wait.max-wait-ms`.
+The maximum wait time and check interval are controlled by the `debezium.sink.batch.batch-size-wait.max-wait-ms` and
+`debezium.sink.batch.batch-size-wait.wait-interval-ms` properties, respectively.
+
+When `debezium.source.max.queue.size.in.bytes` is configured, `MaxBatchSizeWait` avoids stalling when large events fill the queue
+in bytes before the event count reaches `debezium.source.max.batch.size`. By default, it stops waiting once the queue reaches
+90% of its byte capacity, controlled by `debezium.sink.batch.batch-size-wait.queue-size-in-bytes-ratio` (default `0.9`).
 
 For instance, to process 2048 events per commit with a maximum wait time of 30 seconds and a check interval of 5
-seconds, you would configure the settings as follows:
+seconds:
 
 ```properties
 debezium.sink.batch.batch-size-wait=MaxBatchSizeWait
 debezium.source.connector.class=io.debezium.connector.postgresql.PostgresConnector
 debezium.source.max.batch.size=2048
 debezium.source.max.queue.size=16000
+debezium.source.max.queue.size.in.bytes=536870912
+debezium.sink.batch.batch-size-wait.queue-size-in-bytes-ratio=0.9
 debezium.sink.batch.batch-size-wait.max-wait-ms=30000
 debezium.sink.batch.batch-size-wait.wait-interval-ms=5000
 ```
