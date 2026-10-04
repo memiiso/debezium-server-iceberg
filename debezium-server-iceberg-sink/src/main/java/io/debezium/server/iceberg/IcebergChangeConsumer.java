@@ -9,8 +9,9 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
-import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import io.debezium.engine.DebeziumEngine;
+import io.debezium.runtime.BatchEvent;
+import io.debezium.runtime.CapturingEvents;
+import io.debezium.server.api.DebeziumServerConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
@@ -60,8 +61,7 @@ import org.slf4j.LoggerFactory;
  */
 @Named("iceberg")
 @Dependent
-public class IcebergChangeConsumer
-    implements DebeziumEngine.ChangeConsumer<EmbeddedEngineChangeEvent> {
+public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEvents<BatchEvent>> {
 
   protected static final Duration LOG_INTERVAL = Duration.ofMinutes(15);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumer.class);
@@ -132,17 +132,14 @@ public class IcebergChangeConsumer
   }
 
   @Override
-  public void handleBatch(
-      List<EmbeddedEngineChangeEvent> records,
-      DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> committer)
-      throws InterruptedException {
+  public void handle(CapturingEvents<BatchEvent> events) throws InterruptedException {
     Instant start = Instant.now();
 
     // group events by destination (per iceberg table)
     Map<String, List<EventConverter>> result =
-        records.stream()
+        events.records().stream()
             .map(
-                (EmbeddedEngineChangeEvent e) -> {
+                (BatchEvent e) -> {
                   return switch (keyValueChangeEventFormat) {
                     case "json" -> new JsonEventConverter(e, config);
                     case "connect" -> new StructEventConverter(e, config);
@@ -160,18 +157,15 @@ public class IcebergChangeConsumer
       this.processTablesSequentially(result);
     }
 
-    // workaround! somehow offset is not saved to file unless we call
-    // committer.markProcessed per event
-    // even it's should be saved to file periodically
-    for (EmbeddedEngineChangeEvent record : records) {
+    for (BatchEvent record : events.records()) {
       LOGGER.trace("Processed event '{}'", record);
-      committer.markProcessed(record);
+      record.commit();
     }
-    committer.markBatchFinished();
-    this.logConsumerProgress(records.size());
+    this.logConsumerProgress(events.records().size());
 
-    // waiting to group events as bathes
-    batchSizeWait.waitMs(records.size(), (int) Duration.between(start, Instant.now()).toMillis());
+    // waiting to group events as batches
+    batchSizeWait.waitMs(
+        events.records().size(), (int) Duration.between(start, Instant.now()).toMillis());
   }
 
   /**
