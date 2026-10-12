@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +46,7 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.IcebergGenerics;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.CloseableIterable;
@@ -145,14 +147,17 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   }
 
   private void initializeTable() {
-    if (icebergCatalog.tableExists(tableId)) {
-      offsetTable = icebergCatalog.loadTable(tableId);
+    Optional<Table> table = IcebergUtil.loadIcebergTable(icebergCatalog, tableId);
+    if (table.isPresent()) {
+      offsetTable = table.get();
     } else {
       LOG.debug("Creating table {} to store offset", tableFullName);
-      offsetTable =
-          IcebergUtil.createIcebergTable(icebergCatalog, tableId, OFFSET_STORAGE_TABLE_SCHEMA);
-      if (!icebergCatalog.tableExists(tableId)) {
-        throw new DebeziumException("Failed to create table " + tableId + " to store offset");
+      try {
+        offsetTable =
+            IcebergUtil.createIcebergTable(icebergCatalog, tableId, OFFSET_STORAGE_TABLE_SCHEMA);
+      } catch (AlreadyExistsException e) {
+        LOG.warn("Table {} was created concurrently, loading existing table", tableFullName);
+        offsetTable = icebergCatalog.loadTable(tableId);
       }
 
       if (!Strings.isNullOrEmpty(storageConfig.getMigrateOffsetFile().strip())) {

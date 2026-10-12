@@ -1,11 +1,17 @@
 package io.debezium.server.iceberg;
 
 import java.util.List;
+import java.util.Optional;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class IcebergUtilTest {
 
@@ -48,5 +54,33 @@ class IcebergUtilTest {
 
     PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, List.of("missing_column"), false);
     Assertions.assertFalse(spec.isPartitioned());
+  }
+
+  @Test
+  void testLoadIcebergTableWhenTableExists() {
+    Catalog catalog = Mockito.mock(Catalog.class);
+    Table table = Mockito.mock(Table.class);
+    TableIdentifier tableId = TableIdentifier.of("test_ns", "test_table");
+    Mockito.when(catalog.loadTable(tableId)).thenReturn(table);
+
+    Optional<Table> result = IcebergUtil.loadIcebergTable(catalog, tableId);
+
+    Assertions.assertTrue(result.isPresent());
+    Assertions.assertSame(table, result.get());
+    Mockito.verify(catalog).loadTable(tableId);
+    Mockito.verify(catalog, Mockito.never()).tableExists(Mockito.any());
+  }
+
+  @Test
+  void testLoadIcebergTableWhenTableNotFound() {
+    Catalog catalog = Mockito.mock(Catalog.class);
+    TableIdentifier tableId = TableIdentifier.of("test_ns", "test_table");
+    Mockito.when(catalog.loadTable(tableId)).thenThrow(new NoSuchTableException("Table not found"));
+
+    Optional<Table> result = IcebergUtil.loadIcebergTable(catalog, tableId);
+
+    Assertions.assertTrue(result.isEmpty());
+    Mockito.verify(catalog).loadTable(tableId);
+    Mockito.verify(catalog, Mockito.never()).tableExists(Mockito.any());
   }
 }
