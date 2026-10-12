@@ -30,6 +30,9 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg.upsert-dedup-column")
   Optional<String> cdcSourceTsField();
 
+  @WithName("debezium.sink.iceberg.deduplicator")
+  Optional<String> deduplicator();
+
   @WithName("debezium.sink.iceberg.upsert")
   @WithDefault("false")
   boolean upsert();
