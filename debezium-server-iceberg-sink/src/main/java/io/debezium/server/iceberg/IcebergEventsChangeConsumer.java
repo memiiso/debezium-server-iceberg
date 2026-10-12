@@ -50,6 +50,7 @@ import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
@@ -120,17 +121,23 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
     TableIdentifier tableIdentifier =
         TableIdentifier.of(IcebergUtil.parseNamespace(config.iceberg().namespace()), TABLE_NAME);
 
-    // create table if not exists
-    if (!icebergCatalog.tableExists(tableIdentifier)) {
-      IcebergUtil.createNamespaceIfNotExists(icebergCatalog, tableIdentifier.namespace());
-      icebergCatalog
-          .buildTable(tableIdentifier, TABLE_SCHEMA)
-          .withPartitionSpec(TABLE_PARTITION)
-          .withSortOrder(TABLE_SORT_ORDER)
-          .create();
-    }
-    // load table
-    eventTable = icebergCatalog.loadTable(tableIdentifier);
+    // load or create table
+    eventTable =
+        IcebergUtil.loadIcebergTable(icebergCatalog, tableIdentifier)
+            .orElseGet(
+                () -> {
+                  IcebergUtil.createNamespaceIfNotExists(
+                      icebergCatalog, tableIdentifier.namespace());
+                  try {
+                    return icebergCatalog
+                        .buildTable(tableIdentifier, TABLE_SCHEMA)
+                        .withPartitionSpec(TABLE_PARTITION)
+                        .withSortOrder(TABLE_SORT_ORDER)
+                        .create();
+                  } catch (AlreadyExistsException e) {
+                    return icebergCatalog.loadTable(tableIdentifier);
+                  }
+                });
 
     batchSizeWait =
         IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());

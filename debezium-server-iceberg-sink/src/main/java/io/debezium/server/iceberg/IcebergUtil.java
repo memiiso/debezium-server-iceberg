@@ -41,6 +41,7 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericFileWriterFactory;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
+import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.relocated.com.google.common.collect.Sets;
@@ -152,12 +153,13 @@ public class IcebergUtil {
   }
 
   public static Optional<Table> loadIcebergTable(Catalog icebergCatalog, TableIdentifier tableId) {
-    if (icebergCatalog.tableExists(tableId)) {
+    try {
       Table table = icebergCatalog.loadTable(tableId);
       return Optional.of(table);
+    } catch (NoSuchTableException e) {
+      LOGGER.debug("Table not found: {}", tableId);
+      return Optional.empty();
     }
-    LOGGER.debug("Table not found: {}", tableId.toString());
-    return Optional.empty();
   }
 
   public static FileFormat getTableFileFormat(Table icebergTable) {
