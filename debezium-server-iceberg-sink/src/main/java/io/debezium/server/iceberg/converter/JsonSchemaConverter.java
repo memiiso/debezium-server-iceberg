@@ -403,9 +403,4 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     return Objects.equals(valueSchema, that.valueSchema)
         && Objects.equals(keySchema, that.keySchema);
   }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(valueSchema, keySchema);
-  }
 }
