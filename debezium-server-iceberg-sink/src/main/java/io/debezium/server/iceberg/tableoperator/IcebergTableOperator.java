@@ -8,7 +8,6 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
-import com.google.common.collect.ImmutableMap;
 import io.debezium.DebeziumException;
 import io.debezium.Module;
 import io.debezium.connector.common.DebeziumTaskState;
@@ -18,13 +17,16 @@ import io.debezium.openlineage.dataset.DatasetMetadata;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.SchemaConverter;
+import io.debezium.server.iceberg.deduplication.BatchDeduplicator;
+import io.debezium.server.iceberg.deduplication.RetainLastBatchDeduplicator;
+import io.debezium.server.iceberg.deduplication.TimestampAndOpBatchDeduplicator;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.RowDelta;
@@ -45,93 +47,42 @@ import org.slf4j.LoggerFactory;
 @Dependent
 public class IcebergTableOperator {
 
-  static final ImmutableMap<Operation, Integer> CDC_OPERATION_PRIORITY =
-      ImmutableMap.of(
-          Operation.INSERT, 1, Operation.READ, 2, Operation.UPDATE, 3, Operation.DELETE, 4);
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergTableOperator.class);
   @Inject IcebergTableWriterFactory writerFactory;
   @Inject GlobalConfig config;
 
   private volatile ConnectorContext openLineageContext;
+  private BatchDeduplicator deduplicator;
 
-  protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
-
-    ConcurrentHashMap<Object, EventConverter> deduplicatedEvents = new ConcurrentHashMap<>();
-
-    events.forEach(
-        e -> {
-          if (!e.hasKeyData()) {
-            throw new DebeziumException(
-                "Cannot deduplicate data with null key! destination:'"
-                    + e.destination()
-                    + "' event: '"
-                    + e.value().toString()
-                    + "'");
-          }
-
-          try {
-            e.setNewKey(e.cdcOpValue() == Operation.INSERT);
-            // deduplicate using key(PK)
-            deduplicatedEvents.merge(
-                e.key(),
-                e,
-                (oldValue, newValue) -> {
-                  if (this.compareByTsThenOp(oldValue, newValue) <= 0) {
-                    return newValue;
-                  } else {
-                    return oldValue;
-                  }
-                });
-          } catch (Exception ex) {
-            throw new DebeziumException("Failed to deduplicate events", ex);
-          }
-        });
-
-    return new ArrayList<>(deduplicatedEvents.values());
+  @PostConstruct
+  void init() {
+    this.deduplicator = resolveDeduplicator();
+    LOGGER.info("Using batch deduplicator: {}", this.deduplicator.getClass().getSimpleName());
   }
 
-  /**
-   * This is used to deduplicate events within given batch.
-   *
-   * <p>Forex ample a record can be updated multiple times in the source. for example insert
-   * followed by update and delete. for this case we need to only pick last change event for the
-   * row.
-   *
-   * <p>Its used when `upsert` feature enabled (when the consumer operating non append mode) which
-   * means it should not add duplicate records to target table.
-   *
-   * @param lhs
-   * @param rhs
-   * @return
-   */
-  private int compareByTsThenOp(EventConverter lhs, EventConverter rhs) {
-    if (config.iceberg().cdcSourceTsField().orElse("").isBlank()) {
-      rhs.setNewKey(lhs.isNewKey());
-      return -1;
-    }
+  BatchDeduplicator resolveDeduplicator() {
+    String dedup =
+        (config != null && config.iceberg() != null && config.iceberg().deduplicator().isPresent())
+            ? config.iceberg().deduplicator().get().trim().toLowerCase(Locale.ROOT)
+            : "";
 
-    Long lhsTs = lhs.cdcSourceTsValue();
-    Long rhsTs = rhs.cdcSourceTsValue();
-    int result;
-    if (lhsTs == null && rhsTs == null) {
-      result = 0;
-    } else if (lhsTs == null) {
-      result = -1;
-    } else if (rhsTs == null) {
-      result = 1;
+    if (dedup.equals("retainlast") || dedup.equals("retain-last")) {
+      return new RetainLastBatchDeduplicator();
+    } else if (dedup.equals("default")
+        || dedup.equals("timestampandop")
+        || dedup.equals("timestamp-and-op")) {
+      return new TimestampAndOpBatchDeduplicator(config.iceberg());
+    } else if (config != null
+        && config.iceberg() != null
+        && config.iceberg().cdcSourceTsField().filter(s -> !s.isBlank()).isPresent()) {
+      return new TimestampAndOpBatchDeduplicator(config.iceberg());
     } else {
-      result = Long.compare(lhsTs, rhsTs);
+      return new RetainLastBatchDeduplicator();
     }
+  }
 
-    if (result == 0) {
-      // return (x < y) ? -1 : ((x == y) ? 0 : 1);
-      result =
-          CDC_OPERATION_PRIORITY
-              .getOrDefault(lhs.cdcOpValue(), -1)
-              .compareTo(CDC_OPERATION_PRIORITY.getOrDefault(rhs.cdcOpValue(), -1));
-    }
-
-    return result;
+  protected List<EventConverter> deduplicateBatch(List<EventConverter> events) {
+    return this.deduplicator.deduplicate(events);
   }
 
   /**
