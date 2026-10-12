@@ -22,6 +22,7 @@ import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -185,7 +186,10 @@ public class IcebergTableOperator {
       addToTablePerSchema(icebergTable, events);
     } else {
       Map<SchemaConverter, List<EventConverter>> eventsGroupedBySchema =
-          events.stream().collect(Collectors.groupingBy(EventConverter::schemaConverter));
+          events.stream()
+              .collect(
+                  Collectors.groupingBy(
+                      EventConverter::schemaConverter, LinkedHashMap::new, Collectors.toList()));
       LOGGER.debug(
           "Batch got {} records with {} different schema!!",
           events.size(),

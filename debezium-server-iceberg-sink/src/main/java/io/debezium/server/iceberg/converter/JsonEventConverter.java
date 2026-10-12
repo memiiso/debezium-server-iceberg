@@ -52,6 +52,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   private final JsonNode value;
   private final JsonNode key;
   private boolean newKey = false;
+  private JsonSchemaConverter schemaConverter;
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
@@ -163,14 +164,18 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
 
   @Override
   public JsonSchemaConverter schemaConverter() {
-    try {
-      return new JsonSchemaConverter(
-          mapper.readTree(valueData).get("schema"),
-          keyData == null ? null : mapper.readTree(keyData).get("schema"),
-          config);
-    } catch (IOException e) {
-      throw new DebeziumException("Failed to get event schema", e);
+    if (this.schemaConverter == null) {
+      try {
+        this.schemaConverter =
+            new JsonSchemaConverter(
+                mapper.readTree(valueData).get("schema"),
+                keyData == null ? null : mapper.readTree(keyData).get("schema"),
+                config);
+      } catch (IOException e) {
+        throw new DebeziumException("Failed to get event schema", e);
+      }
     }
+    return this.schemaConverter;
   }
 
   /**
@@ -238,7 +243,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   }
 
   private Object jsonValToIcebergVal(Types.NestedField field, JsonNode node) {
-    LOGGER.debug("Processing Field:{} Type:{}", field.name(), field.type());
+    LOGGER.trace("Processing Field:{} Type:{}", field.name(), field.type());
 
     if (node.isNull()) {
       return null;

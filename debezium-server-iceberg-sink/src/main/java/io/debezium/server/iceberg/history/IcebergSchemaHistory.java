@@ -42,7 +42,6 @@ import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
@@ -166,11 +165,9 @@ public final class IcebergSchemaHistory extends AbstractSchemaHistory {
               writer.close();
               WriteResult files = writer.complete();
 
-              Transaction t = historyTable.newTransaction();
-              AppendFiles append = t.newAppend();
+              AppendFiles append = historyTable.newAppend();
               Arrays.stream(files.dataFiles()).forEach(append::appendFile);
               append.commit();
-              t.commitTransaction();
               LOG.trace("Successfully saved history data to Iceberg table");
             }
           } catch (IOException e) {
