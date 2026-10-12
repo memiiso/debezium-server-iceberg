@@ -408,6 +408,7 @@
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
                 <version>${quarkus.version.runtime}</version>
+                <extensions>true</extensions>
                 <executions>
                     <execution>
                         <goals>
@@ -435,6 +436,7 @@
                 <version>3.6.0</version>
                 <configuration>
                     <argLine>
+                        @{argLine}
                         -Djava.util.concurrent.ForkJoinPool.common.parallelism=0
                         -XX:+EnableDynamicAgentLoading
                         -Djava.security.manager=allow
@@ -497,6 +499,7 @@
                     <skipTests>${skipITs}</skipTests>
                     <enableAssertions>true</enableAssertions>
                     <argLine>
+                        @{argLine}
                         -Djava.util.concurrent.ForkJoinPool.common.parallelism=0
                         -XX:+EnableDynamicAgentLoading
                         -Djava.security.manager=allow

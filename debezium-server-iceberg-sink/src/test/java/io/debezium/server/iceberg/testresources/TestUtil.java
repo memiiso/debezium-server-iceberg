@@ -89,16 +89,16 @@ public class TestUtil {
   }
 
   public static DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent> getCommitter() {
-    return new DebeziumEngine.RecordCommitter() {
-      public synchronized void markProcessed(SourceRecord record) {}
+    return new DebeziumEngine.RecordCommitter<EmbeddedEngineChangeEvent>() {
+      @Override
+      public synchronized void markProcessed(EmbeddedEngineChangeEvent record) {}
 
       @Override
-      public void markProcessed(Object record) {}
-
       public synchronized void markBatchFinished() {}
 
       @Override
-      public void markProcessed(Object record, DebeziumEngine.Offsets sourceOffsets) {}
+      public void markProcessed(
+          EmbeddedEngineChangeEvent record, DebeziumEngine.Offsets sourceOffsets) {}
 
       @Override
       public DebeziumEngine.Offsets buildOffsets() {
