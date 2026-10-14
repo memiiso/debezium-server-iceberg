@@ -28,7 +28,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
   public static final String MYSQL_PASSWORD = "mysqlpw";
   public static final String MYSQL_DEBEZIUM_USER = "debezium";
   public static final String MYSQL_DEBEZIUM_PASSWORD = "dbz";
-  public static final String MYSQL_IMAGE = "quay.io/debezium/example-mysql:3.6.3.Final";
+  public static final String MYSQL_IMAGE = "quay.io/debezium/example-mysql:3.0.0.Final";
   public static final String MYSQL_HOST = "127.0.0.1";
   public static final String MYSQL_DATABASE = "inventory";
   public static final Integer MYSQL_PORT_DEFAULT = 3306;
@@ -41,7 +41,7 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
           .withEnv("MYSQL_PASSWORD", MYSQL_PASSWORD)
           .withEnv("MYSQL_ROOT_PASSWORD", MYSQL_ROOT_PASSWORD)
           .withExposedPorts(MYSQL_PORT_DEFAULT)
-          .withStartupTimeout(Duration.ofSeconds(30));
+          .withStartupTimeout(Duration.ofSeconds(60));
 
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
