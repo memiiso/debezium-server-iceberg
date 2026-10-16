@@ -43,18 +43,22 @@ public class SourceMysqlDB implements QuarkusTestResourceLifecycleManager {
           .withExposedPorts(MYSQL_PORT_DEFAULT)
           .withStartupTimeout(Duration.ofSeconds(30));
 
+  public static Connection connection() throws SQLException {
+    String url =
+        "jdbc:mysql://"
+            + MYSQL_HOST
+            + ":"
+            + container.getMappedPort(MYSQL_PORT_DEFAULT)
+            + "/"
+            + MYSQL_DATABASE
+            + "?useSSL=false";
+    return DriverManager.getConnection(url, MYSQL_USER, MYSQL_PASSWORD);
+  }
+
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
-      String url =
-          "jdbc:mysql://"
-              + MYSQL_HOST
-              + ":"
-              + container.getMappedPort(MYSQL_PORT_DEFAULT)
-              + "/"
-              + MYSQL_DATABASE
-              + "?useSSL=false";
       Class.forName("com.mysql.cj.jdbc.Driver");
-      Connection con = DriverManager.getConnection(url, MYSQL_USER, MYSQL_PASSWORD);
+      Connection con = connection();
       Statement st = con.createStatement();
       st.execute(query);
       con.close();

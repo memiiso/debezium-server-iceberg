@@ -13,6 +13,8 @@ import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
+import io.debezium.server.iceberg.converter.geospatial.GeospatialValues;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
@@ -372,8 +374,23 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
           throw new RuntimeException(
               "Failed to convert binary value to iceberg value, field: " + field.name(), e);
         }
+      case GEOMETRY:
+      case GEOGRAPHY:
+        return GeospatialValues.fromJson(node, field.name(), field.type());
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
+        if (GeospatialTypes.isGeospatial(listItemsType.type())) {
+          ArrayList<Object> listVal = new ArrayList<>();
+          node.elements()
+              .forEachRemaining(
+                  element ->
+                      listVal.add(
+                          element.isNull()
+                              ? null
+                              : GeospatialValues.fromJson(
+                                  element, field.name() + "[]", listItemsType.type())));
+          return listVal;
+        }
         // recursive value mapping when list elements are nested type
         if (listItemsType.type().isNestedType()) {
           ArrayList<Object> listVal = new ArrayList<>();
