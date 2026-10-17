@@ -41,6 +41,7 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.batch.concurrent-uploads`                     | `1`                                                           | The number of parallel threads to use for uploading data to Iceberg tables. When set to a value greater than 1, the consumer will write to multiple tables concurrently.                                                                                                                                          |
 | `debezium.sink.batch.concurrent-uploads.timeout-minutes`     | `60`                                                          | The maximum time in minutes to wait for all parallel uploads to complete before timing out. This is only effective when `debezium.sink.batch.concurrent-uploads` is greater than 1.                                                                                                                               |
 | `debezium.sink.iceberg.openlineage-enabled`                  | `false`                                                       | Enables OpenLineage metadata logging for Iceberg commits.                                                                                                                                                                                                                                                         |
+| `debezium.sink.iceberg.exactly-once`                         | `false`                                                       | Commits the source offset in the Iceberg snapshot of each table and skips replayed events already committed. Supported for Postgres and MySQL (without GTIDs) connectors. Explained further below.                                                                                                              |
 | `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                                               | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) These Iceberg settings are passed to Iceberg without the `debezium.sink.iceberg.` prefix.                                                                                                                                                 |
 | `debezium.source.offset.storage`                             | `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming). Set to `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` to use Iceberg table                 |
 | `debezium.source.offset.storage.iceberg.table-name`          | `_debezium_offset_storage`                                    | Destination Iceberg table name to store connector offset information.                                                                                                                                                                                                                                             |
@@ -94,6 +95,65 @@ deduplication is not performed, and all incoming records are appended to the des
 
 It's important to note that even when upsert mode is enabled, tables without a primary key will switch to append-only
 behavior.
+
+### Exactly-once Delivery
+
+Data tables and the offset storage are committed separately. When the consumer stops between the two commits, Debezium
+replays the events committed after its last stored offset on restart. Upsert mode absorbs the replayed events, append mode
+writes them twice.
+
+When enabled (`debezium.sink.iceberg.exactly-once=true`), the source offset of the last committed event is stored in the
+summary of each Iceberg snapshot written by the consumer (`debezium.source-offset` and `debezium.source-partition`
+properties, only the offset keys used to order events). Data and offset are committed atomically in the same snapshot, per table. On restart, events at or below the
+offset stored in the destination table are skipped. To find the stored offset, the consumer walks back the snapshot
+history from the current snapshot. Snapshots from compaction (`rewrite_data_files`), or from any other writer, are simply
+skipped. Only standard single-table commits are used, so it works with any catalog.
+
+Supported connectors (`debezium.source.connector.class`) are Postgres and MySQL, startup fails for other connectors.
+MySQL is only supported without GTIDs: binlog positions are specific to a server, and with GTIDs Debezium can resume on
+another server after a failover, where the positions are not comparable. The consumer fails on the first event with
+GTIDs. MariaDB always uses GTIDs, so it isn't supported. The `icebergevents` consumer doesn't support exactly-once
+delivery.
+
+Limitations:
+- Initial, blocking and incremental snapshot events are never skipped, they can be written again when Debezium restarts a snapshot.
+- Offsets of a different source partition (`topic.prefix`) are not compared and the events are not skipped.
+- The stored offset must stay ahead of the source. When the source positions go back, for example after recreating the
+  Postgres cluster or `RESET MASTER` on MySQL, new events would be skipped. Reset the stored offset of each destination
+  table in that case, see below.
+- The offset is only found while the last snapshot written by the consumer is still in the snapshot history. If
+  `expire_snapshots` removes it (e.g. compaction ran after the last consumer commit, then expiration kept only the
+  compaction snapshot), no event is skipped until the next consumer commit: replayed events are written again, no data is
+  lost.
+
+#### Resetting the stored offset
+
+Rewriting the table (`INSERT OVERWRITE`, `rewrite_data_files`, ...) doesn't reset the stored offset: snapshots without the
+property are skipped and the previous offset is still found. To reset it, stop the consumer and commit a snapshot with
+the `debezium.source-offset=reset` summary property, the history walk stops there. For example with the Iceberg Java API:
+
+```java
+table.newAppend().set("debezium.source-offset", "reset").commit();
+```
+
+The next commit of the consumer stores the offset again.
+
+#### Snapshot expiration
+
+Keep snapshot retention longer than the longest expected consumer downtime, so the last snapshot written by the consumer
+is never expired before the consumer restarts. For example, with Spark:
+
+```sql
+CALL catalog.system.expire_snapshots(
+  table => 'db.table',
+  older_than => TIMESTAMP '2026-10-10 00:00:00', -- older than the longest expected downtime, e.g. 7 days ago
+  retain_last => 10                              -- keep more than one snapshot
+);
+```
+
+`retain_last` alone isn't enough when compaction or other writers commit often, `older_than` is what covers the downtime.
+The same defaults can be set on the table with the `history.expire.max-snapshot-age-ms` and
+`history.expire.min-snapshots-to-keep` properties.
 
 ## Optimizing batch size (or commit frequency)
 

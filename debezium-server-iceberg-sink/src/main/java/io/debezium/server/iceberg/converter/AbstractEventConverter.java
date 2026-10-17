@@ -8,8 +8,11 @@
 
 package io.debezium.server.iceberg.converter;
 
+import static io.debezium.jdbc.TemporalPrecisionMode.ISOSTRING;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
@@ -24,19 +27,6 @@ import io.debezium.time.Time;
 import io.debezium.time.Timestamp;
 import io.debezium.time.ZonedTime;
 import io.debezium.time.ZonedTimestamp;
-import org.apache.iceberg.types.Types;
-import org.apache.iceberg.util.ByteBuffers;
-import org.apache.iceberg.util.DateTimeUtil;
-import org.apache.iceberg.variants.VariantMetadata;
-import org.apache.iceberg.variants.Variants;
-import org.apache.kafka.common.serialization.Deserializer;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.json.JsonConverter;
-import org.apache.kafka.connect.json.JsonConverterConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -52,10 +42,20 @@ import java.time.temporal.Temporal;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
-
-import static io.debezium.jdbc.TemporalPrecisionMode.ISOSTRING;
-
+import org.apache.iceberg.types.Types;
+import org.apache.iceberg.util.ByteBuffers;
+import org.apache.iceberg.util.DateTimeUtil;
+import org.apache.iceberg.variants.VariantMetadata;
+import org.apache.iceberg.variants.Variants;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonConverterConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AbstractEventConverter {
   protected final GlobalConfig config;
@@ -68,9 +68,26 @@ public class AbstractEventConverter {
   protected static Deserializer<JsonNode> valDeserializer;
   protected static Deserializer<JsonNode> keyDeserializer;
 
+  protected Map<String, ?> sourcePartition;
+  protected Map<String, ?> sourceOffset;
 
   public AbstractEventConverter(GlobalConfig config) {
     this.config = config;
+  }
+
+  protected void setSourcePosition(EmbeddedEngineChangeEvent e) {
+    if (e.sourceRecord() != null) {
+      this.sourcePartition = e.sourceRecord().sourcePartition();
+      this.sourceOffset = e.sourceRecord().sourceOffset();
+    }
+  }
+
+  public Map<String, ?> sourcePartition() {
+    return sourcePartition;
+  }
+
+  public Map<String, ?> sourceOffset() {
+    return sourceOffset;
   }
 
   public static void initializeStaticSerdes() {
@@ -80,10 +97,12 @@ public class AbstractEventConverter {
     // configure and set
     keySerde.configure(Collections.emptyMap(), true);
     keyDeserializer = keySerde.deserializer();
-    jsonConverter.configure(Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false"), false);
+    jsonConverter.configure(
+        Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false"), false);
   }
 
-  protected BigDecimal convertDecimal(Object value, Types.DecimalType decimalType, String logicalTypeName) {
+  protected BigDecimal convertDecimal(
+      Object value, Types.DecimalType decimalType, String logicalTypeName) {
     BigDecimal bd;
     if (value instanceof BigDecimal) {
       bd = (BigDecimal) value;
@@ -95,9 +114,12 @@ public class AbstractEventConverter {
     } else if (value instanceof byte[]) { // Debezium precise decimal handling
       bd = new BigDecimal(new BigInteger((byte[]) value), decimalType.scale());
     } else if (value instanceof ByteBuffer) { // Handle ByteBuffer as well
-      bd = new BigDecimal(new BigInteger(ByteBuffers.toByteArray((ByteBuffer) value)), decimalType.scale());
+      bd =
+          new BigDecimal(
+              new BigInteger(ByteBuffers.toByteArray((ByteBuffer) value)), decimalType.scale());
     } else {
-      throw new IllegalArgumentException("Cannot convert to BigDecimal: " + value.getClass().getName());
+      throw new IllegalArgumentException(
+          "Cannot convert to BigDecimal: " + value.getClass().getName());
     }
     // Ensure the scale matches the Iceberg type definition
     return bd.setScale(decimalType.scale(), RoundingMode.HALF_UP);
@@ -106,18 +128,21 @@ public class AbstractEventConverter {
   @SuppressWarnings("JavaUtilDate")
   protected LocalDateTime convertLocalDateTime(Object value, String logicalTypeName) {
     return switch (logicalTypeName) {
-      case ZonedTimestamp.SCHEMA_NAME -> LocalDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
+      case ZonedTimestamp.SCHEMA_NAME ->
+          LocalDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
       case IsoTimestamp.SCHEMA_NAME -> LocalDateTime.parse((String) value, IsoTimestamp.FORMATTER);
-      case MicroTimestamp.SCHEMA_NAME -> DateTimeUtil.timestampFromMicros(((Number) value).longValue());
-      case NanoTimestamp.SCHEMA_NAME -> DateTimeUtil.timestampFromNanos(((Number) value).longValue());
+      case MicroTimestamp.SCHEMA_NAME ->
+          DateTimeUtil.timestampFromMicros(((Number) value).longValue());
+      case NanoTimestamp.SCHEMA_NAME ->
+          DateTimeUtil.timestampFromNanos(((Number) value).longValue());
       case Timestamp.SCHEMA_NAME -> DateTimeUtils.timestampFromMillis(((Number) value).longValue());
       case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME -> {
-          // org.apache.kafka.connect.data.Timestamp value is Date type in connect record.
-          if (value instanceof Date) {
-            yield DateTimeUtils.timestampFromMillis(((Date) value).getTime());
-          } else {
-            yield DateTimeUtils.timestampFromMillis(((Number) value).longValue());
-          }
+        // org.apache.kafka.connect.data.Timestamp value is Date type in connect record.
+        if (value instanceof Date) {
+          yield DateTimeUtils.timestampFromMillis(((Date) value).getTime());
+        } else {
+          yield DateTimeUtils.timestampFromMillis(((Number) value).longValue());
+        }
       }
       case null, default -> {
         if (value instanceof Long) {
@@ -151,7 +176,8 @@ public class AbstractEventConverter {
           yield ((OffsetDateTime) value).toLocalDateTime();
         }
 
-        throw new IllegalArgumentException("Cannot convert to timestamp (LocalDateTime): " + value.getClass().getName());
+        throw new IllegalArgumentException(
+            "Cannot convert to timestamp (LocalDateTime): " + value.getClass().getName());
       }
     };
   }
@@ -160,17 +186,18 @@ public class AbstractEventConverter {
   protected OffsetDateTime convertOffsetDateTime(Object value, String logicalTypeName) {
 
     return switch (logicalTypeName) {
-      case ZonedTimestamp.SCHEMA_NAME -> OffsetDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
+      case ZonedTimestamp.SCHEMA_NAME ->
+          OffsetDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
       case IsoTimestamp.SCHEMA_NAME -> OffsetDateTime.parse((String) value, IsoTimestamp.FORMATTER);
       case NanoTimestamp.SCHEMA_NAME -> DateTimeUtils.timestamptzFromNanos((Long) value);
       case MicroTimestamp.SCHEMA_NAME -> DateTimeUtil.timestamptzFromMicros((Long) value);
       case Timestamp.SCHEMA_NAME -> DateTimeUtils.timestamptzFromMillis((Long) value);
       case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME -> {
-          if (value instanceof Date) {
-            yield DateTimeUtils.timestamptzFromMillis(((Date) value).getTime());
-          } else {
-            yield DateTimeUtils.timestamptzFromMillis((Long) value);
-          }
+        if (value instanceof Date) {
+          yield DateTimeUtils.timestamptzFromMillis(((Date) value).getTime());
+        } else {
+          yield DateTimeUtils.timestamptzFromMillis((Long) value);
+        }
       }
       case null, default -> {
         if (value instanceof Long) {
@@ -178,7 +205,7 @@ public class AbstractEventConverter {
             case MICROSECONDS -> DateTimeUtil.timestamptzFromMicros((Long) value);
             case NANOSECONDS -> DateTimeUtils.timestamptzFromNanos((Long) value);
             case CONNECT -> DateTimeUtils.timestamptzFromMillis((Long) value);
-            case null, default ->DateTimeUtils.timestamptzFromMillis(((Long) value));
+            case null, default -> DateTimeUtils.timestamptzFromMillis(((Long) value));
           };
         } else if (value instanceof String) { // Debezium ZonedTimestamp
           try {
@@ -199,10 +226,10 @@ public class AbstractEventConverter {
         } else if (value instanceof LocalDateTime) { // Handle LocalDateTime by assuming UTC
           yield ((LocalDateTime) value).atOffset(ZoneOffset.UTC);
         }
-        throw new IllegalArgumentException("Cannot convert to timestamptz (OffsetDateTime): " + value.getClass().getName());
+        throw new IllegalArgumentException(
+            "Cannot convert to timestamptz (OffsetDateTime): " + value.getClass().getName());
       }
     };
-
   }
 
   // Conversion methods adapted from Iceberg's RecordConverter
@@ -257,7 +284,8 @@ public class AbstractEventConverter {
       return value.toString();
     } else if (value instanceof Number || value instanceof Boolean) {
       return value.toString();
-    } else if (value instanceof byte[]) { // Handle bytes specifically if needed (e.g., Base64 or UTF8)
+    } else if (value
+        instanceof byte[]) { // Handle bytes specifically if needed (e.g., Base64 or UTF8)
       return new String((byte[]) value, StandardCharsets.UTF_8); // Assuming UTF-8
     } else if (value instanceof ByteBuffer) {
       return StandardCharsets.UTF_8.decode((ByteBuffer) value).toString();
@@ -285,11 +313,13 @@ public class AbstractEventConverter {
       try {
         return ByteBuffer.wrap(Base64.getDecoder().decode((String) value));
       } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("Cannot convert Base64 string to binary: invalid format", e);
+        throw new IllegalArgumentException(
+            "Cannot convert Base64 string to binary: invalid format", e);
       }
     }
 
-    throw new IllegalArgumentException("Cannot convert to binary (ByteBuffer): " + value.getClass().getName());
+    throw new IllegalArgumentException(
+        "Cannot convert to binary (ByteBuffer): " + value.getClass().getName());
   }
 
   @SuppressWarnings("JavaUtilDate")
@@ -297,7 +327,8 @@ public class AbstractEventConverter {
     return switch (logicalTypeName) {
       case io.debezium.time.Date.SCHEMA_NAME -> DateTimeUtil.dateFromDays((Integer) value);
       case IsoDate.SCHEMA_NAME -> LocalDate.parse((String) value, IsoDate.FORMATTER);
-      case org.apache.kafka.connect.data.Date.LOGICAL_NAME -> DateTimeUtils.toLocalDateFromDate((Date) value);
+      case org.apache.kafka.connect.data.Date.LOGICAL_NAME ->
+          DateTimeUtils.toLocalDateFromDate((Date) value);
       case null, default -> {
         if (value instanceof Integer) { // Correct handling for Debezium Date
           yield DateTimeUtil.dateFromDays((Integer) value);
@@ -310,7 +341,8 @@ public class AbstractEventConverter {
         } else if (value instanceof String) { // Handle ISO date string
           yield LocalDate.parse((String) value);
         }
-        throw new IllegalArgumentException("Cannot convert to date (LocalDate): " + value.getClass().getName());
+        throw new IllegalArgumentException(
+            "Cannot convert to date (LocalDate): " + value.getClass().getName());
       }
     };
   }
@@ -325,9 +357,12 @@ public class AbstractEventConverter {
           yield DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
         }
       }
-      case Time.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
-      case MicroTime.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationMicroseconds(((Number) value).longValue());
-      case NanoTime.SCHEMA_NAME -> DateTimeUtils.toLocalTimeFromDurationNanoseconds(((Number) value).longValue());
+      case Time.SCHEMA_NAME ->
+          DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
+      case MicroTime.SCHEMA_NAME ->
+          DateTimeUtils.toLocalTimeFromDurationMicroseconds(((Number) value).longValue());
+      case NanoTime.SCHEMA_NAME ->
+          DateTimeUtils.toLocalTimeFromDurationNanoseconds(((Number) value).longValue());
       case IsoTime.SCHEMA_NAME -> LocalTime.parse((String) value, IsoTime.FORMATTER);
       case ZonedTime.SCHEMA_NAME -> LocalTime.parse((String) value, ZonedTime.FORMATTER);
       case null, default -> {
@@ -350,7 +385,11 @@ public class AbstractEventConverter {
     };
   }
 
-  protected Temporal convertTimestampValue(Object value, Types.TimestampType timestampType, String icebergFieldName, String logicalTypeName) {
+  protected Temporal convertTimestampValue(
+      Object value,
+      Types.TimestampType timestampType,
+      String icebergFieldName,
+      String logicalTypeName) {
     if (DebeziumConfig.TS_MS_FIELDS.contains(icebergFieldName)) {
       return DateTimeUtils.timestamptzFromMillis((Long) value);
     } else if (timestampType.shouldAdjustToUTC()) {
@@ -359,5 +398,4 @@ public class AbstractEventConverter {
       return convertLocalDateTime(value, logicalTypeName); // Timestamp without timezone
     }
   }
-
 }

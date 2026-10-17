@@ -112,6 +112,10 @@ public class IcebergEventsChangeConsumer extends BaseChangeConsumer
 
   @PostConstruct
   void connect() {
+    if (config.iceberg().exactlyOnce()) {
+      throw new DebeziumException(
+          "`debezium.sink.iceberg.exactly-once` is not supported by the icebergevents consumer.");
+    }
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
