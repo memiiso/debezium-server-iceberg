@@ -28,6 +28,8 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.iceberg.upsert-op-field`                      | `__op`                                                        | Field name for operation type in upsert mode. _don't change!_                                                                                                                                                                                                                                                      |
 | `debezium.sink.iceberg.nested-as-variant`                    | `false`                                                       | When true, all nested data is stored in Iceberg variant fields, allowing schema changes to be absorbed directly within these fields.                                                                                                                                                                              |
 | `debezium.sink.iceberg.format-version`                       | `3`                                                           | Iceberg table format version used when creating new tables. `2` uses equality-delete files; `3` enables [Deletion Vectors](https://iceberg.apache.org/docs/latest/deletion-vectors/) for more efficient deletes in upsert mode. Set to `2` to maintain backward compatibility with older Iceberg readers.         |
+| `debezium.sink.iceberg.geospatial-types`                     | `false`                                                       | Store geospatial columns as Iceberg v3 `geometry`/`geography` instead of a `{wkb, srid}` struct. See [Geospatial types](#geospatial-types).                                                                                                                                                                                                        |
+| `debezium.sink.iceberg.geometry-crs`                         | `OGC:CRS84`                                                   | CRS of the created Iceberg `geometry` columns: `OGC:CRS84`, `srid:<N>` or `EPSG:<N>`. Geography columns always use `OGC:CRS84`.                                                                                                                                                                                  |
 | `debezium.sink.iceberg.create-identifier-fields`             | `true`                                                        | When set to `false`, the consumer will create tables without identifier fields. This is useful for scenarios where users want to consume nested events in append-only mode.                                                                                                                                       |
 | `debezium.sink.iceberg.table-mapper`                         | `default-mapper`                                              | Mapping strategy between source table names and their corresponding Iceberg table names. Currently, only `default-mapper` implementation is provided.                                                                                                                                                             |
 | `debezium.sink.iceberg.destination-regexp`                   | ``                                                            | A regular expression used to modify the destination Iceberg table name. This setting allows for combining multiple tables, such as `table_ptt1` and `table_ptt2`, into a single table, `table_combined`.                                                                                                          |
@@ -189,6 +191,41 @@ debezium.sink.iceberg.partition-by=year(event_time),month(event_time)
 debezium.sink.iceberg.partition-by=bucket(user_id, 16)
 ```
 See the [Iceberg documentation](#https://iceberg.apache.org/docs/latest/partitioning/) for more details on partition transforms.
+
+### Geospatial types
+
+By default, Debezium geospatial columns are replicated as a struct `{wkb: binary, srid: int}`.
+With `debezium.sink.iceberg.geospatial-types=true` they are stored using the Iceberg v3 geospatial types:
+
+| Debezium logical type                 | Source types                                           | Iceberg type                      |
+|---------------------------------------|--------------------------------------------------------|-----------------------------------|
+| `io.debezium.data.geometry.Geometry`  | PostGIS `geometry`, MySQL spatial types except `POINT` | `geometry(<geometry-crs>)`        |
+| `io.debezium.data.geometry.Geography` | PostGIS `geography`                                    | `geography(OGC:CRS84, spherical)` |
+
+```properties
+debezium.sink.iceberg.geospatial-types=true
+# optional, defaults to OGC:CRS84 (longitude/latitude, equivalent to SRID 4326)
+debezium.sink.iceberg.geometry-crs=srid:3857
+```
+
+* Requires `format-version` `3` (the default) and doesn't support the `orc` write format, the consumer fails at startup otherwise.
+* Choose `geometry-crs` before the first run. Iceberg can't change a column type, so existing tables keep their old CRS (the schema update fails, or with `allow-field-addition=false` new values use the old CRS). For the same reason, existing struct columns are not converted, and enabling `geospatial-types` is one-way: disabling it later makes the schema update of tables with geospatial columns fail (with the default `allow-field-addition=true`).
+* A value whose SRID doesn't match the column CRS fails.
+* `io.debezium.data.geometry.Point` stays a struct `{x, y, wkb, srid}`: Debezium uses it for PostgreSQL native `point` (no CRS) and for MySQL `POINT`, which can't be told apart. Use a MySQL `GEOMETRY` column to get an Iceberg `geometry` column.
+
+#### Accepted approximations
+
+Values are written as ISO WKB: PostGIS EWKB is converted by rewriting the geometry headers only, coordinates (including Z/M) and curves are kept exactly. What is not carried over:
+
+* **Values without SRID** (PostGIS SRID 0, MySQL without SRID) are written with the column CRS.
+* **SRID 4326 is accepted as `OGC:CRS84`.** Same datum, `OGC:CRS84` has longitude first, as PostGIS stores SRID 4326 (x = longitude).
+* **The per-value SRID is not stored**, only checked against the column CRS.
+* **Type modifiers are dropped:** `geometry(Point,4326)` becomes a `geometry` column, Iceberg has no geometry subtype. The subtype is not enforced on the Iceberg table.
+* **Geography uses spherical edges** (great-circle arcs), as PostGIS interprets geography edges. PostGIS computes distances and areas on the spheroid by default, query engines may return slightly different measurements.
+* **Bounds (Iceberg 1.12)** are used to skip data files, they don't change values:
+  * only X/Y bounds are written, Z/M are not.
+  * `geography` columns have no bounds.
+  * curve, PolyhedralSurface, TIN and Triangle geometries have no bounds: one such value removes the column bounds of its whole data file.
 
 ## Debezium Offset Storage
 

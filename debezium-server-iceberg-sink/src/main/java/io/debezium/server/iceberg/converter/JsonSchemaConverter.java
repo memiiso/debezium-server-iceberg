@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -84,6 +85,10 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
+        if (GeospatialTypes.addIcebergField(
+            fieldTypeName, fieldName, isOptional, isPkField, null, schemaData, config.iceberg())) {
+          return schemaData;
+        }
         if (config.iceberg().nestedAsVariant()) {
           // here we are keeping nested fields in variant
           int variantFieldId = schemaData.nextFieldId().getAndIncrement();
@@ -272,6 +277,10 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
       if (schema.findField(fieldName) == null) {
         LOGGER.debug(
             "Skipping sort order field '{}' as it does not exist in the Iceberg schema", fieldName);
+        continue;
+      }
+      // Iceberg can't sort by geometry/geography
+      if (GeospatialTypes.isGeospatial(schema.findField(fieldName).type())) {
         continue;
       }
       sob = sob.asc(fieldName);

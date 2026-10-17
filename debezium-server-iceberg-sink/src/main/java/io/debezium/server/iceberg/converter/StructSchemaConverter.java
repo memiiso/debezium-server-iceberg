@@ -3,6 +3,7 @@ package io.debezium.server.iceberg.converter;
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,16 @@ public class StructSchemaConverter implements SchemaConverter {
 
     switch (fieldType) {
       case STRUCT:
+        if (GeospatialTypes.addIcebergField(
+            fieldTypeName,
+            fieldName,
+            isOptional,
+            isPkField,
+            connectSchema.doc(),
+            schemaData,
+            config.iceberg())) {
+          break;
+        }
         if (config.iceberg().nestedAsVariant()) {
           // here we are keeping nested fields in variant
           int variantFieldId = schemaData.nextFieldId().getAndIncrement();
@@ -312,6 +323,10 @@ public class StructSchemaConverter implements SchemaConverter {
         LOGGER.debug(
             "Skipping sort order field '{}' as it does not exist in the Iceberg schema",
             field.name());
+        continue;
+      }
+      // Iceberg can't sort by geometry/geography
+      if (GeospatialTypes.isGeospatial(schema.findField(field.name()).type())) {
         continue;
       }
       sob = sob.asc(field.name());

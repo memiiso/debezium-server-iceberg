@@ -42,18 +42,21 @@ public class SourcePostgresqlDB implements QuarkusTestResourceLifecycleManager {
           .withExposedPorts(POSTGRES_PORT_DEFAULT)
           .withStartupTimeout(Duration.ofSeconds(30));
 
+  public static Connection connection() throws SQLException {
+    String url =
+        "jdbc:postgresql://"
+            + POSTGRES_HOST
+            + ":"
+            + container.getMappedPort(POSTGRES_PORT_DEFAULT)
+            + "/"
+            + POSTGRES_DBNAME;
+    return DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
+  }
+
   public static void runSQL(String query) throws SQLException, ClassNotFoundException {
     try {
-
-      String url =
-          "jdbc:postgresql://"
-              + POSTGRES_HOST
-              + ":"
-              + container.getMappedPort(POSTGRES_PORT_DEFAULT)
-              + "/"
-              + POSTGRES_DBNAME;
       Class.forName("org.postgresql.Driver");
-      Connection con = DriverManager.getConnection(url, POSTGRES_USER, POSTGRES_PASSWORD);
+      Connection con = connection();
       Statement st = con.createStatement();
       st.execute(query);
       con.close();

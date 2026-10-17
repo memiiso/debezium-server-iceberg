@@ -12,6 +12,7 @@ import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.GlobalConfig;
+import io.debezium.server.iceberg.converter.geospatial.GeospatialValues;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import java.util.HashMap;
@@ -309,7 +310,8 @@ public class StructEventConverter extends AbstractEventConverter implements Even
             connectValue instanceof List,
             "Cannot convert to List: value is not a List: %s",
             connectValue.getClass().getName());
-        return convertListValue((List<?>) connectValue, icebergType.asListType(), logicalTypeName);
+        return convertListValue(
+            (List<?>) connectValue, icebergType.asListType(), icebergFieldName, logicalTypeName);
 
       case MAP:
         Preconditions.checkArgument(
@@ -337,6 +339,9 @@ public class StructEventConverter extends AbstractEventConverter implements Even
       case BINARY: // raw bytes
       case FIXED: // fixed length bytes
         return convertBinary(connectValue, logicalTypeName);
+      case GEOMETRY:
+      case GEOGRAPHY:
+        return GeospatialValues.fromStruct(connectValue, icebergFieldName, icebergType);
       case DATE:
         return convertDateValue(connectValue, logicalTypeName);
       case TIME:
@@ -350,10 +355,11 @@ public class StructEventConverter extends AbstractEventConverter implements Even
   }
 
   protected List<Object> convertListValue(
-      List<?> list, Types.ListType listType, String logicalTypeName) {
+      List<?> list, Types.ListType listType, String fieldName, String logicalTypeName) {
     Type elementType = listType.elementType();
+    String elementName = fieldName == null ? null : fieldName + "[]";
     return list.stream()
-        .map(element -> convertValue(element, elementType, null, null))
+        .map(element -> convertValue(element, elementType, elementName, null))
         .collect(Collectors.toList());
   }
 
