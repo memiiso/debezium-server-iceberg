@@ -59,10 +59,12 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
+    this.setSourcePosition(e.sourceRecord());
   }
 
   public JsonEventConverter(BatchEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
+    this.setSourcePosition(e.record());
   }
 
   // Testing only

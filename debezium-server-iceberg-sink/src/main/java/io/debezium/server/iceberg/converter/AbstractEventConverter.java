@@ -41,6 +41,7 @@ import java.time.temporal.Temporal;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.ByteBuffers;
@@ -52,6 +53,7 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.json.JsonConverterConfig;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,8 +68,26 @@ public class AbstractEventConverter {
   protected static Deserializer<JsonNode> valDeserializer;
   protected static Deserializer<JsonNode> keyDeserializer;
 
+  protected Map<String, ?> sourcePartition;
+  protected Map<String, ?> sourceOffset;
+
   public AbstractEventConverter(GlobalConfig config) {
     this.config = config;
+  }
+
+  protected void setSourcePosition(SourceRecord record) {
+    if (record != null) {
+      this.sourcePartition = record.sourcePartition();
+      this.sourceOffset = record.sourceOffset();
+    }
+  }
+
+  public Map<String, ?> sourcePartition() {
+    return sourcePartition;
+  }
+
+  public Map<String, ?> sourceOffset() {
+    return sourceOffset;
   }
 
   public static void initializeStaticSerdes() {

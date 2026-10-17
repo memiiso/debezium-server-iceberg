@@ -20,6 +20,8 @@ import io.debezium.server.iceberg.converter.SchemaConverter;
 import io.debezium.server.iceberg.deduplication.BatchDeduplicator;
 import io.debezium.server.iceberg.deduplication.RetainLastBatchDeduplicator;
 import io.debezium.server.iceberg.deduplication.TimestampAndOpBatchDeduplicator;
+import io.debezium.server.iceberg.exactlyonce.ExactlyOnceHandler;
+import io.debezium.server.iceberg.exactlyonce.SourceOffsetComparator;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
@@ -55,11 +57,18 @@ public class IcebergTableOperator {
 
   private volatile ConnectorContext openLineageContext;
   private BatchDeduplicator deduplicator;
+  private ExactlyOnceHandler exactlyOnceHandler;
 
   @PostConstruct
   void init() {
     this.deduplicator = resolveDeduplicator();
     LOGGER.info("Using batch deduplicator: {}", this.deduplicator.getClass().getSimpleName());
+    if (config.iceberg().exactlyOnce()) {
+      String connectorClass = config.debezium().connectorClass().orElse(null);
+      this.exactlyOnceHandler =
+          new ExactlyOnceHandler(SourceOffsetComparator.forConnector(connectorClass));
+      LOGGER.info("Exactly-once delivery enabled for connector: {}", connectorClass);
+    }
   }
 
   BatchDeduplicator resolveDeduplicator() {
@@ -128,14 +137,26 @@ public class IcebergTableOperator {
    */
   public void addToTable(Table icebergTable, List<EventConverter> events) {
 
+    // skip the events replayed by debezium which are already committed to the table
+    if (exactlyOnceHandler != null) {
+      events = exactlyOnceHandler.skipCommitted(icebergTable, events);
+      if (events.isEmpty()) {
+        return;
+      }
+    }
+    final List<EventConverter> tableEvents = events;
+
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
     if (config.iceberg().upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
       events = deduplicateBatch(events);
     }
 
+    final ExactlyOnceHandler.BatchProgress batchProgress =
+        exactlyOnceHandler == null ? null : exactlyOnceHandler.newBatch(tableEvents, events);
+
     if (!config.iceberg().allowFieldAddition()) {
       // if field additions not enabled add set of events to table
-      addToTablePerSchema(icebergTable, events);
+      addToTablePerSchema(icebergTable, events, batchProgress);
     } else {
       Map<SchemaConverter, List<EventConverter>> eventsGroupedBySchema =
           events.stream()
@@ -157,7 +178,7 @@ public class IcebergTableOperator {
                 .get(0)
                 .icebergSchema(config.iceberg().createIdentifierFields()));
         // add set of events to table
-        addToTablePerSchema(icebergTable, schemaEvents.getValue());
+        addToTablePerSchema(icebergTable, schemaEvents.getValue(), batchProgress);
       }
     }
   }
@@ -167,8 +188,12 @@ public class IcebergTableOperator {
    *
    * @param icebergTable
    * @param events
+   * @param batchProgress tracks committed source offsets when exactly-once is enabled, else null
    */
-  private void addToTablePerSchema(Table icebergTable, List<EventConverter> events) {
+  private void addToTablePerSchema(
+      Table icebergTable,
+      List<EventConverter> events,
+      ExactlyOnceHandler.BatchProgress batchProgress) {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
@@ -183,14 +208,18 @@ public class IcebergTableOperator {
       }
 
       files = writer.complete();
+      // source offset is committed in the same snapshot as the data
+      Map<String, String> summary = batchProgress == null ? Map.of() : batchProgress.commit(events);
       if (files.deleteFiles().length > 0) {
         RowDelta newRowDelta = icebergTable.newRowDelta();
         Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
         Arrays.stream(files.deleteFiles()).forEach(newRowDelta::addDeletes);
+        summary.forEach(newRowDelta::set);
         newRowDelta.commit();
       } else {
         AppendFiles appendFiles = icebergTable.newAppend();
         Arrays.stream(files.dataFiles()).forEach(appendFiles::appendFile);
+        summary.forEach(appendFiles::set);
         appendFiles.commit();
       }
     } catch (Exception ex) {

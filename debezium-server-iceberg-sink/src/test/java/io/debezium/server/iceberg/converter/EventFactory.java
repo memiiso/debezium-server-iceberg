@@ -18,6 +18,7 @@ import io.debezium.server.iceberg.testresources.TestUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -58,6 +59,19 @@ public class EventFactory {
       lenient().when(mockEvent.sourceRecord()).thenReturn(mockSourceRecord);
     }
 
+    return mockEvent;
+  }
+
+  /** Sets the Debezium source partition and offset of a mock event. */
+  public static EmbeddedEngineChangeEvent withSourceOffset(
+      EmbeddedEngineChangeEvent mockEvent, Map<String, ?> partition, Map<String, ?> offset) {
+    SourceRecord sourceRecord = mockEvent.sourceRecord();
+    if (sourceRecord == null) {
+      sourceRecord = Mockito.mock(SourceRecord.class);
+      lenient().when(mockEvent.sourceRecord()).thenReturn(sourceRecord);
+    }
+    lenient().when(sourceRecord.sourcePartition()).thenAnswer(i -> partition);
+    lenient().when(sourceRecord.sourceOffset()).thenAnswer(i -> offset);
     return mockEvent;
   }
 
