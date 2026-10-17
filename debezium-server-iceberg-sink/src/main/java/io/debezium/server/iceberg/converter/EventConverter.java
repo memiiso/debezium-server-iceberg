@@ -4,6 +4,7 @@ import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
+import java.util.Map;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 
@@ -130,4 +131,20 @@ public interface EventConverter {
    */
   @NotNull
   RecordWrapper convert(@NotNull Schema schema); // Added @NotNull
+
+  /**
+   * Gets the Debezium source partition of the event, used for exactly-once delivery.
+   *
+   * @return The source partition, or null if not available.
+   */
+  @Nullable
+  Map<String, ?> sourcePartition();
+
+  /**
+   * Gets the Debezium source offset of the event, used for exactly-once delivery.
+   *
+   * @return The source offset, or null if not available.
+   */
+  @Nullable
+  Map<String, ?> sourceOffset();
 }

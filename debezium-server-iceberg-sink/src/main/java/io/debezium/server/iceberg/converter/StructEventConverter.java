@@ -76,6 +76,7 @@ public class StructEventConverter extends AbstractEventConverter implements Even
     this.schemaConverter =
         new StructSchemaConverter(
             e.sourceRecord().valueSchema(), e.sourceRecord().keySchema(), config);
+    this.setSourcePosition(e);
   }
 
   @Override

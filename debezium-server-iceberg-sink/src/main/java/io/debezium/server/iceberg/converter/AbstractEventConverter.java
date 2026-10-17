@@ -12,6 +12,7 @@ import static io.debezium.jdbc.TemporalPrecisionMode.ISOSTRING;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
@@ -41,6 +42,7 @@ import java.time.temporal.Temporal;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.ByteBuffers;
@@ -66,8 +68,26 @@ public class AbstractEventConverter {
   protected static Deserializer<JsonNode> valDeserializer;
   protected static Deserializer<JsonNode> keyDeserializer;
 
+  protected Map<String, ?> sourcePartition;
+  protected Map<String, ?> sourceOffset;
+
   public AbstractEventConverter(GlobalConfig config) {
     this.config = config;
+  }
+
+  protected void setSourcePosition(EmbeddedEngineChangeEvent e) {
+    if (e.sourceRecord() != null) {
+      this.sourcePartition = e.sourceRecord().sourcePartition();
+      this.sourceOffset = e.sourceRecord().sourceOffset();
+    }
+  }
+
+  public Map<String, ?> sourcePartition() {
+    return sourcePartition;
+  }
+
+  public Map<String, ?> sourceOffset() {
+    return sourceOffset;
   }
 
   public static void initializeStaticSerdes() {
