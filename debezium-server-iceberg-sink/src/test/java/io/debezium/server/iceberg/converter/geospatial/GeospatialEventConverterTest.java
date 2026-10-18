@@ -156,6 +156,32 @@ class GeospatialEventConverterTest {
   }
 
   @Test
+  void testAllowMissingSrid() {
+    Schema geomSchema = geoSchema(GEOMETRY_LOGICAL_NAME);
+    Schema valueSchema =
+        SchemaBuilder.struct().field("g", geomSchema).field("__op", OPTIONAL_STRING_SCHEMA).build();
+    List<EventConverter> events =
+        List.of(
+            structEvent(
+                new Struct(valueSchema).put("g", new Struct(geomSchema).put("wkb", EWKB_POINT_Z))),
+            jsonEvent(
+                jsonGeoSchema(GEOMETRY_LOGICAL_NAME, "g"),
+                "\"g\":{\"wkb\":\"%s\",\"srid\":null}".formatted(base64(EWKB_POINT_Z))));
+    for (EventConverter event : events) {
+      var schema = event.icebergSchema(false);
+      assertTrue(
+          assertThrows(DebeziumException.class, () -> event.convert(schema))
+              .getMessage()
+              .contains("value without SRID"));
+    }
+    lenient().when(icebergConfig.geospatialAllowMissingSrid()).thenReturn(true);
+    for (EventConverter event : events) {
+      assertEquals(
+          ByteBuffer.wrap(ISO_POINT_Z), event.convert(event.icebergSchema(false)).getField("g"));
+    }
+  }
+
+  @Test
   void testInvalidArrayElementNamesTheColumn() {
     byte[] invalid = hex("0101");
     JsonEventConverter json =

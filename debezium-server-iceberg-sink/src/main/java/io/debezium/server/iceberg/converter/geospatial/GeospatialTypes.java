@@ -12,6 +12,7 @@ import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergConfig;
 import io.debezium.server.iceberg.converter.IcebergSchemaInfo;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
@@ -25,6 +26,10 @@ public final class GeospatialTypes {
 
   public static final String GEOMETRY_LOGICAL_NAME = "io.debezium.data.geometry.Geometry";
   public static final String GEOGRAPHY_LOGICAL_NAME = "io.debezium.data.geometry.Geography";
+  // GeoParquet 2.0 readers must resolve <authority>:<code>, not srid:<N>: srid:0 is only used for
+  // the unknown CRS
+  private static final Pattern GEOMETRY_CRS =
+      Pattern.compile("OGC:CRS84|EPSG:[1-9]\\d{0,8}|srid:0", Pattern.CASE_INSENSITIVE);
 
   private GeospatialTypes() {}
 
@@ -95,15 +100,11 @@ public final class GeospatialTypes {
           "debezium.sink.iceberg.geospatial-types is not supported with the orc write format,"
               + " use parquet");
     }
-    // GeoParquet 2.0 readers must resolve <authority>:<code>, not srid:<N>: srid:0 is only used
-    // for the unknown CRS
-    String crs = config.geometryCrs();
-    Integer srid = srid(crs);
-    if (srid == null || (srid != 0 && crs.toLowerCase(Locale.ROOT).startsWith("srid:"))) {
+    if (!GEOMETRY_CRS.matcher(config.geometryCrs()).matches()) {
       throw new DebeziumException(
-          "debezium.sink.iceberg.geometry-crs must be OGC:CRS84, EPSG:<N> or srid:0 (unknown"
-              + " CRS), got: "
-              + crs);
+          "debezium.sink.iceberg.geometry-crs must be OGC:CRS84, EPSG:<N> (N > 0) or srid:0"
+              + " (unknown CRS), got: "
+              + config.geometryCrs());
     }
     int formatVersion;
     try {

@@ -29,30 +29,37 @@ public final class GeospatialValues {
 
   private GeospatialValues() {}
 
-  public static ByteBuffer fromStruct(Object value, String fieldName, Type type) {
+  /**
+   * @param allowMissingSrid write values without SRID with the column CRS instead of failing
+   */
+  public static ByteBuffer fromStruct(
+      Object value, String fieldName, Type type, boolean allowMissingSrid) {
     if (!(value instanceof Struct struct)) {
       throw invalid(fieldName, "not a Struct: " + value.getClass().getName(), null);
     }
+    Object wkb = struct.get(WKB_FIELD);
+    ByteBuffer isoWkb;
+    if (wkb instanceof byte[] bytes) {
+      isoWkb = toIsoWkb(bytes, fieldName);
+    } else if (wkb instanceof ByteBuffer buffer) {
+      isoWkb = toIsoWkb(ByteBuffers.toByteArray(buffer), fieldName);
+    } else {
+      throw invalid(fieldName, "unexpected wkb: " + wkb, null);
+    }
+    // after the WKB, so an invalid value isn't reported as an SRID mismatch
     checkSrid(
         struct.schema().field(SRID_FIELD) == null ? null : (Integer) struct.get(SRID_FIELD),
         fieldName,
-        type);
-    Object wkb = struct.get(WKB_FIELD);
-    if (wkb instanceof byte[] bytes) {
-      return toIsoWkb(bytes, fieldName);
-    }
-    if (wkb instanceof ByteBuffer buffer) {
-      return toIsoWkb(ByteBuffers.toByteArray(buffer), fieldName);
-    }
-    throw invalid(fieldName, "unexpected wkb: " + wkb, null);
+        type,
+        allowMissingSrid);
+    return isoWkb;
   }
 
-  public static ByteBuffer fromJson(JsonNode node, String fieldName, Type type) {
-    JsonNode srid = node.get(SRID_FIELD);
-    if (srid != null && !srid.isNull() && !srid.isInt()) {
-      throw invalid(fieldName, "srid is not an integer: " + srid, null);
-    }
-    checkSrid(srid == null || srid.isNull() ? null : srid.intValue(), fieldName, type);
+  /**
+   * @param allowMissingSrid write values without SRID with the column CRS instead of failing
+   */
+  public static ByteBuffer fromJson(
+      JsonNode node, String fieldName, Type type, boolean allowMissingSrid) {
     JsonNode wkb = node.get(WKB_FIELD);
     byte[] bytes;
     try {
@@ -63,20 +70,37 @@ public final class GeospatialValues {
     if (bytes == null) {
       throw invalid(fieldName, "missing wkb", null);
     }
-    return toIsoWkb(bytes, fieldName);
+    ByteBuffer isoWkb = toIsoWkb(bytes, fieldName);
+    // after the WKB, so an invalid value isn't reported as an SRID mismatch
+    JsonNode srid = node.get(SRID_FIELD);
+    if (srid != null && !srid.isNull() && !srid.isInt()) {
+      throw invalid(fieldName, "srid is not an integer: " + srid, null);
+    }
+    checkSrid(
+        srid == null || srid.isNull() ? null : srid.intValue(), fieldName, type, allowMissingSrid);
+    return isoWkb;
   }
 
   /** The per-value SRID is not stored, fail when it contradicts the column CRS. */
-  private static void checkSrid(Integer srid, String fieldName, Type type) {
-    if (!sridMatchesCrs(srid, type)) {
-      throw invalid(
-          fieldName,
-          (srid == null || srid == 0 ? "value without SRID" : "SRID " + srid)
-              + " doesn't match the column CRS "
-              + crs(type)
-              + ", see debezium.sink.iceberg.geometry-crs",
-          null);
+  private static void checkSrid(
+      Integer srid, String fieldName, Type type, boolean allowMissingSrid) {
+    boolean missingSrid = srid == null || srid == 0;
+    if ((missingSrid && allowMissingSrid) || sridMatchesCrs(srid, type)) {
+      return;
     }
+    throw invalid(
+        fieldName,
+        missingSrid
+            ? "value without SRID doesn't match the column CRS "
+                + crs(type)
+                + ", see debezium.sink.iceberg.geometry-crs and"
+                + " debezium.sink.iceberg.geospatial-allow-missing-srid"
+            : "SRID "
+                + srid
+                + " doesn't match the column CRS "
+                + crs(type)
+                + ", see debezium.sink.iceberg.geometry-crs",
+        null);
   }
 
   /** Values without SRID (null or 0) only match the unknown CRS {@code srid:0}. */

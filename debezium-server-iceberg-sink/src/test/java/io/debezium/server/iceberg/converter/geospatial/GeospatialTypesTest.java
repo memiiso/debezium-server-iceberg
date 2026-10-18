@@ -89,13 +89,22 @@ class GeospatialTypesTest {
     assertTrue(e.getMessage().contains("invalid debezium.sink.iceberg.format-version: v3"));
 
     lenient().when(icebergConfig.formatVersion()).thenReturn("3");
-    lenient().when(icebergConfig.geometryCrs()).thenReturn("EPSG:2154");
-    GeospatialTypes.validateConfig(icebergConfig);
-    lenient().when(icebergConfig.geometryCrs()).thenReturn("srid:0");
-    GeospatialTypes.validateConfig(icebergConfig);
+    for (String crs : List.of("EPSG:2154", "epsg:3857", "ogc:crs84", "srid:0")) {
+      lenient().when(icebergConfig.geometryCrs()).thenReturn(crs);
+      GeospatialTypes.validateConfig(icebergConfig);
+    }
 
     // GeoParquet 2.0 readers may not resolve srid:<N>
-    for (String crs : List.of("projjson:my_crs", "srid:3857")) {
+    for (String crs :
+        List.of(
+            "projjson:my_crs",
+            "srid:3857",
+            "EPSG:0",
+            "EPSG:-1",
+            "EPSG:+3857",
+            "EPSG:03857",
+            "EPSG:",
+            "srid:-0")) {
       lenient().when(icebergConfig.geometryCrs()).thenReturn(crs);
       e =
           assertThrows(

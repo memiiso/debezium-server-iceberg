@@ -341,7 +341,11 @@ public class StructEventConverter extends AbstractEventConverter implements Even
         return convertBinary(connectValue, logicalTypeName);
       case GEOMETRY:
       case GEOGRAPHY:
-        return GeospatialValues.fromStruct(connectValue, icebergFieldName, icebergType);
+        return GeospatialValues.fromStruct(
+            connectValue,
+            icebergFieldName,
+            icebergType,
+            config.iceberg().geospatialAllowMissingSrid());
       case DATE:
         return convertDateValue(connectValue, logicalTypeName);
       case TIME:

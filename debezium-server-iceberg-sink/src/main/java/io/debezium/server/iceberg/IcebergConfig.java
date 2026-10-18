@@ -119,6 +119,10 @@ public interface IcebergConfig {
   @WithDefault(Types.GeometryType.DEFAULT_CRS)
   String geometryCrs();
 
+  @WithName("debezium.sink.iceberg.geospatial-allow-missing-srid")
+  @WithDefault("false")
+  boolean geospatialAllowMissingSrid();
+
   @WithName("debezium.sink.iceberg.format-version")
   @WithDefault("3")
   String formatVersion();

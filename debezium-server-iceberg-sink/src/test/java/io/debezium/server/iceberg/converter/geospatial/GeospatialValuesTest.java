@@ -10,6 +10,7 @@ import io.debezium.DebeziumException;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.data.Schema;
@@ -32,21 +33,30 @@ class GeospatialValuesTest {
   @Test
   void testFromStruct() {
     assertEquals(
-        ISO, GeospatialValues.fromStruct(new Struct(SCHEMA).put("wkb", EWKB), "g", UNKNOWN_CRS_GEOMETRY));
+        ISO,
+        GeospatialValues.fromStruct(
+            new Struct(SCHEMA).put("wkb", EWKB), "g", UNKNOWN_CRS_GEOMETRY, false));
     assertEquals(
         ISO,
         GeospatialValues.fromStruct(
-            new Struct(SCHEMA).put("wkb", ByteBuffer.wrap(EWKB)), "g", UNKNOWN_CRS_GEOMETRY));
+            new Struct(SCHEMA).put("wkb", ByteBuffer.wrap(EWKB)),
+            "g",
+            UNKNOWN_CRS_GEOMETRY,
+            false));
     assertInvalid(
         "g: unexpected wkb: null",
-        () -> GeospatialValues.fromStruct(new Struct(SCHEMA), "g", UNKNOWN_CRS_GEOMETRY));
+        () -> GeospatialValues.fromStruct(new Struct(SCHEMA), "g", UNKNOWN_CRS_GEOMETRY, false));
     assertInvalid(
-        "g: not a Struct: java.lang.String", () -> GeospatialValues.fromStruct("x", "g", UNKNOWN_CRS_GEOMETRY));
+        "g: not a Struct: java.lang.String",
+        () -> GeospatialValues.fromStruct("x", "g", UNKNOWN_CRS_GEOMETRY, false));
     assertInvalid(
         "g: invalid WKB: truncated or corrupt",
         () ->
             GeospatialValues.fromStruct(
-                new Struct(SCHEMA).put("wkb", hex("0101000020")), "g", UNKNOWN_CRS_GEOMETRY));
+                new Struct(SCHEMA).put("wkb", hex("0101000020")),
+                "g",
+                UNKNOWN_CRS_GEOMETRY,
+                false));
   }
 
   @Test
@@ -54,15 +64,21 @@ class GeospatialValuesTest {
     String base64 = Base64.getEncoder().encodeToString(EWKB);
     assertEquals(
         ISO,
-        GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"" + base64 + "\"}"), "g", UNKNOWN_CRS_GEOMETRY));
-    assertInvalid(
-        "g: missing wkb", () -> GeospatialValues.fromJson(MAPPER.readTree("{}"), "g", UNKNOWN_CRS_GEOMETRY));
+        GeospatialValues.fromJson(
+            MAPPER.readTree("{\"wkb\":\"" + base64 + "\"}"), "g", UNKNOWN_CRS_GEOMETRY, false));
     assertInvalid(
         "g: missing wkb",
-        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":null}"), "g", UNKNOWN_CRS_GEOMETRY));
+        () -> GeospatialValues.fromJson(MAPPER.readTree("{}"), "g", UNKNOWN_CRS_GEOMETRY, false));
+    assertInvalid(
+        "g: missing wkb",
+        () ->
+            GeospatialValues.fromJson(
+                MAPPER.readTree("{\"wkb\":null}"), "g", UNKNOWN_CRS_GEOMETRY, false));
     assertInvalid(
         "g: wkb is not base64",
-        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"%%\"}"), "g", UNKNOWN_CRS_GEOMETRY));
+        () ->
+            GeospatialValues.fromJson(
+                MAPPER.readTree("{\"wkb\":\"%%\"}"), "g", UNKNOWN_CRS_GEOMETRY, false));
   }
 
   @Test
@@ -98,43 +114,106 @@ class GeospatialValuesTest {
         reason,
         () ->
             GeospatialValues.fromStruct(
-                new Struct(schema).put("wkb", EWKB).put("srid", 3857), "g", GEOMETRY));
+                new Struct(schema).put("wkb", EWKB).put("srid", 3857), "g", GEOMETRY, false));
     String base64 = Base64.getEncoder().encodeToString(EWKB);
     assertInvalid(
         reason,
         () ->
             GeospatialValues.fromJson(
-                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":3857}"), "g", GEOMETRY));
+                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":3857}"),
+                "g",
+                GEOMETRY,
+                false));
     assertInvalid(
         "g: srid is not an integer: \"x\"",
         () ->
             GeospatialValues.fromJson(
-                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":\"x\"}"), "g", GEOMETRY));
+                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":\"x\"}"),
+                "g",
+                GEOMETRY,
+                false));
     // SRID 4326 matches CRS84, SRID 0 means no SRID
     assertEquals(
         ISO,
         GeospatialValues.fromStruct(
-            new Struct(schema).put("wkb", EWKB).put("srid", 4326), "g", GEOMETRY));
+            new Struct(schema).put("wkb", EWKB).put("srid", 4326), "g", GEOMETRY, false));
     String noSrid =
         "g: value without SRID doesn't match the column CRS OGC:CRS84, see"
-            + " debezium.sink.iceberg.geometry-crs";
+            + " debezium.sink.iceberg.geometry-crs and"
+            + " debezium.sink.iceberg.geospatial-allow-missing-srid";
     assertInvalid(
         noSrid,
         () ->
             GeospatialValues.fromStruct(
-                new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", GEOMETRY));
+                new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", GEOMETRY, false));
     assertInvalid(
         noSrid,
-        () -> GeospatialValues.fromStruct(new Struct(schema).put("wkb", EWKB), "g", GEOMETRY));
+        () ->
+            GeospatialValues.fromStruct(new Struct(schema).put("wkb", EWKB), "g", GEOMETRY, false));
     assertInvalid(
         noSrid,
         () ->
             GeospatialValues.fromJson(
-                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":null}"), "g", GEOMETRY));
+                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":null}"),
+                "g",
+                GEOMETRY,
+                false));
     assertEquals(
         ISO,
         GeospatialValues.fromStruct(
-            new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", UNKNOWN_CRS_GEOMETRY));
+            new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", UNKNOWN_CRS_GEOMETRY, false));
+  }
+
+  @Test
+  void testAllowMissingSrid() throws Exception {
+    Schema schema =
+        SchemaBuilder.struct()
+            .field("wkb", Schema.BYTES_SCHEMA)
+            .field("srid", Schema.OPTIONAL_INT32_SCHEMA)
+            .build();
+    String base64 = Base64.getEncoder().encodeToString(EWKB);
+    // values without SRID are written with the column CRS
+    for (Type type :
+        List.of(GEOMETRY, Types.GeometryType.of("EPSG:2154"), Types.GeographyType.crs84())) {
+      assertEquals(
+          ISO,
+          GeospatialValues.fromStruct(
+              new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", type, true));
+      assertEquals(
+          ISO, GeospatialValues.fromStruct(new Struct(schema).put("wkb", EWKB), "g", type, true));
+      assertEquals(
+          ISO,
+          GeospatialValues.fromJson(
+              MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":null}"), "g", type, true));
+    }
+    // a mismatching SRID still fails
+    assertInvalid(
+        "g: SRID 3857 doesn't match the column CRS OGC:CRS84, see"
+            + " debezium.sink.iceberg.geometry-crs",
+        () ->
+            GeospatialValues.fromStruct(
+                new Struct(schema).put("wkb", EWKB).put("srid", 3857), "g", GEOMETRY, true));
+  }
+
+  @Test
+  void testWkbCheckedBeforeSrid() throws Exception {
+    assertInvalid(
+        "g: missing wkb",
+        () -> GeospatialValues.fromJson(MAPPER.readTree("{}"), "g", GEOMETRY, false));
+    assertInvalid(
+        "g: unexpected wkb: null",
+        () -> GeospatialValues.fromStruct(new Struct(SCHEMA), "g", GEOMETRY, false));
+    // truncated WKB, no SRID
+    assertInvalid(
+        "g: invalid WKB: truncated or corrupt",
+        () ->
+            GeospatialValues.fromStruct(
+                new Struct(SCHEMA).put("wkb", hex("0101000020")), "g", GEOMETRY, false));
+    assertInvalid(
+        "g: invalid WKB: truncated or corrupt",
+        () ->
+            GeospatialValues.fromJson(
+                MAPPER.readTree("{\"wkb\":\"AQEAACA=\"}"), "g", GEOMETRY, false));
   }
 
   private static void assertInvalid(String reason, org.junit.jupiter.api.function.Executable call) {

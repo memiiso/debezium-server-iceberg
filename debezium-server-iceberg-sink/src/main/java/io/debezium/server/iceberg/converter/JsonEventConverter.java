@@ -376,7 +376,8 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         }
       case GEOMETRY:
       case GEOGRAPHY:
-        return GeospatialValues.fromJson(node, field.name(), field.type());
+        return GeospatialValues.fromJson(
+            node, field.name(), field.type(), config.iceberg().geospatialAllowMissingSrid());
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
         if (GeospatialTypes.isGeospatial(listItemsType.type())) {
@@ -388,7 +389,10 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
                           element.isNull()
                               ? null
                               : GeospatialValues.fromJson(
-                                  element, field.name() + "[]", listItemsType.type())));
+                                  element,
+                                  field.name() + "[]",
+                                  listItemsType.type(),
+                                  config.iceberg().geospatialAllowMissingSrid())));
           return listVal;
         }
         // recursive value mapping when list elements are nested type

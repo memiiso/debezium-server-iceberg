@@ -50,7 +50,8 @@ public class IcebergChangeConsumerGeospatialMysqlTest extends BaseTest {
   private static final Map<String, String[]> COLUMNS = new LinkedHashMap<>();
 
   static {
-    COLUMNS.put("g", new String[] {"GEOMETRY SRID 4326", "LINESTRING(0 0,1 1)"});
+    // no SRID, written as OGC:CRS84 with geospatial-allow-missing-srid
+    COLUMNS.put("g", new String[] {"GEOMETRY", "LINESTRING(0 0,1 1)"});
     COLUMNS.put(
         "g_linestring", new String[] {"LINESTRING SRID 4326", "LINESTRING(2.35 48.85,-0.12 51.5)"});
     COLUMNS.put(
@@ -172,7 +173,8 @@ public class IcebergChangeConsumerGeospatialMysqlTest extends BaseTest {
           "quarkus.profile", "mysql",
           "%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector",
           "%mysql.debezium.source.table.whitelist", "inventory.geo_types",
-          "debezium.sink.iceberg.geospatial-types", "true");
+          "debezium.sink.iceberg.geospatial-types", "true",
+          "debezium.sink.iceberg.geospatial-allow-missing-srid", "true");
     }
 
     @Override
