@@ -3,6 +3,7 @@ package io.debezium.server.iceberg.converter.geospatial;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,18 +24,40 @@ class WkbConverterTest {
 
   private static final Path FIXTURE =
       Path.of("src/test/resources/geospatial/postgis-ewkb-iso-wkb.psv");
-  // Iceberg 1.12 limit: no bounds for curves, PolyhedralSurface, TIN, Triangle
-  private static final List<String> UNBOUNDED_TYPES =
-      List.of("CIRCULARSTRING", "COMPOUNDCURVE", "CURVE", "SURFACE", "TIN", "TRIANGLE");
+  // not allowed by GeoParquet 2.0
+  private static final List<String> UNSUPPORTED_TYPES =
+      List.of(
+          "CIRCULARSTRING",
+          "COMPOUNDCURVE",
+          "CURVEPOLYGON",
+          "MULTICURVE",
+          "MULTISURFACE",
+          "POLYHEDRALSURFACE",
+          "TIN",
+          "TRIANGLE");
 
   static Stream<Arguments> postgisGeometries() throws IOException {
+    return fixture(false);
+  }
+
+  static Stream<Arguments> unsupportedGeometries() throws IOException {
+    return fixture(true);
+  }
+
+  private static Stream<Arguments> fixture(boolean unsupported) throws IOException {
     return Files.readAllLines(FIXTURE).stream()
         .filter(line -> !line.isBlank() && !line.startsWith("#"))
         .map(line -> line.split("\\|"))
+        .filter(cols -> isUnsupported(cols[0]) == unsupported)
         .map(
             cols ->
                 Arguments.of(
                     cols[0], HexFormat.of().parseHex(cols[1]), HexFormat.of().parseHex(cols[2])));
+  }
+
+  private static boolean isUnsupported(String geometry) {
+    String wkt = geometry.replaceFirst("^(geography )?(SRID=\\d+;)?", "");
+    return UNSUPPORTED_TYPES.stream().anyMatch(wkt::startsWith);
   }
 
   @ParameterizedTest(name = "{0}")
@@ -52,7 +75,7 @@ class WkbConverterTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("postgisGeometries")
   void testIcebergComputesBounds(String geometry, byte[] ewkb, byte[] isoWkb) {
-    if (geometry.contains("EMPTY") || UNBOUNDED_TYPES.stream().anyMatch(geometry::contains)) {
+    if (geometry.contains("EMPTY")) {
       return;
     }
     GeometryFieldMetrics.Builder metrics =
@@ -61,6 +84,16 @@ class WkbConverterTest {
     GeometryFieldMetrics result = metrics.build();
     assertNotNull(result.lowerBound(), geometry);
     assertNotNull(result.upperBound(), geometry);
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("unsupportedGeometries")
+  void testUnsupportedTypesFail(String geometry, byte[] ewkb, byte[] isoWkb) {
+    for (byte[] wkb : List.of(ewkb, isoWkb)) {
+      IllegalArgumentException e =
+          assertThrows(IllegalArgumentException.class, () -> WkbConverter.toIsoWkb(wkb), geometry);
+      assertTrue(e.getMessage().contains("unsupported geometry type"), geometry);
+    }
   }
 
   @Test

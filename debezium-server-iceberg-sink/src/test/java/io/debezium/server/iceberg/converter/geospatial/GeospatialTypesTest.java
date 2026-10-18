@@ -10,6 +10,7 @@ import static org.mockito.Mockito.lenient;
 import io.debezium.DebeziumException;
 import io.debezium.data.geometry.Point;
 import io.debezium.server.iceberg.IcebergConfig;
+import java.util.List;
 import org.apache.iceberg.types.Types;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,9 +43,9 @@ class GeospatialTypesTest {
     assertNull(GeospatialTypes.icebergType("some.Struct", icebergConfig));
     assertNull(GeospatialTypes.icebergType(null, icebergConfig));
 
-    lenient().when(icebergConfig.geometryCrs()).thenReturn("srid:3857");
+    lenient().when(icebergConfig.geometryCrs()).thenReturn("EPSG:3857");
     assertEquals(
-        Types.GeometryType.of("srid:3857"),
+        Types.GeometryType.of("EPSG:3857"),
         GeospatialTypes.icebergType(GeospatialTypes.GEOMETRY_LOGICAL_NAME, icebergConfig));
 
     lenient().when(icebergConfig.geospatialTypes()).thenReturn(false);
@@ -88,9 +89,19 @@ class GeospatialTypesTest {
     assertTrue(e.getMessage().contains("invalid debezium.sink.iceberg.format-version: v3"));
 
     lenient().when(icebergConfig.formatVersion()).thenReturn("3");
-    lenient().when(icebergConfig.geometryCrs()).thenReturn("projjson:my_crs");
-    e = assertThrows(DebeziumException.class, () -> GeospatialTypes.validateConfig(icebergConfig));
-    assertTrue(e.getMessage().contains("geometry-crs"));
+    lenient().when(icebergConfig.geometryCrs()).thenReturn("EPSG:2154");
+    GeospatialTypes.validateConfig(icebergConfig);
+    lenient().when(icebergConfig.geometryCrs()).thenReturn("srid:0");
+    GeospatialTypes.validateConfig(icebergConfig);
+
+    // GeoParquet 2.0 readers may not resolve srid:<N>
+    for (String crs : List.of("projjson:my_crs", "srid:3857")) {
+      lenient().when(icebergConfig.geometryCrs()).thenReturn(crs);
+      e =
+          assertThrows(
+              DebeziumException.class, () -> GeospatialTypes.validateConfig(icebergConfig));
+      assertTrue(e.getMessage().contains("geometry-crs"), crs);
+    }
 
     lenient().when(icebergConfig.geospatialTypes()).thenReturn(false);
     GeospatialTypes.validateConfig(icebergConfig);

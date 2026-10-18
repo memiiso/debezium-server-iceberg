@@ -27,25 +27,26 @@ class GeospatialValuesTest {
       SchemaBuilder.struct().field("wkb", Schema.OPTIONAL_BYTES_SCHEMA).build();
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final Type GEOMETRY = Types.GeometryType.crs84();
+  private static final Type UNKNOWN_CRS_GEOMETRY = Types.GeometryType.of("srid:0");
 
   @Test
   void testFromStruct() {
     assertEquals(
-        ISO, GeospatialValues.fromStruct(new Struct(SCHEMA).put("wkb", EWKB), "g", GEOMETRY));
+        ISO, GeospatialValues.fromStruct(new Struct(SCHEMA).put("wkb", EWKB), "g", UNKNOWN_CRS_GEOMETRY));
     assertEquals(
         ISO,
         GeospatialValues.fromStruct(
-            new Struct(SCHEMA).put("wkb", ByteBuffer.wrap(EWKB)), "g", GEOMETRY));
+            new Struct(SCHEMA).put("wkb", ByteBuffer.wrap(EWKB)), "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
         "g: unexpected wkb: null",
-        () -> GeospatialValues.fromStruct(new Struct(SCHEMA), "g", GEOMETRY));
+        () -> GeospatialValues.fromStruct(new Struct(SCHEMA), "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
-        "g: not a Struct: java.lang.String", () -> GeospatialValues.fromStruct("x", "g", GEOMETRY));
+        "g: not a Struct: java.lang.String", () -> GeospatialValues.fromStruct("x", "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
         "g: invalid WKB: truncated or corrupt",
         () ->
             GeospatialValues.fromStruct(
-                new Struct(SCHEMA).put("wkb", hex("0101000020")), "g", GEOMETRY));
+                new Struct(SCHEMA).put("wkb", hex("0101000020")), "g", UNKNOWN_CRS_GEOMETRY));
   }
 
   @Test
@@ -53,15 +54,15 @@ class GeospatialValuesTest {
     String base64 = Base64.getEncoder().encodeToString(EWKB);
     assertEquals(
         ISO,
-        GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"" + base64 + "\"}"), "g", GEOMETRY));
+        GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"" + base64 + "\"}"), "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
-        "g: missing wkb", () -> GeospatialValues.fromJson(MAPPER.readTree("{}"), "g", GEOMETRY));
+        "g: missing wkb", () -> GeospatialValues.fromJson(MAPPER.readTree("{}"), "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
         "g: missing wkb",
-        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":null}"), "g", GEOMETRY));
+        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":null}"), "g", UNKNOWN_CRS_GEOMETRY));
     assertInvalid(
         "g: wkb is not base64",
-        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"%%\"}"), "g", GEOMETRY));
+        () -> GeospatialValues.fromJson(MAPPER.readTree("{\"wkb\":\"%%\"}"), "g", UNKNOWN_CRS_GEOMETRY));
   }
 
   @Test
@@ -72,9 +73,13 @@ class GeospatialValuesTest {
     assertTrue(GeospatialValues.sridMatchesCrs(3857, Types.GeometryType.of("EPSG:3857")));
     assertFalse(GeospatialValues.sridMatchesCrs(4326, Types.GeometryType.of("srid:3857")));
     assertTrue(GeospatialValues.sridMatchesCrs(4326, Types.GeographyType.crs84()));
-    // values without SRID are accepted
-    assertTrue(GeospatialValues.sridMatchesCrs(null, GEOMETRY));
-    assertTrue(GeospatialValues.sridMatchesCrs(0, GEOMETRY));
+    // values without SRID only match the unknown CRS
+    assertFalse(GeospatialValues.sridMatchesCrs(null, GEOMETRY));
+    assertFalse(GeospatialValues.sridMatchesCrs(0, GEOMETRY));
+    assertFalse(GeospatialValues.sridMatchesCrs(0, Types.GeographyType.crs84()));
+    assertTrue(GeospatialValues.sridMatchesCrs(null, UNKNOWN_CRS_GEOMETRY));
+    assertTrue(GeospatialValues.sridMatchesCrs(0, UNKNOWN_CRS_GEOMETRY));
+    assertFalse(GeospatialValues.sridMatchesCrs(4326, UNKNOWN_CRS_GEOMETRY));
     // a CRS that can't be compared fails
     assertFalse(GeospatialValues.sridMatchesCrs(3857, Types.GeometryType.of("projjson:my_crs")));
   }
@@ -110,10 +115,26 @@ class GeospatialValuesTest {
         ISO,
         GeospatialValues.fromStruct(
             new Struct(schema).put("wkb", EWKB).put("srid", 4326), "g", GEOMETRY));
+    String noSrid =
+        "g: value without SRID doesn't match the column CRS OGC:CRS84, see"
+            + " debezium.sink.iceberg.geometry-crs";
+    assertInvalid(
+        noSrid,
+        () ->
+            GeospatialValues.fromStruct(
+                new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", GEOMETRY));
+    assertInvalid(
+        noSrid,
+        () -> GeospatialValues.fromStruct(new Struct(schema).put("wkb", EWKB), "g", GEOMETRY));
+    assertInvalid(
+        noSrid,
+        () ->
+            GeospatialValues.fromJson(
+                MAPPER.readTree("{\"wkb\":\"" + base64 + "\",\"srid\":null}"), "g", GEOMETRY));
     assertEquals(
         ISO,
         GeospatialValues.fromStruct(
-            new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", GEOMETRY));
+            new Struct(schema).put("wkb", EWKB).put("srid", 0), "g", UNKNOWN_CRS_GEOMETRY));
   }
 
   private static void assertInvalid(String reason, org.junit.jupiter.api.function.Executable call) {

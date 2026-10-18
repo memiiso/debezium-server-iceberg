@@ -145,7 +145,9 @@ class GeospatialEventConverterTest {
     StructEventConverter struct =
         structEvent(
             new Struct(valueSchema)
-                .put("ga", List.of(new Struct(geomSchema).put("wkb", EWKB_POINT_Z))));
+                .put(
+                    "ga",
+                    List.of(new Struct(geomSchema).put("wkb", EWKB_POINT_Z).put("srid", 4326))));
     var structSchema = struct.icebergSchema(false);
     assertEquals(
         Types.GeometryType.crs84(), structSchema.findType("ga").asListType().elementType());

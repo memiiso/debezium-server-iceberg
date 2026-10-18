@@ -95,10 +95,15 @@ public final class GeospatialTypes {
           "debezium.sink.iceberg.geospatial-types is not supported with the orc write format,"
               + " use parquet");
     }
-    if (srid(config.geometryCrs()) == null) {
+    // GeoParquet 2.0 readers must resolve <authority>:<code>, not srid:<N>: srid:0 is only used
+    // for the unknown CRS
+    String crs = config.geometryCrs();
+    Integer srid = srid(crs);
+    if (srid == null || (srid != 0 && crs.toLowerCase(Locale.ROOT).startsWith("srid:"))) {
       throw new DebeziumException(
-          "debezium.sink.iceberg.geometry-crs must be OGC:CRS84, srid:<N> or EPSG:<N>, got: "
-              + config.geometryCrs());
+          "debezium.sink.iceberg.geometry-crs must be OGC:CRS84, EPSG:<N> or srid:0 (unknown"
+              + " CRS), got: "
+              + crs);
     }
     int formatVersion;
     try {

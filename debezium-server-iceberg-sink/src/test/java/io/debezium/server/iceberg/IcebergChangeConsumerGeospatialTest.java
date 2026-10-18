@@ -50,17 +50,6 @@ public class IcebergChangeConsumerGeospatialTest extends BaseTest {
   // column -> {postgres type, value}
   private static final Map<String, String[]> GEOMETRY_COLUMNS = new LinkedHashMap<>();
   private static final Map<String, String[]> GEOGRAPHY_COLUMNS = new LinkedHashMap<>();
-  // Iceberg 1.12 limit: no bounds for curves, PolyhedralSurface, TIN, Triangle
-  private static final List<String> UNBOUNDED_COLUMNS =
-      List.of(
-          "g_circularstring",
-          "g_compoundcurve",
-          "g_curvepolygon",
-          "g_multicurve",
-          "g_multisurface",
-          "g_polyhedralsurface",
-          "g_tin",
-          "g_triangle");
 
   static {
     geometry("g", "geometry", "SRID=4326;LINESTRING(0 0,1 1)");
@@ -88,30 +77,7 @@ public class IcebergChangeConsumerGeospatialTest extends BaseTest {
     geometry("g_point_zm", "geometry(PointZM,4326)", "SRID=4326;POINT ZM(1 2 3 4)");
     geometry(
         "g_polygon_z", "geometry(PolygonZ,4326)", "SRID=4326;POLYGON Z((0 0 1,4 0 1,4 4 1,0 0 1))");
-    geometry("g_empty", "geometry", "POINT EMPTY");
-    geometry("g_circularstring", "geometry(CircularString)", "CIRCULARSTRING(0 0,1 1,2 0)");
-    geometry(
-        "g_compoundcurve",
-        "geometry(CompoundCurve)",
-        "COMPOUNDCURVE(CIRCULARSTRING(0 0,1 1,2 0),(2 0,3 0))");
-    geometry(
-        "g_curvepolygon",
-        "geometry(CurvePolygon)",
-        "CURVEPOLYGON(CIRCULARSTRING(0 0,4 0,4 4,0 4,0 0))");
-    geometry(
-        "g_multicurve",
-        "geometry(MultiCurve)",
-        "MULTICURVE((0 0,5 5),CIRCULARSTRING(4 0,4 4,8 4))");
-    geometry(
-        "g_multisurface",
-        "geometry(MultiSurface)",
-        "MULTISURFACE(CURVEPOLYGON(CIRCULARSTRING(0 0,4 0,4 4,0 4,0 0)),((10 10,14 12,11 10,10 10)))");
-    geometry(
-        "g_polyhedralsurface",
-        "geometry(PolyhedralSurfaceZ)",
-        "POLYHEDRALSURFACE Z(((0 0 0,0 0 1,0 1 1,0 0 0)))");
-    geometry("g_tin", "geometry(TinZ)", "TIN Z(((0 0 0,0 0 1,0 1 0,0 0 0)))");
-    geometry("g_triangle", "geometry(Triangle)", "TRIANGLE((0 0,0 9,9 0,0 0))");
+    geometry("g_empty", "geometry", "SRID=4326;POINT EMPTY");
     GEOGRAPHY_COLUMNS.put("geog", new String[] {"geography", "SRID=4326;LINESTRING(0 0,1 1)"});
     GEOGRAPHY_COLUMNS.put(
         "geog_point", new String[] {"geography(Point,4326)", "POINT(2.35 48.85)"});
@@ -204,7 +170,7 @@ public class IcebergChangeConsumerGeospatialTest extends BaseTest {
     for (String column : GEOMETRY_COLUMNS.keySet()) {
       int fieldId = table.schema().findField(column).fieldId();
       boolean hasBounds = dataFile.lowerBounds().containsKey(fieldId);
-      if (UNBOUNDED_COLUMNS.contains(column) || column.equals("g_empty")) {
+      if (column.equals("g_empty")) {
         assertFalse(hasBounds, column + " should have no bounds");
       } else {
         assertTrue(hasBounds, column + " should have bounds");

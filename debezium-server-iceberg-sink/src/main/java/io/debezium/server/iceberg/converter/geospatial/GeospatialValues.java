@@ -33,9 +33,10 @@ public final class GeospatialValues {
     if (!(value instanceof Struct struct)) {
       throw invalid(fieldName, "not a Struct: " + value.getClass().getName(), null);
     }
-    if (struct.schema().field(SRID_FIELD) != null) {
-      checkSrid((Integer) struct.get(SRID_FIELD), fieldName, type);
-    }
+    checkSrid(
+        struct.schema().field(SRID_FIELD) == null ? null : (Integer) struct.get(SRID_FIELD),
+        fieldName,
+        type);
     Object wkb = struct.get(WKB_FIELD);
     if (wkb instanceof byte[] bytes) {
       return toIsoWkb(bytes, fieldName);
@@ -70,8 +71,7 @@ public final class GeospatialValues {
     if (!sridMatchesCrs(srid, type)) {
       throw invalid(
           fieldName,
-          "SRID "
-              + srid
+          (srid == null || srid == 0 ? "value without SRID" : "SRID " + srid)
               + " doesn't match the column CRS "
               + crs(type)
               + ", see debezium.sink.iceberg.geometry-crs",
@@ -79,14 +79,12 @@ public final class GeospatialValues {
     }
   }
 
-  /** Values without SRID (null or 0) are accepted. */
+  /** Values without SRID (null or 0) only match the unknown CRS {@code srid:0}. */
   static boolean sridMatchesCrs(Integer srid, Type type) {
-    if (srid == null || srid == 0) {
-      return true;
-    }
+    int valueSrid = srid == null ? 0 : srid;
     return CRS_SRIDS
         .computeIfAbsent(crs(type), crs -> Optional.ofNullable(GeospatialTypes.srid(crs)))
-        .filter(srid::equals)
+        .filter(crsSrid -> crsSrid == valueSrid)
         .isPresent();
   }
 

@@ -27,7 +27,7 @@ public final class WkbConverter {
 
   /**
    * Rewrites the geometry headers only (SRID dropped, Z/M flags to ISO codes), ISO WKB input is
-   * validated and copied. Not using JTS: it writes EWKB Z/M flags and doesn't support curves.
+   * validated and copied. Not using JTS: it writes EWKB Z/M flags.
    */
   public static byte[] toIsoWkb(byte[] wkb) {
     ByteBuffer in = ByteBuffer.wrap(wkb);
@@ -68,13 +68,19 @@ public final class WkbConverter {
     out.write(byteOrder);
     writeInt(out, geometryType + (hasZ ? 1000 : 0) + (hasM ? 2000 : 0), in.order());
 
-    // cases grouped by WKB body layout, not by type code
+    // GeoParquet 2.0 only allows the 7 simple feature types: no curves, PolyhedralSurface, TIN,
+    // Triangle
     switch (geometryType) {
       case 1 -> copy(in, out, 8 * dimensions); // Point
-      case 2, 8 -> copyPoints(in, out, dimensions); // LineString, CircularString
-      case 3, 17 -> copyRings(in, out, dimensions); // Polygon, Triangle
-      case 4, 5, 6, 7, 9, 10, 11, 12, 15, 16 -> copyGeometries(in, out); // nested geometries
-      default -> throw new IllegalArgumentException("unsupported geometry type: " + geometryType);
+      case 2 -> copyPoints(in, out, dimensions); // LineString
+      case 3 -> copyRings(in, out, dimensions); // Polygon
+      case 4, 5, 6, 7 -> copyGeometries(in, out); // Multi*, GeometryCollection
+      default ->
+          throw new IllegalArgumentException(
+              "unsupported geometry type: "
+                  + geometryType
+                  + ", only Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon"
+                  + " and GeometryCollection are supported");
     }
   }
 
