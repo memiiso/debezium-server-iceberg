@@ -195,7 +195,7 @@
                     <ratchetFrom>refs/remotes/origin/master</ratchetFrom>
                     <java>
                         <googleJavaFormat>
-                            <version>1.19.2</version>
+                            <version>1.36.1</version>
                         </googleJavaFormat>
                         <removeUnusedImports />
                     </java>
