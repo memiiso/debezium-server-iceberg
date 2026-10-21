@@ -322,24 +322,24 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
       case TIME:
         if (node.isTextual()) {
           return switch (config.debezium().temporalPrecisionMode()) {
-              // io.debezium.time.IsoTime
+            // io.debezium.time.IsoTime
             case ISOSTRING -> LocalTime.parse(node.asText(), IsoTime.FORMATTER);
-              // io.debezium.time.ZonedTime
-              // A string representation of a time value with timezone information,
-              // Iceberg using LocalTime for time values
+            // io.debezium.time.ZonedTime
+            // A string representation of a time value with timezone information,
+            // Iceberg using LocalTime for time values
             default -> OffsetTime.parse(node.asText(), ZonedTime.FORMATTER).toLocalTime();
           };
         }
         if (node.isNumber()) {
           return switch (config.debezium().temporalPrecisionMode()) {
-              // io.debezium.time.MicroTime
-              // Represents the time value in microseconds
+            // io.debezium.time.MicroTime
+            // Represents the time value in microseconds
             case MICROSECONDS -> LocalTime.ofNanoOfDay(node.asLong() * 1000);
-              // io.debezium.time.NanoTime
-              // Represents the time value in nanoseconds
+            // io.debezium.time.NanoTime
+            // Represents the time value in nanoseconds
             case NANOSECONDS -> LocalTime.ofNanoOfDay(node.asLong());
-              // org.apache.kafka.connect.data.Time
-              // Represents the number of milliseconds since midnight,
+            // org.apache.kafka.connect.data.Time
+            // Represents the number of milliseconds since midnight,
             case CONNECT -> LocalTime.ofNanoOfDay(node.asLong() * 1_000_000);
             default ->
                 throw new RuntimeException(
