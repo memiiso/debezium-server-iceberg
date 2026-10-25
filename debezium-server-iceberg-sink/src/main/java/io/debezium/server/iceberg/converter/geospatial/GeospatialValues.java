@@ -47,11 +47,14 @@ public final class GeospatialValues {
       throw invalid(fieldName, "unexpected wkb: " + wkb, null);
     }
     // after the WKB, so an invalid value isn't reported as an SRID mismatch
-    checkSrid(
-        struct.schema().field(SRID_FIELD) == null ? null : (Integer) struct.get(SRID_FIELD),
-        fieldName,
-        type,
-        allowMissingSrid);
+    Object sridVal = struct.schema().field(SRID_FIELD) == null ? null : struct.get(SRID_FIELD);
+    Integer srid = null;
+    if (sridVal instanceof Number n) {
+      srid = n.intValue();
+    } else if (sridVal != null) {
+      throw invalid(fieldName, "srid is not an integer: " + sridVal, null);
+    }
+    checkSrid(srid, fieldName, type, allowMissingSrid);
     return isoWkb;
   }
 

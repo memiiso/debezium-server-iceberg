@@ -95,14 +95,18 @@ public class StructSchemaConverter implements SchemaConverter {
 
     switch (fieldType) {
       case STRUCT:
-        if (GeospatialTypes.addIcebergField(
-            fieldTypeName,
-            fieldName,
-            isOptional,
-            isPkField,
-            connectSchema.doc(),
-            schemaData,
-            config.iceberg())) {
+        if (GeospatialTypes.isGeospatialType(fieldTypeName, config.iceberg())) {
+          final Types.NestedField geospatialField =
+              Types.NestedField.of(
+                  schemaData.nextFieldId().getAndIncrement(),
+                  isOptional,
+                  fieldName,
+                  GeospatialTypes.icebergType(fieldTypeName, config.iceberg()),
+                  connectSchema.doc());
+          schemaData.fields().add(geospatialField);
+          if (isPkField) {
+            schemaData.identifierFieldIds().add(geospatialField.fieldId());
+          }
           break;
         }
         if (config.iceberg().nestedAsVariant()) {

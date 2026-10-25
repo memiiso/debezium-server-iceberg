@@ -75,14 +75,14 @@ class GeospatialEventConverterTest {
     lenient().when(config.iceberg()).thenReturn(icebergConfig);
     lenient().when(config.debezium()).thenReturn(debeziumConfig);
     lenient().when(debeziumConfig.isEventFlatteningEnabled()).thenReturn(true);
-    lenient().when(icebergConfig.geospatialTypes()).thenReturn(true);
+    lenient().when(icebergConfig.geospatialTypesEnabled()).thenReturn(true);
     lenient().when(icebergConfig.geometryCrs()).thenReturn(Types.GeometryType.DEFAULT_CRS);
     lenient().when(icebergConfig.cdcOpField()).thenReturn("__op");
   }
 
   @Test
   void testDisabledKeepsStructMapping() {
-    lenient().when(icebergConfig.geospatialTypes()).thenReturn(false);
+    lenient().when(icebergConfig.geospatialTypesEnabled()).thenReturn(false);
     assertEquals(
         Types.StructType.of(
             Types.NestedField.optional(2, "wkb", Types.BinaryType.get()),

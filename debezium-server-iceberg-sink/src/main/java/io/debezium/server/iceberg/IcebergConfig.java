@@ -111,9 +111,9 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean nestedAsVariant();
 
-  @WithName("debezium.sink.iceberg.geospatial-types")
+  @WithName("debezium.sink.iceberg.geospatial-types-enabled")
   @WithDefault("false")
-  boolean geospatialTypes();
+  boolean geospatialTypesEnabled();
 
   @WithName("debezium.sink.iceberg.geometry-crs")
   @WithDefault(Types.GeometryType.DEFAULT_CRS)

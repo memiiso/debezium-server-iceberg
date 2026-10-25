@@ -214,7 +214,7 @@ public class IcebergChangeConsumerGeospatialTest extends BaseTest {
   public static class TestProfile implements QuarkusTestProfile {
     @Override
     public Map<String, String> getConfigOverrides() {
-      return Map.of("debezium.sink.iceberg.geospatial-types", "true");
+      return Map.of("debezium.sink.iceberg.geospatial-types-enabled", "true");
     }
   }
 }

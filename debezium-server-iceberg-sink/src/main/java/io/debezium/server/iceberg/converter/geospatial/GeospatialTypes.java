@@ -10,7 +10,6 @@ package io.debezium.server.iceberg.converter.geospatial;
 
 import io.debezium.DebeziumException;
 import io.debezium.server.iceberg.IcebergConfig;
-import io.debezium.server.iceberg.converter.IcebergSchemaInfo;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import org.apache.iceberg.FileFormat;
@@ -35,7 +34,7 @@ public final class GeospatialTypes {
 
   /** Returns null when disabled or not a geospatial type. */
   public static Type.PrimitiveType icebergType(String logicalTypeName, IcebergConfig config) {
-    if (logicalTypeName == null || !config.geospatialTypes()) {
+    if (logicalTypeName == null || !config.geospatialTypesEnabled()) {
       return null;
     }
     return switch (logicalTypeName) {
@@ -45,27 +44,9 @@ public final class GeospatialTypes {
     };
   }
 
-  /** Returns false when the field is not a geospatial field. */
-  public static boolean addIcebergField(
-      String logicalTypeName,
-      String fieldName,
-      boolean isOptional,
-      boolean isPkField,
-      String doc,
-      IcebergSchemaInfo schemaData,
-      IcebergConfig config) {
-    Type.PrimitiveType type = icebergType(logicalTypeName, config);
-    if (type == null) {
-      return false;
-    }
-    Types.NestedField field =
-        Types.NestedField.of(
-            schemaData.nextFieldId().getAndIncrement(), isOptional, fieldName, type, doc);
-    schemaData.fields().add(field);
-    if (isPkField) {
-      schemaData.identifierFieldIds().add(field.fieldId());
-    }
-    return true;
+  /** Returns false when disabled or not a geospatial type. */
+  public static boolean isGeospatialType(String logicalTypeName, IcebergConfig config) {
+    return icebergType(logicalTypeName, config) != null;
   }
 
   /** SRID of a CRS ({@code OGC:CRS84}, {@code srid:N}, {@code EPSG:N}), null for other formats. */
@@ -91,14 +72,14 @@ public final class GeospatialTypes {
   }
 
   public static void validateConfig(IcebergConfig config) {
-    if (!config.geospatialTypes()) {
+    if (!config.geospatialTypesEnabled()) {
       return;
     }
     // Iceberg ORC writers don't support geospatial types
     if (FileFormat.ORC.name().equalsIgnoreCase(config.writeFormat())) {
       throw new DebeziumException(
-          "debezium.sink.iceberg.geospatial-types is not supported with the orc write format,"
-              + " use parquet");
+          "debezium.sink.iceberg.geospatial-types-enabled is not supported with the orc write"
+              + " format, use parquet");
     }
     if (!GEOMETRY_CRS.matcher(config.geometryCrs()).matches()) {
       throw new DebeziumException(
@@ -115,8 +96,8 @@ public final class GeospatialTypes {
     }
     if (formatVersion < 3) {
       throw new DebeziumException(
-          "debezium.sink.iceberg.geospatial-types requires debezium.sink.iceberg.format-version"
-              + " 3 or higher");
+          "debezium.sink.iceberg.geospatial-types-enabled requires"
+              + " debezium.sink.iceberg.format-version 3 or higher");
     }
   }
 }

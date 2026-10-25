@@ -25,7 +25,7 @@ class GeospatialTypesTest {
 
   @BeforeEach
   void setUp() {
-    lenient().when(icebergConfig.geospatialTypes()).thenReturn(true);
+    lenient().when(icebergConfig.geospatialTypesEnabled()).thenReturn(true);
     lenient().when(icebergConfig.geometryCrs()).thenReturn(Types.GeometryType.DEFAULT_CRS);
     lenient().when(icebergConfig.writeFormat()).thenReturn("parquet");
     lenient().when(icebergConfig.formatVersion()).thenReturn("3");
@@ -48,7 +48,7 @@ class GeospatialTypesTest {
         Types.GeometryType.of("EPSG:3857"),
         GeospatialTypes.icebergType(GeospatialTypes.GEOMETRY_LOGICAL_NAME, icebergConfig));
 
-    lenient().when(icebergConfig.geospatialTypes()).thenReturn(false);
+    lenient().when(icebergConfig.geospatialTypesEnabled()).thenReturn(false);
     assertNull(GeospatialTypes.icebergType(GeospatialTypes.GEOMETRY_LOGICAL_NAME, icebergConfig));
   }
 
@@ -112,7 +112,7 @@ class GeospatialTypesTest {
       assertTrue(e.getMessage().contains("geometry-crs"), crs);
     }
 
-    lenient().when(icebergConfig.geospatialTypes()).thenReturn(false);
+    lenient().when(icebergConfig.geospatialTypesEnabled()).thenReturn(false);
     GeospatialTypes.validateConfig(icebergConfig);
   }
 }

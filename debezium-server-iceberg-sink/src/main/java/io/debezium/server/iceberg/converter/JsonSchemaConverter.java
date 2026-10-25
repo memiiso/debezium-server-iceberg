@@ -85,8 +85,15 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
-        if (GeospatialTypes.addIcebergField(
-            fieldTypeName, fieldName, isOptional, isPkField, null, schemaData, config.iceberg())) {
+        if (GeospatialTypes.isGeospatialType(fieldTypeName, config.iceberg())) {
+          final Types.NestedField geospatialField =
+              Types.NestedField.of(
+                  schemaData.nextFieldId().getAndIncrement(),
+                  isOptional,
+                  fieldName,
+                  GeospatialTypes.icebergType(fieldTypeName, config.iceberg()));
+          schemaData.fields().add(geospatialField);
+          if (isPkField) schemaData.identifierFieldIds().add(geospatialField.fieldId());
           return schemaData;
         }
         if (config.iceberg().nestedAsVariant()) {

@@ -173,7 +173,7 @@ public class IcebergChangeConsumerGeospatialMysqlTest extends BaseTest {
           "quarkus.profile", "mysql",
           "%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector",
           "%mysql.debezium.source.table.whitelist", "inventory.geo_types",
-          "debezium.sink.iceberg.geospatial-types", "true",
+          "debezium.sink.iceberg.geospatial-types-enabled", "true",
           "debezium.sink.iceberg.geospatial-allow-missing-srid", "true");
     }
 

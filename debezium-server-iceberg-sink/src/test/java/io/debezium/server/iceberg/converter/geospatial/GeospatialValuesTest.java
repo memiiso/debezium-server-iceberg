@@ -165,6 +165,39 @@ class GeospatialValuesTest {
   }
 
   @Test
+  void testStructSridOtherTypes() {
+    // srid emitted as another numeric type by an upstream transform or custom schema
+    Schema int64 =
+        SchemaBuilder.struct()
+            .field("wkb", Schema.BYTES_SCHEMA)
+            .field("srid", Schema.OPTIONAL_INT64_SCHEMA)
+            .build();
+    assertEquals(
+        ISO,
+        GeospatialValues.fromStruct(
+            new Struct(int64).put("wkb", EWKB).put("srid", 4326L), "g", GEOMETRY, false));
+    Schema int16 =
+        SchemaBuilder.struct()
+            .field("wkb", Schema.BYTES_SCHEMA)
+            .field("srid", Schema.OPTIONAL_INT16_SCHEMA)
+            .build();
+    assertEquals(
+        ISO,
+        GeospatialValues.fromStruct(
+            new Struct(int16).put("wkb", EWKB).put("srid", (short) 4326), "g", GEOMETRY, false));
+    Schema string =
+        SchemaBuilder.struct()
+            .field("wkb", Schema.BYTES_SCHEMA)
+            .field("srid", Schema.OPTIONAL_STRING_SCHEMA)
+            .build();
+    assertInvalid(
+        "g: srid is not an integer: x",
+        () ->
+            GeospatialValues.fromStruct(
+                new Struct(string).put("wkb", EWKB).put("srid", "x"), "g", GEOMETRY, false));
+  }
+
+  @Test
   void testAllowMissingSrid() throws Exception {
     Schema schema =
         SchemaBuilder.struct()
