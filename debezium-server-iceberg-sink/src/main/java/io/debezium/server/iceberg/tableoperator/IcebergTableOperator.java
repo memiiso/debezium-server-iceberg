@@ -172,9 +172,6 @@ public class IcebergTableOperator {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
-    boolean commitAttempted = false;
-    try (writer) {
-      for (EventConverter e : events) {
     WriteResult files = null;
     try (writer) {
       for (EventConverter e : events) {
