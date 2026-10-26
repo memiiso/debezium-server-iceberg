@@ -8,29 +8,28 @@
 
 package io.debezium.server.iceberg.converter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.server.iceberg.BaseTest;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.iceberg.Schema;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
+import org.apache.iceberg.Schema;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
 @TestProfile(JsonEventConverterTestUnwrapped.TestProfile.class)
@@ -42,19 +41,28 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     Assertions.assertFalse(config.debezium().isEventFlatteningEnabled());
 
-    String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
-    String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
+    String key =
+        Files.readString(
+            Path.of("src/test/resources/json/serde-unnested-order-key-withschema.json"));
+    String val =
+        Files.readString(
+            Path.of("src/test/resources/json/serde-unnested-order-val-withschema.json"));
     EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
 
-    Exception exception = assertThrows(RuntimeException.class, () -> {
-      EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
-    });
-    assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
+    Exception exception =
+        assertThrows(
+            RuntimeException.class,
+            () -> {
+              EventFactory.toIcebergChangeEvent(dbzEvent, config).icebergSchema();
+            });
+    assertTrue(
+        exception.getMessage().contains("Identifier fields are not supported for unnested events"));
 
     when(config.iceberg().createIdentifierFields()).thenReturn(false);
-    Schema schema = EventFactory.toIcebergChangeEvent(dbzEvent,config).icebergSchema();
+    Schema schema = EventFactory.toIcebergChangeEvent(dbzEvent, config).icebergSchema();
     assertEquals(config.debezium().temporalPrecisionMode(), TemporalPrecisionMode.ISOSTRING);
-    assertEquals("""
+    assertEquals(
+        """
         table {
           1: before: optional struct<2: order_number: optional int, 3: order_date: optional date, 4: purchaser: optional int, 5: quantity: optional int, 6: product_id: optional int>
           7: after: optional struct<8: order_number: optional int, 9: order_date: optional date, 10: purchaser: optional int, 11: quantity: optional int, 12: product_id: optional int>
@@ -64,7 +72,8 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
           36: ts_ms: optional long
           37: ts_us: optional long
           38: ts_ns: optional long
-        }""", schema.toString());
+        }""",
+        schema.toString());
     assertEquals(Set.of(), schema.identifierFieldIds());
   }
 
@@ -73,15 +82,23 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
     assertFalse(config.debezium().isEventFlatteningEnabled());
 
-    String key = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
-    String val = Files.readString(Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
+    String key =
+        Files.readString(
+            Path.of("src/test/resources/json/serde-unnested-delete-key-withschema.json"));
+    String val =
+        Files.readString(
+            Path.of("src/test/resources/json/serde-unnested-delete-val-withschema.json"));
     EmbeddedEngineChangeEvent dbzEvent = EventFactory.createMockChangeEvent(key, val, "test");
-    JsonEventConverter ie = EventFactory.toIcebergChangeEvent(dbzEvent,config);
+    JsonEventConverter ie = EventFactory.toIcebergChangeEvent(dbzEvent, config);
 
-    Exception exception = assertThrows(RuntimeException.class, () -> {
-      ie.icebergSchema();
-    });
-    assertTrue(exception.getMessage().contains("Identifier fields are not supported for unnested events"));
+    Exception exception =
+        assertThrows(
+            RuntimeException.class,
+            () -> {
+              ie.icebergSchema();
+            });
+    assertTrue(
+        exception.getMessage().contains("Identifier fields are not supported for unnested events"));
     // print converted event value!
     // System.out.println(ie.convert(ie.icebergSchema(false),"__op"));
   }
@@ -95,6 +112,5 @@ class JsonEventConverterTestUnwrapped extends BaseTest {
 
       return config;
     }
-
   }
 }

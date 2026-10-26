@@ -16,11 +16,10 @@ import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.IcebergChangeConsumerTest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Iterator;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * helper class used to generate test change events
@@ -35,8 +34,7 @@ public class JsonBuilder {
   ObjectNode keyPayload = JsonNodeFactory.instance.objectNode();
   String destination = "test";
 
-  @Inject
-  GlobalConfig config;
+  @Inject GlobalConfig config;
 
   public JsonBuilder destination(String destination) {
     this.destination = destination;
@@ -106,18 +104,24 @@ public class JsonBuilder {
   }
 
   public JsonEventConverter build() {
-    JsonEventConverter result = new JsonEventConverter(
-        this.destination,
-        ("{" +
-            "\"schema\":" + this.valueSchema() + "," +
-            "\"payload\":" + payload.toString() +
-            "} "),
-        ("{" +
-            "\"schema\":" + this.keySchema() + "," +
-            "\"payload\":" + (keyPayload.isEmpty() ? "null" : keyPayload.toString()) +
-            "} "),
-        this.config
-    );
+    JsonEventConverter result =
+        new JsonEventConverter(
+            this.destination,
+            ("{"
+                + "\"schema\":"
+                + this.valueSchema()
+                + ","
+                + "\"payload\":"
+                + payload.toString()
+                + "} "),
+            ("{"
+                + "\"schema\":"
+                + this.keySchema()
+                + ","
+                + "\"payload\":"
+                + (keyPayload.isEmpty() ? "null" : keyPayload.toString())
+                + "} "),
+            this.config);
     // reset the builder
     this.reset();
     return result;
@@ -128,7 +132,6 @@ public class JsonBuilder {
     keyPayload = JsonNodeFactory.instance.objectNode();
     destination = "test";
   }
-
 
   private ObjectNode valueSchema() {
     return getSchema(payload);
@@ -180,23 +183,26 @@ public class JsonBuilder {
     return fields;
   }
 
-  public static String ofNoKey(String destination, Integer id, String operation, String name,
-                               Long epoch) {
-    final JsonEventConverter t = new JsonBuilder()
-        .destination(destination)
-        .addField("id", id)
-        .addField("first_name", name)
-        .addField("__op", operation)
-        .addField("__source_ts_ns", epoch)
-        .addField("__deleted", operation.equals("d"))
-        .build();
+  public static String ofNoKey(
+      String destination, Integer id, String operation, String name, Long epoch) {
+    final JsonEventConverter t =
+        new JsonBuilder()
+            .destination(destination)
+            .addField("id", id)
+            .addField("first_name", name)
+            .addField("__op", operation)
+            .addField("__source_ts_ns", epoch)
+            .addField("__deleted", operation.equals("d"))
+            .build();
 
-    final String val = "{" +
-        "\"schema\":" + t.schemaConverter().valueSchema() + "," +
-        "\"payload\":" + t.value() +
-        "} ";
+    final String val =
+        "{"
+            + "\"schema\":"
+            + t.schemaConverter().valueSchema()
+            + ","
+            + "\"payload\":"
+            + t.value()
+            + "} ";
     return val;
   }
-
-
 }

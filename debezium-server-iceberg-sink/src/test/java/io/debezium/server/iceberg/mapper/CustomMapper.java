@@ -10,18 +10,18 @@ import org.apache.iceberg.catalog.TableIdentifier;
 @Named("custom-mapper")
 @Dependent
 public class CustomMapper implements IcebergTableMapper {
-    @Inject
-    GlobalConfig config;
+  @Inject GlobalConfig config;
 
-    @Override
-    public TableIdentifier mapDestination(String destination) {
-      try {
-        String[] parts = destination.split("\\.");
-        String tableName = parts[parts.length - 1];
-        return TableIdentifier.of(Namespace.of(config.iceberg().namespace()), "custom_mapper_" + tableName);
-      } catch (Exception e) {
-        System.out.println("Failed to map:" + destination);
-        throw new RuntimeException(e);
-      }
+  @Override
+  public TableIdentifier mapDestination(String destination) {
+    try {
+      String[] parts = destination.split("\\.");
+      String tableName = parts[parts.length - 1];
+      return TableIdentifier.of(
+          Namespace.of(config.iceberg().namespace()), "custom_mapper_" + tableName);
+    } catch (Exception e) {
+      System.out.println("Failed to map:" + destination);
+      throw new RuntimeException(e);
     }
+  }
 }

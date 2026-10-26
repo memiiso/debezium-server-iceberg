@@ -23,5 +23,4 @@ public interface GlobalConfig {
   @WithName("quarkus.log.level")
   @WithDefault("INFO")
   Logger.Level quarkusLogLevel();
-
 }

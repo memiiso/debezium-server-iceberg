@@ -8,6 +8,8 @@
 
 package io.debezium.server.iceberg;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -15,20 +17,18 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
+ * destination.
  *
  * @author Ismail Simsek
  */
@@ -44,16 +44,19 @@ public class IcebergChangeConsumerConnectTest extends BaseSparkTest {
   public void testSimpleUpload() {
     assertEquals("connect", config.debezium().keyValueChangeEventFormat());
 
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        Dataset<Row> ds = getTableData("testc.inventory.customers");
-        ds.show(false);
-        return ds.count() >= 3;
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(120))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> ds = getTableData("testc.inventory.customers");
+                ds.show(false);
+                return ds.count() >= 3;
+              } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+              }
+            });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -65,5 +68,4 @@ public class IcebergChangeConsumerConnectTest extends BaseSparkTest {
       return config;
     }
   }
-
 }

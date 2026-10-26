@@ -15,17 +15,15 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
@@ -38,16 +36,19 @@ public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
   @Test
   public void testSimpleUpload() {
 
-    Awaitility.await().atMost(Duration.ofSeconds(180)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.products");
-        df.show();
-        return df.filter("_id is not null").count() >= 4;
-      } catch (Exception e) {
-        //e.printStackTrace();
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(180))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> df = getTableData("testc.inventory.products");
+                df.show();
+                return df.filter("_id is not null").count() >= 4;
+              } catch (Exception e) {
+                // e.printStackTrace();
+                return false;
+              }
+            });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -55,8 +56,12 @@ public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
     public Map<String, String> getConfigOverrides() {
       Map<String, String> config = new HashMap<>();
       config.put("quarkus.profile", "mongodb");
-      config.put("%mongodb.debezium.source.connector.class", "io.debezium.connector.mongodb.MongoDbConnector");
-      config.put("%mongodb.debezium.transforms.unwrap.type", "io.debezium.connector.mongodb.transforms.ExtractNewDocumentState");
+      config.put(
+          "%mongodb.debezium.source.connector.class",
+          "io.debezium.connector.mongodb.MongoDbConnector");
+      config.put(
+          "%mongodb.debezium.transforms.unwrap.type",
+          "io.debezium.connector.mongodb.transforms.ExtractNewDocumentState");
       config.put("%mongodb.debezium.transforms.unwrap.add.fields", "op,source.ts_ns,db");
       config.put("%mongodb.debezium.sink.iceberg.allow-field-addition", "false");
       config.put("%mongodb.debezium.source.topic.prefix", "testc");
@@ -64,7 +69,8 @@ public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
       config.put("%mongodb.debezium.source.collection.include.list", "inventory.products");
       // IMPORTANT !!! FIX MongoDbConnector KEY FIELD NAME "id"=>"_id" !!!
       config.put("%mongodb.debezium.transforms", "unwrap,renamekeyfield");
-      config.put("%mongodb.debezium.transforms.renamekeyfield.type",
+      config.put(
+          "%mongodb.debezium.transforms.renamekeyfield.type",
           "org.apache.kafka.connect.transforms.ReplaceField$Key");
       config.put("%mongodb.debezium.transforms.renamekeyfield.renames", "id:_id");
 
@@ -76,5 +82,4 @@ public class IcebergChangeConsumerMongodbTest extends BaseSparkTest {
       return "mongodb";
     }
   }
-
 }

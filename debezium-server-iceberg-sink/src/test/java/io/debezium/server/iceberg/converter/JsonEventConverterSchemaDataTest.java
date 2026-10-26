@@ -1,11 +1,10 @@
 package io.debezium.server.iceberg.converter;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 class JsonEventConverterSchemaDataTest {
@@ -28,7 +27,5 @@ class JsonEventConverterSchemaDataTest {
     assertEquals(Set.of(3), copy.identifierFieldIds());
     copy.identifierFieldIds().add(7);
     assertEquals(Set.of(3, 7), test.identifierFieldIds());
-
   }
-
 }

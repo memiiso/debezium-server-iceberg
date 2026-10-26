@@ -8,6 +8,10 @@
 
 package io.debezium.server.iceberg.tableoperator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
@@ -18,6 +22,10 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -25,19 +33,10 @@ import org.apache.iceberg.data.Record;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
- * A test class to verify Iceberg schema evolution capabilities, particularly for field type changes.
- * It simulates a scenario where a legacy Debezium version (0.8.x) handles timestamps as a long
- * type, and a newer version (0.9.x) handles them as a proper timestamp type.
+ * A test class to verify Iceberg schema evolution capabilities, particularly for field type
+ * changes. It simulates a scenario where a legacy Debezium version (0.8.x) handles timestamps as a
+ * long type, and a newer version (0.9.x) handles them as a proper timestamp type.
  */
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
@@ -59,13 +58,15 @@ class IcebergSchemaEvolutionTest extends BaseTest {
   }
 
   /**
-   * Tests the scenario where a timestamp field's type evolves from long to timestamp.
-   * This is a common migration scenario for Debezium users.
+   * Tests the scenario where a timestamp field's type evolves from long to timestamp. This is a
+   * common migration scenario for Debezium users.
    */
   @Test
   public void testTimestampFieldTypeEvolution() throws InterruptedException {
-    // A legacy data type handling (e.g., from Debezium 0.8.x) where the timestamp converted to long.
-    String eventLegacyJson = """
+    // A legacy data type handling (e.g., from Debezium 0.8.x) where the timestamp converted to
+    // long.
+    String eventLegacyJson =
+        """
           {
           "schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"id"},
           {"type":"string","optional":false,"field":"first_name"},
@@ -76,8 +77,10 @@ class IcebergSchemaEvolutionTest extends BaseTest {
           }
         """;
 
-    // A new data type handling (e.g., from Debezium 0.9.x) where the timestamp converted to timestamp type.
-    String eventModernJson = """
+    // A new data type handling (e.g., from Debezium 0.9.x) where the timestamp converted to
+    // timestamp type.
+    String eventModernJson =
+        """
         {
         "schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"id"},
         {"type":"string","optional":false,"field":"first_name"},
@@ -99,15 +102,23 @@ class IcebergSchemaEvolutionTest extends BaseTest {
     assertEquals(1, legacyDataFiles.size(), "Expected one data file after initial write.");
 
     // Step 2: Attempt to write the modern event, which should fail due to the type mismatch.
-    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-      icebergTableOperator.addToTable(legacyTable, List.of(modernEvent));
-    }, "Writing the new event should fail due to a type change.");
-    assertTrue(exception.getMessage().contains("Cannot change column type: order_created_ts_ms: long -> timestamp"),
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> {
+              icebergTableOperator.addToTable(legacyTable, List.of(modernEvent));
+            },
+            "Writing the new event should fail due to a type change.");
+    assertTrue(
+        exception
+            .getMessage()
+            .contains("Cannot change column type: order_created_ts_ms: long -> timestamp"),
         "The error message should indicate a type change is not allowed.");
 
     // Step 3: END USER ACTION! Manually evolve the schema by renaming the old column.
     // This is a metadata-only operation, no data rewrite occurs.
-    legacyTable.updateSchema()
+    legacyTable
+        .updateSchema()
         .renameColumn("order_created_ts_ms", "order_created_ts_ms__legacy")
         .commit();
 
@@ -123,24 +134,34 @@ class IcebergSchemaEvolutionTest extends BaseTest {
     assertEquals(2, records.size(), "Expected two records after the second write.");
 
     // Verify both the old and new columns exist with their respective types.
-    assertEquals("long", legacyTable.schema().findField("order_created_ts_ms__legacy").type().toString(),
+    assertEquals(
+        "long",
+        legacyTable.schema().findField("order_created_ts_ms__legacy").type().toString(),
         "The renamed legacy column should have a 'long' type.");
-    assertEquals("timestamp", legacyTable.schema().findField("order_created_ts_ms").type().toString(),
+    assertEquals(
+        "timestamp",
+        legacyTable.schema().findField("order_created_ts_ms").type().toString(),
         "The new column should have a 'timestamp' type.");
 
     List<DataFile> evolvedDataFiles = getDataFiles(legacyTable);
-    assertEquals(2, evolvedDataFiles.size(), "Expected two data files after schema evolution and new data write.");
+    assertEquals(
+        2,
+        evolvedDataFiles.size(),
+        "Expected two data files after schema evolution and new data write.");
 
     // The new set of data files should contain the original data file.
-    List<String> legacyFileLocations = legacyDataFiles.stream().map(DataFile::location).collect(Collectors.toList());
-    List<String> evolvedFileLocations = evolvedDataFiles.stream().map(DataFile::location).collect(Collectors.toList());
-    assertTrue(evolvedFileLocations.containsAll(legacyFileLocations),
+    List<String> legacyFileLocations =
+        legacyDataFiles.stream().map(DataFile::location).collect(Collectors.toList());
+    List<String> evolvedFileLocations =
+        evolvedDataFiles.stream().map(DataFile::location).collect(Collectors.toList());
+    assertTrue(
+        evolvedFileLocations.containsAll(legacyFileLocations),
         "The new data files should include the original data file, as no rewrite occurred.");
   }
 
   /**
-   * A Quarkus test profile that configures the Debezium source to use
-   * 'connect' time precision, which is crucial for this test's scenario.
+   * A Quarkus test profile that configures the Debezium source to use 'connect' time precision,
+   * which is crucial for this test's scenario.
    */
   public static class LegacyTimePrecisionProfile implements QuarkusTestProfile {
     @Override

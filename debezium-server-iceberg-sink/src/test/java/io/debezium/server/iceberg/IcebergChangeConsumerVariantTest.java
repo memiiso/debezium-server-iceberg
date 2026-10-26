@@ -8,6 +8,9 @@
 
 package io.debezium.server.iceberg;
 
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.try_variant_get;
+
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
@@ -15,6 +18,9 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
@@ -22,15 +28,9 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.try_variant_get;
-
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
+ * destination.
  *
  * @author Ismail Simsek
  */
@@ -44,25 +44,30 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
   @Test
   public void testSimpleUpload() {
 
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.customers");
-        df.show(false);
-        df.withColumn("after_first_name", try_variant_get(col("after"), "$.first_name", "string"))
-            .show(false);
-        Assertions.assertEquals(DataTypes.VariantType, getSchemaField(df, "after").dataType());
-        return df.count() >= 3;
-      } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-      }
-    });
-
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(120))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> df = getTableData("testc.inventory.customers");
+                df.show(false);
+                df.withColumn(
+                        "after_first_name", try_variant_get(col("after"), "$.first_name", "string"))
+                    .show(false);
+                Assertions.assertEquals(
+                    DataTypes.VariantType, getSchemaField(df, "after").dataType());
+                return df.count() >= 3;
+              } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+              }
+            });
   }
 
   @Test
   public void testConsumingVariousDataTypes() throws Exception {
-    String sql = """
+    String sql =
+        """
         DROP TABLE IF EXISTS inventory.data_types;
         CREATE TABLE IF NOT EXISTS inventory.data_types (
             c_id INTEGER ,
@@ -104,12 +109,14 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
           );
         """;
     SourcePostgresqlDB.runSQL(sql);
-    SourcePostgresqlDB.runSQL("""
+    SourcePostgresqlDB.runSQL(
+        """
         INSERT INTO inventory.data_types (c_id)
         VALUES (1)
         """);
 
-    sql = """
+    sql =
+        """
         INSERT INTO inventory.data_types (
         c_id,\s
         c_text, c_varchar, c_int,
@@ -134,26 +141,29 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
         'mapkey1=>1, mapkey2=>2'::hstore,\s
         'stringvalue'\s
         )
-        """
-    ;
+        """;
     SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
-      try {
-        getTableData("testc.inventory.data_types").show(false);
-        Dataset<Row> df = getTableData("testc.inventory.data_types");
-        df.show(false);
-        Assertions.assertEquals(DataTypes.VariantType, getSchemaField(df, "after").dataType());
-        Assertions.assertEquals(DataTypes.VariantType, getSchemaField(df, "before").dataType());
-        df.withColumn("after_c_text", try_variant_get(col("after"), "$.c_text", "string"))
-            .show(false);
-        return true;
-      } catch (Exception | AssertionError e) {
-        LOGGER.error("Error: {}", e.getMessage());
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(320))
+        .until(
+            () -> {
+              try {
+                getTableData("testc.inventory.data_types").show(false);
+                Dataset<Row> df = getTableData("testc.inventory.data_types");
+                df.show(false);
+                Assertions.assertEquals(
+                    DataTypes.VariantType, getSchemaField(df, "after").dataType());
+                Assertions.assertEquals(
+                    DataTypes.VariantType, getSchemaField(df, "before").dataType());
+                df.withColumn("after_c_text", try_variant_get(col("after"), "$.c_text", "string"))
+                    .show(false);
+                return true;
+              } catch (Exception | AssertionError e) {
+                LOGGER.error("Error: {}", e.getMessage());
+                return false;
+              }
+            });
   }
-
 
   public static class TestProfile implements QuarkusTestProfile {
     @Override
@@ -164,5 +174,4 @@ public class IcebergChangeConsumerVariantTest extends BaseSparkTest {
       return config;
     }
   }
-
 }

@@ -1,13 +1,6 @@
 package io.debezium.server.iceberg.converter;
 
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
-import org.apache.kafka.connect.data.Decimal;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -23,15 +16,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.apache.kafka.connect.data.Decimal;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A builder class to conveniently create Kafka Connect Struct objects
- * by **inferring** the schema from the provided field names and values.
- * <p>
- * Note: Schema inference has limitations and relies on the runtime type
- * of the provided values. All inferred fields are marked as **optional**.
- * For precise schema control (required fields, specific logical types, defaults),
- * </p>
+ * A builder class to conveniently create Kafka Connect Struct objects by **inferring** the schema
+ * from the provided field names and values.
+ *
+ * <p>Note: Schema inference has limitations and relies on the runtime type of the provided values.
+ * All inferred fields are marked as **optional**. For precise schema control (required fields,
+ * specific logical types, defaults),
  */
 public class StructBuilder {
 
@@ -60,14 +58,14 @@ public class StructBuilder {
   }
 
   /**
-   * Adds a field and its value. The schema type will be inferred from the value
-   * during the build() phase.
+   * Adds a field and its value. The schema type will be inferred from the value during the build()
+   * phase.
    *
    * @param fieldName The name of the field.
-   * @param value     The value for the field. Used for schema inference. Null values are allowed,
-   *                  but their type might be inferred generically (e.g., String) if no other
-   *                  field provides a concrete type hint during build. It's best practice
-   *                  to provide non-null values for reliable inference.
+   * @param value The value for the field. Used for schema inference. Null values are allowed, but
+   *     their type might be inferred generically (e.g., String) if no other field provides a
+   *     concrete type hint during build. It's best practice to provide non-null values for reliable
+   *     inference.
    * @return This builder instance for chaining.
    */
   public StructBuilder field(String fieldName, Object value) {
@@ -80,12 +78,12 @@ public class StructBuilder {
   }
 
   /**
-   * Builds the Struct by first inferring the schema based on the fields added
-   * and then populating the Struct with the provided values.
+   * Builds the Struct by first inferring the schema based on the fields added and then populating
+   * the Struct with the provided values.
    *
    * @return The constructed Struct with an inferred schema.
-   * @throws org.apache.kafka.connect.errors.DataException if schema inference fails for any field or
-   *                                                       if putting a value into the struct fails.
+   * @throws org.apache.kafka.connect.errors.DataException if schema inference fails for any field
+   *     or if putting a value into the struct fails.
    */
   public Struct build() {
     SchemaBuilder schemaBuilder = SchemaBuilder.struct().name(schemaName);
@@ -102,8 +100,11 @@ public class StructBuilder {
         inferredFieldSchemas.put(fieldName, fieldSchema); // Store for struct creation
       } catch (Exception e) {
         throw new org.apache.kafka.connect.errors.DataException(
-            "Failed to infer schema for field '" + fieldName + "' with value type "
-                + (value != null ? value.getClass().getName() : "null"), e);
+            "Failed to infer schema for field '"
+                + fieldName
+                + "' with value type "
+                + (value != null ? value.getClass().getName() : "null"),
+            e);
       }
     }
 
@@ -123,9 +124,14 @@ public class StructBuilder {
       } catch (org.apache.kafka.connect.errors.DataException e) {
         // This might happen if inference was slightly off or value is incompatible
         throw new org.apache.kafka.connect.errors.DataException(
-            "Failed to put value for field '" + fieldName + "' into struct with inferred schema. "
-                + "Value type: " + (value != null ? value.getClass().getName() : "null")
-                + ", Inferred Schema: " + fieldSchema, e);
+            "Failed to put value for field '"
+                + fieldName
+                + "' into struct with inferred schema. "
+                + "Value type: "
+                + (value != null ? value.getClass().getName() : "null")
+                + ", Inferred Schema: "
+                + fieldSchema,
+            e);
       }
     }
 
@@ -142,13 +148,13 @@ public class StructBuilder {
   }
 
   /**
-   * Infers the Kafka Connect Schema based on the runtime type of the value.
-   * Marks the inferred schema as optional.
-   * Handles basic types, common logical types, and basic collections.
+   * Infers the Kafka Connect Schema based on the runtime type of the value. Marks the inferred
+   * schema as optional. Handles basic types, common logical types, and basic collections.
    */
   private Schema inferSchema(Object value) {
     if (value == null) {
-      log.warn("Inferring schema for null value as OPTIONAL_STRING_SCHEMA. Provide non-null value or explicit type for better inference.");
+      log.warn(
+          "Inferring schema for null value as OPTIONAL_STRING_SCHEMA. Provide non-null value or explicit type for better inference.");
       return Schema.OPTIONAL_STRING_SCHEMA;
     }
 
@@ -168,19 +174,25 @@ public class StructBuilder {
       log.debug("Inferring Decimal schema with scale: {}", scale);
       return Decimal.builder(scale).optional().build();
     }
-    if (value instanceof java.util.Date || value instanceof Instant || value instanceof LocalDateTime) {
+    if (value instanceof java.util.Date
+        || value instanceof Instant
+        || value instanceof LocalDateTime) {
       if (value instanceof LocalDateTime) {
-        log.warn("Inferring java.time.LocalDateTime as Timestamp schema. Timezone information is lost/assumed.");
+        log.warn(
+            "Inferring java.time.LocalDateTime as Timestamp schema. Timezone information is lost/assumed.");
       } else if (value instanceof java.util.Date) {
         log.debug("Inferring java.util.Date as Timestamp schema.");
       }
       return org.apache.kafka.connect.data.Timestamp.builder().optional().build();
     }
-    if (value instanceof LocalDate) return org.apache.kafka.connect.data.Date.builder().optional().build();
-    if (value instanceof LocalTime) return org.apache.kafka.connect.data.Time.builder().optional().build();
+    if (value instanceof LocalDate)
+      return org.apache.kafka.connect.data.Date.builder().optional().build();
+    if (value instanceof LocalTime)
+      return org.apache.kafka.connect.data.Time.builder().optional().build();
     if (value instanceof UUID) {
       log.debug("Inferring UUID as String schema.");
-      return Schema.OPTIONAL_STRING_SCHEMA; // Standard practice to store UUIDs as Strings in Connect
+      return Schema
+          .OPTIONAL_STRING_SCHEMA; // Standard practice to store UUIDs as Strings in Connect
     }
 
     // Collections (Basic Recursive Inference)
@@ -199,21 +211,24 @@ public class StructBuilder {
         try {
           keySchema = inferSchema(firstKey.get());
         } catch (Exception e) {
-          log.warn("Could not infer Map key type from first key [{}], defaulting to String.", firstKey.get(), e);
+          log.warn(
+              "Could not infer Map key type from first key [{}], defaulting to String.",
+              firstKey.get(),
+              e);
         }
       } else if (!map.isEmpty()) {
-        log.warn("Map keys are all null or map is non-empty but couldn't get first key, defaulting key schema to String.");
+        log.warn(
+            "Map keys are all null or map is non-empty but couldn't get first key, defaulting key schema to String.");
       }
       return SchemaBuilder.map(keySchema, valueSchema).optional().build();
     }
 
     // Fallback for unknown types
-    throw new org.apache.kafka.connect.errors.DataException("Unsupported type for schema inference: " + value.getClass().getName());
+    throw new org.apache.kafka.connect.errors.DataException(
+        "Unsupported type for schema inference: " + value.getClass().getName());
   }
 
-  /**
-   * Helper to infer schema for elements within a collection (List or Map values)
-   */
+  /** Helper to infer schema for elements within a collection (List or Map values) */
   private Schema inferCollectionElementSchema(Collection<?> collection) {
     // Infer from the first non-null element
     Optional<?> firstNonNull = collection.stream().filter(Objects::nonNull).findFirst();
@@ -221,19 +236,23 @@ public class StructBuilder {
       try {
         return inferSchema(firstNonNull.get());
       } catch (Exception e) {
-        log.warn("Could not infer collection element type from first element [{}], defaulting to String.", firstNonNull.get(), e);
+        log.warn(
+            "Could not infer collection element type from first element [{}], defaulting to String.",
+            firstNonNull.get(),
+            e);
         return Schema.OPTIONAL_STRING_SCHEMA;
       }
     } else {
       // All elements are null or collection is empty
-      log.warn("Inferring schema for collection with no non-null elements as OPTIONAL_STRING_SCHEMA.");
+      log.warn(
+          "Inferring schema for collection with no non-null elements as OPTIONAL_STRING_SCHEMA.");
       return Schema.OPTIONAL_STRING_SCHEMA;
     }
   }
 
   /**
-   * Prepares the value to be put into the Struct, potentially converting types
-   * to match the inferred schema (e.g., byte[] to ByteBuffer, UUID to String, time types).
+   * Prepares the value to be put into the Struct, potentially converting types to match the
+   * inferred schema (e.g., byte[] to ByteBuffer, UUID to String, time types).
    */
   private Object prepareValueForSchema(Object value, Schema fieldSchema) {
     if (value == null) {
@@ -274,7 +293,7 @@ public class StructBuilder {
             return (int) (((LocalTime) value).toNanoOfDay() / 1_000_000L);
           }
           break; // Important break
-        // Decimal usually expects BigDecimal, no conversion needed here typically
+          // Decimal usually expects BigDecimal, no conversion needed here typically
       }
     }
 

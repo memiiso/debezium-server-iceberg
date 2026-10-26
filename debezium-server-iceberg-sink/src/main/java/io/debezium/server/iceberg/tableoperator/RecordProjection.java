@@ -1,5 +1,7 @@
 package io.debezium.server.iceberg.tableoperator;
 
+import java.util.List;
+import java.util.Map;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
@@ -8,14 +10,12 @@ import org.apache.iceberg.types.Types.MapType;
 import org.apache.iceberg.types.Types.NestedField;
 import org.apache.iceberg.types.Types.StructType;
 
-import java.util.List;
-import java.util.Map;
-
 /**
- * This is copy of tabular-io iceberg-kafka-connect code!
- * <a href="https://github.com/tabular-io/iceberg-kafka-connect/blob/main/kafka-connect/src/main/java/io/tabular/iceberg/connect/data/RecordProjection.java">...</a>
- * <p>
- * This is modified from {@link org.apache.iceberg.util.StructProjection} to support record types.
+ * This is copy of tabular-io iceberg-kafka-connect code! <a
+ * href="https://github.com/tabular-io/iceberg-kafka-connect/blob/main/kafka-connect/src/main/java/io/tabular/iceberg/connect/data/RecordProjection.java">...</a>
+ *
+ * <p>This is modified from {@link org.apache.iceberg.util.StructProjection} to support record
+ * types.
  */
 public class RecordProjection implements Record {
 
@@ -24,7 +24,7 @@ public class RecordProjection implements Record {
    *
    * <p>This projection does not work with repeated types like lists and maps.
    *
-   * @param dataSchema      schema of rows wrapped by this projection
+   * @param dataSchema schema of rows wrapped by this projection
    * @param projectedSchema result schema of the projected rows
    * @return a wrapper to project rows
    */

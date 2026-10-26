@@ -15,17 +15,16 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration test that verifies columns can be excluded from the written iceberg table
@@ -42,38 +41,42 @@ public class IcebergChangeConsumerExcludedColumnsTest extends BaseSparkTest {
   @Test
   public void testSupportExcludedColumns() throws Exception {
     String sql =
-            "DROP TABLE IF EXISTS inventory.table_with_excluded_column;\n" +
-            "CREATE TABLE IF NOT EXISTS inventory.table_with_excluded_column (\n" +
-            "    c_id INTEGER ,\n" +
-            "    c_text TEXT ,\n" +
-            "    c_exclude_me TEXT\n" +
-            ");";
+        "DROP TABLE IF EXISTS inventory.table_with_excluded_column;\n"
+            + "CREATE TABLE IF NOT EXISTS inventory.table_with_excluded_column (\n"
+            + "    c_id INTEGER ,\n"
+            + "    c_text TEXT ,\n"
+            + "    c_exclude_me TEXT\n"
+            + ");";
     SourcePostgresqlDB.runSQL(sql);
-    sql = "INSERT INTO inventory.table_with_excluded_column \n" +
-          "(c_id, c_text, c_exclude_me) \n" +
-          "VALUES \n" +
-          "(1, 'one' , 'should_not_write_to_iceberg' ) \n" +
-          ",(1, 'two' , 'should_not_write_to_iceberg' )";
+    sql =
+        "INSERT INTO inventory.table_with_excluded_column \n"
+            + "(c_id, c_text, c_exclude_me) \n"
+            + "VALUES \n"
+            + "(1, 'one' , 'should_not_write_to_iceberg' ) \n"
+            + ",(1, 'two' , 'should_not_write_to_iceberg' )";
 
     SourcePostgresqlDB.runSQL(sql);
-    Awaitility.await().atMost(Duration.ofSeconds(320)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.table_with_excluded_column");
-        df.show(false);
-        df.schema().printTreeString();
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(320))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> df = getTableData("testc.inventory.table_with_excluded_column");
+                df.show(false);
+                df.schema().printTreeString();
 
-        List<String> columns = Arrays.asList(df.columns());
+                List<String> columns = Arrays.asList(df.columns());
 
-        Assertions.assertTrue(columns.contains("c_id"));
-        Assertions.assertTrue(columns.contains("c_text"));
-        Assertions.assertFalse(columns.contains("c_exclude_me"));
-        Assertions.assertFalse(columns.contains("__table"));
-        Assertions.assertFalse(columns.contains("__db"));
-        return true;
-      } catch (Exception | AssertionError e) {
-        return false;
-      }
-    });
+                Assertions.assertTrue(columns.contains("c_id"));
+                Assertions.assertTrue(columns.contains("c_text"));
+                Assertions.assertFalse(columns.contains("c_exclude_me"));
+                Assertions.assertFalse(columns.contains("__table"));
+                Assertions.assertFalse(columns.contains("__db"));
+                return true;
+              } catch (Exception | AssertionError e) {
+                return false;
+              }
+            });
   }
 
   public static class TestProfile implements QuarkusTestProfile {
