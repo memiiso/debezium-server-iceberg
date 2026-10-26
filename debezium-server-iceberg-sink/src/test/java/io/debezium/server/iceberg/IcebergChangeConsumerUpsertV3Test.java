@@ -37,7 +37,7 @@ public class IcebergChangeConsumerUpsertV3Test extends BaseSparkTest {
     records.add(eventFactory.of(dest, 1, "c"));
     records.add(eventFactory.of(dest, 2, "c"));
     records.add(eventFactory.of(dest, 3, "c"));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
 
     Dataset<Row> ds = getTableData("testc.inventory.customers_upsert_v3");
     Assertions.assertEquals(ds.count(), 3);
@@ -53,7 +53,7 @@ public class IcebergChangeConsumerUpsertV3Test extends BaseSparkTest {
     records.add(eventFactory.of(dest, 2, "d"));
     records.add(eventFactory.of(dest, 3, "u", "UpdatednameV1"));
     records.add(eventFactory.of(dest, 4, "c"));
-    consumer.handleBatch(records, TestUtil.getCommitter());
+    consumer.handle(TestUtil.toCapturingEvents(records));
 
     ds = getTableData("testc.inventory.customers_upsert_v3");
     Assertions.assertEquals(4, ds.count());

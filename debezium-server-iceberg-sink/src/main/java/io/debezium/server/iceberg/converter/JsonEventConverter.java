@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.converter;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.debezium.DebeziumException;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
+import io.debezium.runtime.BatchEvent;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
 import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
@@ -57,6 +58,10 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   private JsonSchemaConverter schemaConverter;
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+    this(e.destination(), e.value(), e.key(), config);
+  }
+
+  public JsonEventConverter(BatchEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
   }
 

@@ -2,8 +2,8 @@ package io.debezium.server.iceberg.converter;
 
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.NotNull;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
 
@@ -46,7 +46,7 @@ public interface EventConverter {
    *
    * @return The timestamp, or null if not available in the event.
    */
-  @NotNull
+  @Nonnull
   Long cdcSourceTsValue();
 
   /**
@@ -54,7 +54,7 @@ public interface EventConverter {
    *
    * @return The {@link Operation} enum value.
    */
-  @NotNull
+  @Nonnull
   Operation cdcOpValue();
 
   /** True if the first operation for a key in a batch is an insert */
@@ -68,7 +68,7 @@ public interface EventConverter {
    *
    * @return The schema converter instance.
    */
-  @NotNull
+  @Nonnull
   SchemaConverter schemaConverter();
 
   /**
@@ -107,7 +107,7 @@ public interface EventConverter {
    *
    * @return The destination string.
    */
-  @NotNull
+  @Nonnull
   String destination();
 
   /**
@@ -118,8 +118,8 @@ public interface EventConverter {
    * @param schema The target Iceberg schema to conform to.
    * @return A {@link RecordWrapper} containing the data formatted for appending.
    */
-  @NotNull
-  RecordWrapper convertAsAppend(@NotNull Schema schema); // Added @NotNull
+  @Nonnull
+  RecordWrapper convertAsAppend(@Nonnull Schema schema); // Added @Nonnull
 
   /**
    * Converts the event data into a {@link RecordWrapper} suitable for general iceberg consumption
@@ -128,6 +128,6 @@ public interface EventConverter {
    * @param schema The target Iceberg schema to conform to.
    * @return A {@link RecordWrapper} containing the data formatted for iceberg table.
    */
-  @NotNull
-  RecordWrapper convert(@NotNull Schema schema); // Added @NotNull
+  @Nonnull
+  RecordWrapper convert(@Nonnull Schema schema); // Added @Nonnull
 }
