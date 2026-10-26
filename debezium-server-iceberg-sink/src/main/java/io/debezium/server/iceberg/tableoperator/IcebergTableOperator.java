@@ -175,6 +175,9 @@ public class IcebergTableOperator {
     boolean commitAttempted = false;
     try (writer) {
       for (EventConverter e : events) {
+    WriteResult files = null;
+    try (writer) {
+      for (EventConverter e : events) {
         final RecordWrapper record =
             (config.iceberg().upsert() && !tableSchema.identifierFieldIds().isEmpty())
                 ? e.convert(tableSchema)
@@ -182,8 +185,7 @@ public class IcebergTableOperator {
         writer.write(record);
       }
 
-      WriteResult files = writer.complete();
-      commitAttempted = true;
+      files = writer.complete();
       if (files.deleteFiles().length > 0) {
         RowDelta newRowDelta = icebergTable.newRowDelta();
         Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
@@ -197,7 +199,7 @@ public class IcebergTableOperator {
     } catch (Exception ex) {
       // once a commit was attempted the files may already be referenced by the table (e.g.
       // CommitStateUnknownException), only delete them when iceberg reports the failure cleanable
-      if (!commitAttempted || ex instanceof CleanableFailure) {
+      if (files == null || ex instanceof CleanableFailure) {
         try {
           writer.abort();
         } catch (Exception e) {
