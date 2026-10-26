@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.types.Types;
 
 @ConfigRoot
 @ConfigMapping
@@ -109,6 +110,18 @@ public interface IcebergConfig {
   @WithName("debezium.sink.iceberg.nested-as-variant")
   @WithDefault("false")
   boolean nestedAsVariant();
+
+  @WithName("debezium.sink.iceberg.geospatial-types-enabled")
+  @WithDefault("false")
+  boolean geospatialTypesEnabled();
+
+  @WithName("debezium.sink.iceberg.geometry-crs")
+  @WithDefault(Types.GeometryType.DEFAULT_CRS)
+  String geometryCrs();
+
+  @WithName("debezium.sink.iceberg.geospatial-allow-missing-srid")
+  @WithDefault("false")
+  boolean geospatialAllowMissingSrid();
 
   @WithName("debezium.sink.iceberg.format-version")
   @WithDefault("3")
