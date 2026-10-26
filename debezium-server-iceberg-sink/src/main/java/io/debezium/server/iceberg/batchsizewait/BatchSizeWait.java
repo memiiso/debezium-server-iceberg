@@ -9,16 +9,15 @@
 package io.debezium.server.iceberg.batchsizewait;
 
 /**
- * When enabled dds waiting to the consumer to control batch size. I will turn the processing to batch processing.
+ * When enabled dds waiting to the consumer to control batch size. I will turn the processing to
+ * batch processing.
  *
  * @author Ismail Simsek
  */
 public interface BatchSizeWait {
 
-  default void initizalize() {
-  }
+  default void initizalize() {}
 
-  default void waitMs(Integer numRecordsProcessed, Integer processingTimeMs) throws InterruptedException {
-  }
-
+  default void waitMs(Integer numRecordsProcessed, Integer processingTimeMs)
+      throws InterruptedException {}
 }

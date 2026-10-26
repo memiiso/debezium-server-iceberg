@@ -18,6 +18,12 @@
  */
 package io.debezium.server.iceberg.converter;
 
+import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.variants.ShreddedObject;
 import org.apache.iceberg.variants.ValueArray;
@@ -29,18 +35,12 @@ import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 
-import java.math.BigDecimal;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 /**
- * An implementation of {@link org.apache.iceberg.variants.VariantObject} that wraps a Kafka Connect {@link Struct}.
+ * An implementation of {@link org.apache.iceberg.variants.VariantObject} that wraps a Kafka Connect
+ * {@link Struct}.
  *
- * <p>This allows treating a Struct as a generic variant object, which can then be used to
- * create a serializable {@code ShreddedObject} or {@code SerializedObject}. This implementation is a
+ * <p>This allows treating a Struct as a generic variant object, which can then be used to create a
+ * serializable {@code ShreddedObject} or {@code SerializedObject}. This implementation is a
  * read-only wrapper and does not support direct serialization.
  */
 public class StructVariantObject extends AbstractVariantObject {
@@ -49,18 +49,19 @@ public class StructVariantObject extends AbstractVariantObject {
     super(createMetadata(data));
     Preconditions.checkArgument(data != null, "Invalid Struct: null");
 
-    data.schema().fields().forEach(field -> {
-      Object objectValue = data.get(field);
-      shreddedObject.put(field.name(), toVariantValue(field.schema(), objectValue));
-    });
+    data.schema()
+        .fields()
+        .forEach(
+            field -> {
+              Object objectValue = data.get(field);
+              shreddedObject.put(field.name(), toVariantValue(field.schema(), objectValue));
+            });
   }
 
   private static VariantMetadata createMetadata(Struct data) {
     Preconditions.checkArgument(data != null, "Invalid Struct: null");
     return Variants.metadata(
-        data.schema().fields().stream()
-            .map(Field::name)
-            .collect(Collectors.toList()));
+        data.schema().fields().stream().map(Field::name).collect(Collectors.toList()));
   }
 
   private static VariantValue toVariantValue(Schema schema, Object val) {
@@ -79,7 +80,9 @@ public class StructVariantObject extends AbstractVariantObject {
       case STRUCT:
         return new StructVariantObject((Struct) val);
       case MAP:
-        Preconditions.checkArgument(schema.keySchema().type() == Schema.Type.STRING, "Only MAP with STRING key is supported");
+        Preconditions.checkArgument(
+            schema.keySchema().type() == Schema.Type.STRING,
+            "Only MAP with STRING key is supported");
         Map<String, ?> map = (Map<String, ?>) val;
         Schema valueSchema = schema.valueSchema();
 

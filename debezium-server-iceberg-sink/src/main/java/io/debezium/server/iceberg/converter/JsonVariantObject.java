@@ -19,6 +19,10 @@
 package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import org.apache.iceberg.relocated.com.google.common.base.Preconditions;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.variants.ShreddedObject;
@@ -27,17 +31,13 @@ import org.apache.iceberg.variants.VariantMetadata;
 import org.apache.iceberg.variants.VariantValue;
 import org.apache.iceberg.variants.Variants;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-
 /**
- * An implementation of {@link org.apache.iceberg.variants.VariantObject} that wraps a Jackson {@link JsonNode}.
+ * An implementation of {@link org.apache.iceberg.variants.VariantObject} that wraps a Jackson
+ * {@link JsonNode}.
  *
  * <p>This allows treating a JSON object as a generic variant object, which can then be used to
- * create a serializable {@code ShreddedObject} or {@code SerializedObject}. This implementation is a
- * read-only wrapper and does not support direct serialization.
+ * create a serializable {@code ShreddedObject} or {@code SerializedObject}. This implementation is
+ * a read-only wrapper and does not support direct serialization.
  */
 public class JsonVariantObject extends AbstractVariantObject {
 
@@ -45,10 +45,12 @@ public class JsonVariantObject extends AbstractVariantObject {
     super(createMetadata(node));
     Preconditions.checkArgument(node.isObject(), "Invalid JSON: not an object or null");
 
-    node.fieldNames().forEachRemaining(fieldName -> {
-      JsonNode fieldNode = node.get(fieldName);
-      shreddedObject.put(fieldName, toVariantValue(fieldNode));
-    });
+    node.fieldNames()
+        .forEachRemaining(
+            fieldName -> {
+              JsonNode fieldNode = node.get(fieldName);
+              shreddedObject.put(fieldName, toVariantValue(fieldNode));
+            });
   }
 
   private static VariantMetadata createMetadata(JsonNode node) {
@@ -69,9 +71,11 @@ public class JsonVariantObject extends AbstractVariantObject {
         ArrayList<String> fieldNames = Lists.newArrayList(val.fieldNames());
         VariantMetadata metadata = Variants.metadata(fieldNames);
         ShreddedObject shreddedObject = Variants.object(metadata);
-        val.fields().forEachRemaining(entry -> {
-          shreddedObject.put(entry.getKey(), toVariantValue(entry.getValue()));
-        });
+        val.fields()
+            .forEachRemaining(
+                entry -> {
+                  shreddedObject.put(entry.getKey(), toVariantValue(entry.getValue()));
+                });
         return shreddedObject;
       case ARRAY:
         ValueArray arr = Variants.array();

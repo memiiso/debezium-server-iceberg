@@ -13,17 +13,17 @@ import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import java.sql.SQLException;
+import java.time.Duration;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
-import java.sql.SQLException;
-import java.time.Duration;
-
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
+ * destination.
  *
  * @author Ismail Simsek
  */
@@ -36,15 +36,18 @@ public class IcebergChangeConsumerNessieCatalogTest extends BaseSparkTest {
 
   @Test
   public void testSimpleUpload() throws InterruptedException, SQLException, ClassNotFoundException {
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        Dataset<Row> df = getTableData("testc.inventory.customers");
-        df.show(false);
-        return df.count() >= 3;
-      } catch (Exception e) {
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(120))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> df = getTableData("testc.inventory.customers");
+                df.show(false);
+                return df.count() >= 3;
+              } catch (Exception e) {
+                return false;
+              }
+            });
 
     int startId = 1005;
     int numberOfRecords = 5; // You can change this value
@@ -53,19 +56,14 @@ public class IcebergChangeConsumerNessieCatalogTest extends BaseSparkTest {
       String firstName = "FirstName" + currentId;
       String lastName = "LastName" + currentId;
       String email = "user" + currentId + "@example.com";
-      String insertStatement = String.format(
-          "INSERT INTO inventory.customers (id, first_name, last_name, email) VALUES (%d, '%s', '%s', '%s');",
-          currentId,
-          firstName,
-          lastName,
-          email
-      );
+      String insertStatement =
+          String.format(
+              "INSERT INTO inventory.customers (id, first_name, last_name, email) VALUES (%d, '%s', '%s', '%s');",
+              currentId, firstName, lastName, email);
       SourcePostgresqlDB.runSQL(insertStatement);
       Thread.sleep(3000);
       Dataset<Row> df = getTableData("testc.inventory.customers");
       df.show(false);
     }
   }
-
-
 }

@@ -9,10 +9,8 @@
 package io.debezium.server.iceberg.testresources;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.testcontainers.containers.MySQLContainer;
 
 public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
@@ -38,5 +36,4 @@ public class CatalogJdbc implements QuarkusTestResourceLifecycleManager {
   public void stop() {
     container.stop();
   }
-
 }

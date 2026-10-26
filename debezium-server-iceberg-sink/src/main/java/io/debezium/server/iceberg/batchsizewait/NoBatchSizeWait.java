@@ -18,5 +18,4 @@ import jakarta.inject.Named;
  */
 @Dependent
 @Named("NoBatchSizeWait")
-public class NoBatchSizeWait implements BatchSizeWait {
-}
+public class NoBatchSizeWait implements BatchSizeWait {}

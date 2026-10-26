@@ -8,6 +8,8 @@
 
 package io.debezium.server.iceberg;
 
+import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
+
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourceMysqlDB;
@@ -15,6 +17,9 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
@@ -23,14 +28,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import static io.debezium.server.iceberg.TestConfigSource.ICEBERG_CATALOG_TABLE_NAMESPACE;
-
 /**
- *
  * @author Ismail Simsek
  */
 @QuarkusTest
@@ -47,18 +45,26 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
   @Test
   public void testSimpleUpload() {
     Assertions.assertEquals(sinkType, "icebergevents");
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        Dataset<Row> ds = spark.newSession().sql("SELECT * FROM "+ICEBERG_CATALOG_TABLE_NAMESPACE+".debezium_events");
-        ds.show(false);
-        return ds.count() >= 10
-               && ds.select("event_destination").distinct().count() >= 2;
-      } catch (Exception e) {
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(120))
+        .until(
+            () -> {
+              try {
+                Dataset<Row> ds =
+                    spark
+                        .newSession()
+                        .sql(
+                            "SELECT * FROM "
+                                + ICEBERG_CATALOG_TABLE_NAMESPACE
+                                + ".debezium_events");
+                ds.show(false);
+                return ds.count() >= 10 && ds.select("event_destination").distinct().count() >= 2;
+              } catch (Exception e) {
+                return false;
+              }
+            });
 
-//    S3Minio.listFiles();
+    //    S3Minio.listFiles();
   }
 
   public static class TestProfile implements QuarkusTestProfile {
@@ -69,8 +75,11 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
       config.put("quarkus.profile", "mysql");
       config.put("debezium.format.value", "json");
       config.put("debezium.format.key", "json");
-      config.put("%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
-      config.put("%mysql.debezium.source.table.whitelist", "inventory.customers,inventory.test_delete_table");
+      config.put(
+          "%mysql.debezium.source.connector.class", "io.debezium.connector.mysql.MySqlConnector");
+      config.put(
+          "%mysql.debezium.source.table.whitelist",
+          "inventory.customers,inventory.test_delete_table");
       return config;
     }
 
@@ -79,5 +88,4 @@ public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
       return "mysql";
     }
   }
-
 }

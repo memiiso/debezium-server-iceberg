@@ -14,15 +14,15 @@ import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import java.time.Duration;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
-
 /**
- * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg destination.
+ * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
+ * destination.
  *
  * @author Ismail Simsek
  */
@@ -34,14 +34,16 @@ public class IcebergChangeConsumerJdbcCatalogTest extends BaseTest {
 
   @Test
   public void testSimpleUpload() {
-    Awaitility.await().atMost(Duration.ofSeconds(120)).until(() -> {
-      try {
-        CloseableIterable<Record> result = getTableDataV2("testc.inventory.customers");
-        return Lists.newArrayList(result).size() >= 3;
-      } catch (Exception e) {
-        return false;
-      }
-    });
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(120))
+        .until(
+            () -> {
+              try {
+                CloseableIterable<Record> result = getTableDataV2("testc.inventory.customers");
+                return Lists.newArrayList(result).size() >= 3;
+              } catch (Exception e) {
+                return false;
+              }
+            });
   }
-
 }

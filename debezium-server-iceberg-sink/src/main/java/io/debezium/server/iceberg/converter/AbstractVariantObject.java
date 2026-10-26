@@ -18,13 +18,12 @@
  */
 package io.debezium.server.iceberg.converter;
 
+import java.nio.ByteBuffer;
 import org.apache.iceberg.variants.ShreddedObject;
 import org.apache.iceberg.variants.VariantMetadata;
 import org.apache.iceberg.variants.VariantObject;
 import org.apache.iceberg.variants.VariantValue;
 import org.apache.iceberg.variants.Variants;
-
-import java.nio.ByteBuffer;
 
 public abstract class AbstractVariantObject implements VariantObject {
 
