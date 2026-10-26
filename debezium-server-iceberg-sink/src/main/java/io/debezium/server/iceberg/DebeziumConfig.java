@@ -7,7 +7,6 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
-
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +46,7 @@ public interface DebeziumConfig {
   boolean eventKeySchemaEnabled();
 
   // SET RECOMMENDED DEFAULT VALUES FOR DEBEZIUM CONFIGS
-  //# Save debezium offset state to destination, iceberg table
+  // # Save debezium offset state to destination, iceberg table
   @WithName("debezium.source.offset.storage")
   @WithDefault("io.debezium.server.iceberg.offset.IcebergOffsetBackingStore")
   String offsetStorage();
@@ -102,8 +101,8 @@ public interface DebeziumConfig {
   }
 
   default boolean isAdaptiveTemporalMode() {
-    return temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE ||
-        temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE_TIME_MICROSECONDS;
+    return temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE
+        || temporalPrecisionMode() == TemporalPrecisionMode.ADAPTIVE_TIME_MICROSECONDS;
   }
 
   default boolean isJsonKeyValueChangeEventFormat() {
@@ -114,11 +113,13 @@ public interface DebeziumConfig {
     return this.valueFormat().equals("connect") && this.keyFormat().equals("connect");
   }
 
-
   default String keyValueChangeEventFormat() {
 
     if (!isJsonKeyValueChangeEventFormat() && !isConnectKeyValueChangeEventFormat()) {
-      throw new DebeziumException("debezium.format.value={" + this.valueFormat() + "} not supported! Supported (debezium.format.value,debezium.format.key) formats are {json,connect}!");
+      throw new DebeziumException(
+          "debezium.format.value={"
+              + this.valueFormat()
+              + "} not supported! Supported (debezium.format.value,debezium.format.key) formats are {json,connect}!");
     }
 
     return this.valueFormat();
@@ -127,8 +128,10 @@ public interface DebeziumConfig {
   default void validateTemporalPrecisionMode() {
     if (isAdaptiveTemporalMode()) {
       if (!temporalPrecisionModeAdaptiveAllowed()) {
-        throw new DebeziumException("Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:" + temporalPrecisionMode() +
-            " to enable it set `debezium.source.time.precision.mode.adaptive-allowed` to true.");
+        throw new DebeziumException(
+            "Debezium Adaptive Temporal Precision Modes are not supported!  Temporal Precision Mode:"
+                + temporalPrecisionMode()
+                + " to enable it set `debezium.source.time.precision.mode.adaptive-allowed` to true.");
       }
     }
   }
