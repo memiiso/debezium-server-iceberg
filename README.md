@@ -19,6 +19,7 @@ The following table details version compatibility across all releases and tags, 
 
 | Release / Tag | Release Date | Debezium Version | Iceberg Version | Spark Runtime | Java | Key Capabilities & Highlights |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`1.2.1.Final`** | 2026-10-26 | `3.6.3.Final` | `1.11.0` | `4.0.3` | `21` | Commit failure safety (#778), RetainLast batch deduplicator (#768), batch encounter ordering (#770), eliminate duplicate catalog RPC (#769), assembly ordering (#779) |
 | **`1.2.0.Final`** | 2026-10-04 | `3.6.3.Final` | `1.11.0` | `4.0.3` | `21` | Iceberg v3 Deletion Vectors (#720), parallel upload safety (#754), nullable field defaults (#749), queue byte limit (#762) |
 | **`1.1.1.Final`** | 2026-09-29 | `3.6.3.Final` | `1.10.2` | `4.0.3` | `21` | Upgraded to Debezium 3.6.3.Final |
 | **`1.1.0.Final`** | 2026-07-18 | `3.6.0.Final` | `1.10.2` | `4.0.3` | `21` | Debezium 3.6 baseline, Spark 4.0.3 runtime |
