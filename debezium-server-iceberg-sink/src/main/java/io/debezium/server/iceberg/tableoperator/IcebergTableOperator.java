@@ -35,6 +35,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.UpdateSchema;
 import org.apache.iceberg.data.Record;
+import org.apache.iceberg.exceptions.CleanableFailure;
 import org.apache.iceberg.io.BaseTaskWriter;
 import org.apache.iceberg.io.WriteResult;
 import org.slf4j.Logger;
@@ -171,6 +172,7 @@ public class IcebergTableOperator {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
+    WriteResult files = null;
     try (writer) {
       for (EventConverter e : events) {
         final RecordWrapper record =
@@ -180,7 +182,7 @@ public class IcebergTableOperator {
         writer.write(record);
       }
 
-      WriteResult files = writer.complete();
+      files = writer.complete();
       if (files.deleteFiles().length > 0) {
         RowDelta newRowDelta = icebergTable.newRowDelta();
         Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
@@ -192,10 +194,14 @@ public class IcebergTableOperator {
         appendFiles.commit();
       }
     } catch (Exception ex) {
-      try {
-        writer.abort();
-      } catch (Exception e) {
-        LOGGER.warn("Failed to abort writer for table:`{}`", icebergTable.name(), e);
+      // once a commit was attempted the files may already be referenced by the table (e.g.
+      // CommitStateUnknownException), only delete them when iceberg reports the failure cleanable
+      if (files == null || ex instanceof CleanableFailure) {
+        try {
+          writer.abort();
+        } catch (Exception e) {
+          LOGGER.warn("Failed to abort writer for table:`{}`", icebergTable.name(), e);
+        }
       }
       throw new DebeziumException(
           "Failed to write data to table:`" + icebergTable.name() + "`", ex);
