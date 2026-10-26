@@ -98,10 +98,17 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <dependencies>
+                <!-- Debezium Server and Iceberg Sink -->
                 <dependency>
-                    <groupId>io.prometheus.jmx</groupId>
-                    <artifactId>jmx_prometheus_javaagent</artifactId>
+                    <groupId>io.debezium</groupId>
+                    <artifactId>debezium-server-core</artifactId>
                 </dependency>
+                <dependency>
+                    <groupId>io.debezium</groupId>
+                    <artifactId>debezium-server-iceberg-sink</artifactId>
+                    <version>${revision}</version>
+                </dependency>
+                <!-- Debezium Connectors and Scripting -->
                 <dependency>
                     <groupId>io.debezium</groupId>
                     <artifactId>debezium-connector-mariadb</artifactId>
@@ -139,18 +146,15 @@
                     <artifactId>debezium-scripting-languages</artifactId>
                     <type>pom</type>
                 </dependency>
-                <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-core</artifactId>
-                </dependency>
-                <dependency>
-                    <groupId>io.debezium</groupId>
-                    <artifactId>debezium-server-iceberg-sink</artifactId>
-                    <version>${revision}</version>
-                </dependency>
+                <!-- Iceberg -->
                 <dependency>
                     <groupId>org.apache.iceberg</groupId>
                     <artifactId>iceberg-nessie</artifactId>
+                </dependency>
+                <!-- Additional extensions -->
+                <dependency>
+                    <groupId>io.prometheus.jmx</groupId>
+                    <artifactId>jmx_prometheus_javaagent</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>io.quarkus</groupId>
