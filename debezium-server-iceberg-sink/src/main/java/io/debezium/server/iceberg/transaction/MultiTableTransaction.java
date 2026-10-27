@@ -9,8 +9,6 @@
 package io.debezium.server.iceberg.transaction;
 
 import io.debezium.DebeziumException;
-import io.debezium.runtime.BatchEvent;
-import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link BatchTransaction} implementation that stages updates across multiple Iceberg tables (and
- * the offset storage table) and commits them atomically via {@link
- * RESTCatalog#commitTransaction(List)}.
+ * {@link BatchTransaction} implementation that stages updates across multiple Iceberg tables and
+ * commits them atomically via {@link RESTCatalog#commitTransaction(List)}.
  */
 public class MultiTableTransaction implements BatchTransaction {
 
@@ -35,8 +32,6 @@ public class MultiTableTransaction implements BatchTransaction {
 
   private final RESTCatalog restCatalog;
   private final Map<TableIdentifier, Transaction> transactions = new ConcurrentHashMap<>();
-  private List<BatchEvent> batchRecords = List.of();
-  private boolean committed = false;
 
   public MultiTableTransaction(RESTCatalog restCatalog) {
     this.restCatalog = restCatalog;
@@ -45,15 +40,6 @@ public class MultiTableTransaction implements BatchTransaction {
   @Override
   public Table enlist(TableIdentifier tableId, Table icebergTable) {
     return transactions.computeIfAbsent(tableId, id -> icebergTable.newTransaction()).table();
-  }
-
-  @Override
-  public void commitOffset(List<BatchEvent> records) {
-    this.batchRecords = records != null ? records : List.of();
-    IcebergOffsetBackingStore offsetStore = IcebergOffsetBackingStore.getActiveInstance();
-    if (offsetStore != null) {
-      offsetStore.stageBatchOffsets(this, this.batchRecords);
-    }
   }
 
   @Override
@@ -79,27 +65,6 @@ public class MultiTableTransaction implements BatchTransaction {
       restCatalog.commitTransaction(tableCommits);
       for (TableCommit tc : tableCommits) {
         restCatalog.invalidateTable(tc.identifier());
-      }
-    }
-
-    IcebergOffsetBackingStore offsetStore = IcebergOffsetBackingStore.getActiveInstance();
-    if (offsetStore != null) {
-      offsetStore.onBatchTransactionCommitted();
-    }
-
-    for (BatchEvent record : batchRecords) {
-      LOGGER.trace("Processed event '{}'", record);
-      record.commit();
-    }
-    this.committed = true;
-  }
-
-  @Override
-  public void close() {
-    if (!committed) {
-      IcebergOffsetBackingStore offsetStore = IcebergOffsetBackingStore.getActiveInstance();
-      if (offsetStore != null) {
-        offsetStore.onBatchTransactionAborted();
       }
     }
   }

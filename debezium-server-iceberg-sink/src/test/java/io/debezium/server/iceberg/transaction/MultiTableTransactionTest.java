@@ -9,7 +9,6 @@
 package io.debezium.server.iceberg.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,16 +33,11 @@ import io.debezium.server.iceberg.batchsizewait.NoBatchSizeWait;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.deduplication.RetainLastBatchDeduplicator;
 import io.debezium.server.iceberg.mapper.DefaultIcebergTableMapper;
-import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
-import io.debezium.server.iceberg.offset.IcebergOffsetBackingStoreTest;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.server.iceberg.tableoperator.IcebergTableWriterFactory;
 import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,8 +59,6 @@ import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.inmemory.InMemoryCatalog;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.rest.RESTCatalog;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -84,7 +76,6 @@ public class MultiTableTransactionTest {
   private BatchConfig batchConfig;
   private IcebergTableOperator tableOperator;
   private IcebergChangeConsumer consumer;
-  private IcebergOffsetBackingStore offsetStore;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -155,24 +146,6 @@ public class MultiTableTransactionTest {
     setField(consumer, "numConcurrentUploads", 1);
     setField(consumer, "concurrentUploadsTimeoutMinutes", 5);
     setStaticField(IcebergChangeConsumer.class, "keyValueChangeEventFormat", "json");
-
-    IcebergOffsetBackingStore.registerSharedCatalog(restCatalog);
-    offsetStore = new IcebergOffsetBackingStore();
-    Map<String, String> offsetProps = new HashMap<>();
-    offsetProps.put("name", "test-engine");
-    offsetProps.put("offset.storage.iceberg.table-namespace", NAMESPACE);
-    offsetProps.put("offset.storage.iceberg.table-name", "debezium_offset_storage");
-    offsetProps.put("offset.storage.iceberg.warehouse", tempDir.resolve("warehouse").toString());
-    offsetStore.configure(new IcebergOffsetBackingStoreTest.TestWorkerConfig(offsetProps));
-    offsetStore.start();
-  }
-
-  @AfterEach
-  void tearDown() {
-    if (offsetStore != null) {
-      offsetStore.stop();
-    }
-    IcebergOffsetBackingStore.clearSharedCatalog(restCatalog);
   }
 
   @Test
@@ -183,23 +156,21 @@ public class MultiTableTransactionTest {
         Map.of(CatalogProperties.WAREHOUSE_LOCATION, tempDir.resolve("wh2").toString()));
     setField(consumer, "icebergCatalog", nonRestCatalog);
 
-    BatchEvent event = createBatchEvent("inventory.customers", 1, "Alice", 100L);
-    CapturingEvents<BatchEvent> batch = createCapturingEvents(List.of(event));
-
-    DebeziumException ex = assertThrows(DebeziumException.class, () -> consumer.handle(batch));
+    DebeziumException ex =
+        assertThrows(
+            DebeziumException.class, () -> consumer.validateMultiTableTransactionSupport());
     assertTrue(ex.getMessage().contains("RESTCatalog"));
-    verify(event, never()).commit();
   }
 
   @Test
-  void testMultiTableTransactionSequentialWithOffsetCommit() throws Exception {
+  void testMultiTableTransactionSequential() throws Exception {
     BatchEvent event1 = createBatchEvent("inventory.customers", 1, "Alice", 101L);
     BatchEvent event2 = createBatchEvent("inventory.orders", 10, "Order-10", 102L);
     CapturingEvents<BatchEvent> batch = createCapturingEvents(List.of(event1, event2));
 
     consumer.handle(batch);
 
-    // 1. Verify single atomic commitTransaction call containing both data tables + offset table
+    // 1. Verify single atomic commitTransaction call containing both data tables
     assertEquals(1, restCatalog.committedBatches.size());
     List<TableCommit> commits = restCatalog.committedBatches.get(0);
     Set<TableIdentifier> committedTables =
@@ -207,8 +178,7 @@ public class MultiTableTransactionTest {
     assertEquals(
         Set.of(
             TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_customers"),
-            TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders"),
-            TableIdentifier.of(NAMESPACE, "debezium_offset_storage")),
+            TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders")),
         committedTables);
 
     // 2. Verify data in both tables
@@ -218,37 +188,13 @@ public class MultiTableTransactionTest {
     assertEquals(
         1, readTableRecords(TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders")).size());
 
-    // 3. Verify offset table has the committed offset (lsn=102)
-    List<Record> offsetRows =
-        readTableRecords(TableIdentifier.of(NAMESPACE, "debezium_offset_storage"));
-    assertEquals(1, offsetRows.size());
-    String offsetJson = (String) offsetRows.get(0).getField("offset_data");
-    assertTrue(offsetJson.contains("102"), "Expected offset_data to contain 102: " + offsetJson);
-
-    // 4. Verify Debezium BatchEvents were marked committed
+    // 3. Verify Debezium BatchEvents were marked committed after transaction commit
     verify(event1, times(1)).commit();
     verify(event2, times(1)).commit();
-
-    // 5. Verify subsequent periodic set() with identical offset skips redundant table commit
-    Table offsetTableBefore =
-        restCatalog.loadTable(TableIdentifier.of(NAMESPACE, "debezium_offset_storage"));
-    long snapshotBefore = offsetTableBefore.currentSnapshot().snapshotId();
-
-    Map<ByteBuffer, ByteBuffer> sameOffset = new HashMap<>();
-    String expectedKey = "[\"test-engine\",{\"server\":\"testc\"}]";
-    String expectedVal = "{\"lsn\":102}";
-    sameOffset.put(
-        IcebergOffsetBackingStore.toByteBuffer(expectedKey),
-        IcebergOffsetBackingStore.toByteBuffer(expectedVal));
-    offsetStore.set(sameOffset, (err, res) -> {}).get();
-
-    Table offsetTableAfter =
-        restCatalog.loadTable(TableIdentifier.of(NAMESPACE, "debezium_offset_storage"));
-    assertEquals(snapshotBefore, offsetTableAfter.currentSnapshot().snapshotId());
   }
 
   @Test
-  void testMultiTableTransactionParallelWithOffsetCommit() throws Exception {
+  void testMultiTableTransactionParallel() throws Exception {
     setField(consumer, "numConcurrentUploads", 4);
     setField(consumer, "concurrencyLimiter", new Semaphore(4));
 
@@ -267,8 +213,7 @@ public class MultiTableTransactionTest {
         Set.of(
             TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_customers"),
             TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders"),
-            TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_products"),
-            TableIdentifier.of(NAMESPACE, "debezium_offset_storage")),
+            TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_products")),
         committedTables);
 
     assertEquals(
@@ -307,17 +252,6 @@ public class MultiTableTransactionTest {
         readTableRecords(TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_customers")).size());
     assertEquals(
         0, readTableRecords(TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders")).size());
-
-    // Offset store in-memory state and Iceberg table must still reflect Batch 1 (lsn=100)
-    String keyStr = "[\"test-engine\",{\"server\":\"testc\"}]";
-    Map<ByteBuffer, ByteBuffer> stored =
-        offsetStore.get(List.of(IcebergOffsetBackingStore.toByteBuffer(keyStr))).get();
-    String offsetVal =
-        IcebergOffsetBackingStore.fromByteBuffer(
-            stored.get(IcebergOffsetBackingStore.toByteBuffer(keyStr)));
-    assertNotNull(offsetVal);
-    assertTrue(offsetVal.contains("100"));
-    assertFalse(offsetVal.contains("201"));
 
     // Batch 2 events must NOT be committed to Debezium
     verify(b2Event1, never()).commit();
@@ -415,11 +349,6 @@ public class MultiTableTransactionTest {
     lenient().when(batchEvent.destination()).thenReturn(destination);
     lenient().when(batchEvent.key()).thenReturn(key);
     lenient().when(batchEvent.value()).thenReturn(val);
-
-    SourceRecord sr = mock(SourceRecord.class);
-    lenient().doReturn(Collections.singletonMap("server", "testc")).when(sr).sourcePartition();
-    lenient().doReturn(Collections.singletonMap("lsn", lsn)).when(sr).sourceOffset();
-    lenient().when(batchEvent.record()).thenReturn(sr);
     return batchEvent;
   }
 
@@ -470,11 +399,6 @@ public class MultiTableTransactionTest {
     lenient().when(batchEvent.destination()).thenReturn(destination);
     lenient().when(batchEvent.key()).thenReturn(key);
     lenient().when(batchEvent.value()).thenReturn(val);
-
-    SourceRecord sr = mock(SourceRecord.class);
-    lenient().doReturn(Collections.singletonMap("server", "testc")).when(sr).sourcePartition();
-    lenient().doReturn(Collections.singletonMap("lsn", lsn)).when(sr).sourceOffset();
-    lenient().when(batchEvent.record()).thenReturn(sr);
     return batchEvent;
   }
 
