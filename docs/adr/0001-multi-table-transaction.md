@@ -1,4 +1,4 @@
-# ADR-0001: Multi-Table Batch Transaction
+# ADR-0001: Multi-Table Batch Transaction & Synchronous Offset Commit
 
 * **Status**: Proposed / Draft
 * **Date**: 2026-10-27
@@ -26,12 +26,33 @@ In `IcebergChangeConsumer`, a single Debezium CDC batch often spans multiple sou
    - When `false` (default), the existing per-table commit behavior is preserved without changes.
    - When `true`, `IcebergChangeConsumer` verifies once during `@PostConstruct` initialization (`validateMultiTableTransactionSupport()`) that the configured catalog supports multi-table transactions (`RESTCatalog`), failing fast otherwise.
 
-3. **4-Step Batch Lifecycle**:
+3. **4-Step Batch Lifecycle Synchronized with Debezium 3.7.0 Offset Commit**:
    Every batch in `IcebergChangeConsumer.handle()` executes a unified 4-step flow through a `BatchTransaction` abstraction:
    1. **Open transaction** (`try (BatchTransaction tx = openTransaction())`)
    2. **Consume batch & upload to tables** (supporting both **parallel** and **sequential** table processing)
    3. **Commit the multi-table transaction** (`tx.commit()` — executes a single atomic `RESTCatalog.commitTransaction(List<TableCommit>)` across all modified destination tables)
-   4. **Commit the offset** (`record.commit()` on each `BatchEvent`, allowing Debezium's `RecordCommitter.markBatchFinished()` to persist the offset only after all tables in the batch are atomically committed)
+   4. **Commit the offset** (`record.commit()` on each `BatchEvent`, followed immediately by `debezium-quarkus` invoking `committer.markBatchFinished()`)
+
+---
+
+## Debezium 3.7.0 Offset Commit Synchronization
+
+In Debezium 3.7.0 (`debezium-quarkus` and `debezium-embedded`):
+
+1. **In-Memory Record Marking (`BatchEvent.commit()`)**:
+   `CapturingEvents<BatchEvent>` provides `records()`, `destination()`, `source()`, and `engine()`. Calling `record.commit()` on each `BatchEvent` invokes `RecordCommitter.markProcessed(record)`, which buffers `(sourcePartition, sourceOffset)` in memory inside Kafka Connect's `OffsetStorageWriter` and increments `recordsSinceLastCommit`.
+2. **Automatic Batch Finish (`committer.markBatchFinished()`)**:
+   In `io.quarkus.debezium.engine.capture.consumer.DefaultChangeConsumerFactory.RoutedQuarkusChangeConsumer`, `committer.markBatchFinished()` is called **automatically right after `IcebergChangeConsumer.handle(events)` returns**.
+3. **Synchronous Flush (`AsyncEmbeddedEngine.commitOffsets()`)**:
+   Inside `AsyncEmbeddedEngine.markBatchFinished()`, when `OffsetCommitPolicy.performCommit(...)` returns `true`, `commitOffsets()` calls `offsetWriter.doFlush(...)` and **blocks synchronously on `flushFuture.get(commitTimeout, TimeUnit.MILLISECONDS)`** followed by `task.commit()` before polling the next batch.
+4. **Enabling Synchronous Per-Batch Offset Flush**:
+   By default, Debezium uses `PeriodicCommitOffsetPolicy` (`debezium.source.offset.flush.interval.ms=60000`). To flush the offset **synchronously at the end of every batch** immediately after `MultiTableTransaction.commit()`, configure either:
+   ```properties
+   debezium.source.offset.flush.interval.ms=0
+   # or
+   debezium.source.offset.commit.policy=io.debezium.engine.spi.OffsetCommitPolicy$AlwaysCommitOffsetPolicy
+   ```
+   When `debezium.sink.iceberg.multi-table-transaction=true` and neither property is set, `IcebergChangeConsumer` logs a startup warning recommending synchronous per-batch offset flushing.
 
 ---
 
@@ -39,11 +60,12 @@ In `IcebergChangeConsumer`, a single Debezium CDC batch often spans multiple sou
 
 ```mermaid
 sequenceDiagram
-    participant DBZ as Debezium Engine
+    participant DBZ as Debezium Engine (Quarkus)
     participant ICC as IcebergChangeConsumer
     participant TX as BatchTransaction
     participant ITO as IcebergTableOperator
     participant CAT as RESTCatalog
+    participant OBS as OffsetBackingStore
 
     DBZ->>ICC: handle(CapturingEvents<BatchEvent>)
     Note over ICC: Filter heartbeats & group events<br/>by mapped TableIdentifier (#761)
@@ -57,8 +79,9 @@ sequenceDiagram
     ICC->>TX: 3. tx.commit()
     TX->>CAT: commitTransaction(List<TableCommit>)
     Note over CAT: Single atomic POST /v1/transactions/commit<br/>across all modified data tables
-    ICC->>DBZ: 4. record.commit() for all BatchEvents
-    ICC-->>DBZ: return -> committer.markBatchFinished() flushes offset
+    ICC->>DBZ: 4. record.commit() for all BatchEvents (buffers in OffsetStorageWriter)
+    ICC-->>DBZ: return from handle()
+    DBZ->>OBS: 5. committer.markBatchFinished() -> flushFuture.get() (synchronous when flush.interval.ms=0 / AlwaysCommitOffsetPolicy)
 ```
 
 ---
@@ -92,5 +115,6 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 
 | Failure Point | Data Tables | Debezium Offset & Source DB Replication Slot | Recovery Behavior |
 | :--- | :--- | :--- | :--- |
-| **Crash / Exception during Step 2 (Table upload)** | Uncommitted (`BaseTransaction` never sent to catalog) | Uncommitted (`handle()` throws before `record.commit()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
-| **Crash / Exception during Step 3 (`RESTCatalog.commitTransaction`)** | Atomically rejected by catalog | Uncommitted (`handle()` throws before `record.commit()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
+| **Crash / Exception during Step 2 (Table upload)** | Uncommitted (`BaseTransaction` never sent to catalog) | Uncommitted (`handle()` throws before `record.commit()` and `markBatchFinished()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
+| **Crash / Exception during Step 3 (`RESTCatalog.commitTransaction`)** | Atomically rejected by catalog | Uncommitted (`handle()` throws before `record.commit()` and `markBatchFinished()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
+| **Step 3 succeeds -> Step 4 & 5 (`record.commit()` + synchronous `markBatchFinished()`)** | All batch tables committed atomically in a single catalog transaction | Flushed synchronously via `flushFuture.get()` before polling the next batch (when `offset.flush.interval.ms=0` or `AlwaysCommitOffsetPolicy`) | Batch data and source offset are persisted before the next batch begins. |

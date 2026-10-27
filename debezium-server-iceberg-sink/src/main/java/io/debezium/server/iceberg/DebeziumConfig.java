@@ -9,6 +9,7 @@ import io.smallrye.config.WithDefault;
 import io.smallrye.config.WithName;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @ConfigRoot
 @ConfigMapping
@@ -54,6 +55,19 @@ public interface DebeziumConfig {
   @WithName("debezium.source.offset.storage.iceberg.table-name")
   @WithDefault("_debezium_offset_storage")
   String offsetStorageTable();
+
+  @WithName("debezium.source.offset.flush.interval.ms")
+  Optional<Long> offsetFlushIntervalMs();
+
+  @WithName("debezium.source.offset.commit.policy")
+  Optional<String> offsetCommitPolicy();
+
+  default boolean isSynchronousOffsetCommitEnabled() {
+    return offsetFlushIntervalMs().map(ms -> ms <= 0L).orElse(false)
+        || offsetCommitPolicy()
+            .map(policy -> policy.endsWith("AlwaysCommitOffsetPolicy"))
+            .orElse(false);
+  }
 
   // Save schema history to iceberg table
   @WithName("debezium.source.schema.history.internal")

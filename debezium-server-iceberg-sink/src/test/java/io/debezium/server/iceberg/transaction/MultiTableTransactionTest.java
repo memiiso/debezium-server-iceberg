@@ -9,6 +9,7 @@
 package io.debezium.server.iceberg.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -160,6 +161,29 @@ public class MultiTableTransactionTest {
         assertThrows(
             DebeziumException.class, () -> consumer.validateMultiTableTransactionSupport());
     assertTrue(ex.getMessage().contains("RESTCatalog"));
+  }
+
+  @Test
+  void testSynchronousOffsetCommitConfigDetection() {
+    when(debeziumConfig.isSynchronousOffsetCommitEnabled()).thenCallRealMethod();
+
+    when(debeziumConfig.offsetFlushIntervalMs()).thenReturn(Optional.empty());
+    when(debeziumConfig.offsetCommitPolicy()).thenReturn(Optional.empty());
+    assertFalse(debeziumConfig.isSynchronousOffsetCommitEnabled());
+
+    when(debeziumConfig.offsetFlushIntervalMs()).thenReturn(Optional.of(60000L));
+    assertFalse(debeziumConfig.isSynchronousOffsetCommitEnabled());
+
+    when(debeziumConfig.offsetFlushIntervalMs()).thenReturn(Optional.of(0L));
+    assertTrue(debeziumConfig.isSynchronousOffsetCommitEnabled());
+
+    when(debeziumConfig.offsetFlushIntervalMs()).thenReturn(Optional.empty());
+    when(debeziumConfig.offsetCommitPolicy())
+        .thenReturn(
+            Optional.of("io.debezium.engine.spi.OffsetCommitPolicy$AlwaysCommitOffsetPolicy"));
+    assertTrue(debeziumConfig.isSynchronousOffsetCommitEnabled());
+
+    consumer.validateMultiTableTransactionSupport();
   }
 
   @Test

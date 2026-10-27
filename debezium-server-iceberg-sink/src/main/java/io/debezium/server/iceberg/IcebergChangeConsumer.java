@@ -131,6 +131,13 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
           "Multi-table transaction (debezium.sink.iceberg.multi-table-transaction=true) requires a RESTCatalog, but found: "
               + (icebergCatalog == null ? "null" : icebergCatalog.getClass().getName()));
     }
+    if (!config.debezium().isSynchronousOffsetCommitEnabled()) {
+      LOGGER.warn(
+          "Multi-table transaction is enabled, but synchronous per-batch offset commit is not configured. "
+              + "Recommend setting 'debezium.source.offset.flush.interval.ms=0' or "
+              + "'debezium.source.offset.commit.policy=io.debezium.engine.spi.OffsetCommitPolicy$AlwaysCommitOffsetPolicy' "
+              + "so offsets are flushed synchronously after each batch commit.");
+    }
   }
 
   protected BatchTransaction openTransaction() {
