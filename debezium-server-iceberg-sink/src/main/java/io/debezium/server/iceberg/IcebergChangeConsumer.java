@@ -18,7 +18,11 @@ import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.StructEventConverter;
 import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.mapper.IcebergTableMapper;
+import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
+import io.debezium.server.iceberg.transaction.BatchTransaction;
+import io.debezium.server.iceberg.transaction.MultiTableTransaction;
+import io.debezium.server.iceberg.transaction.NoOpBatchTransaction;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
@@ -53,6 +57,7 @@ import org.apache.iceberg.SortOrder;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.iceberg.rest.RESTCatalog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +108,10 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
     icebergCatalog =
         CatalogUtil.buildIcebergCatalog(
             config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
+    if (config.iceberg().multiTableTransaction()) {
+      validateMultiTableTransactionSupport();
+      IcebergOffsetBackingStore.registerSharedCatalog(icebergCatalog);
+    }
     batchSizeWait =
         IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
@@ -118,8 +127,27 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
     }
   }
 
+  void validateMultiTableTransactionSupport() {
+    if (!(icebergCatalog instanceof RESTCatalog)) {
+      throw new DebeziumException(
+          "Multi-table transaction (debezium.sink.iceberg.multi-table-transaction=true) requires a RESTCatalog, but found: "
+              + (icebergCatalog == null ? "null" : icebergCatalog.getClass().getName()));
+    }
+  }
+
+  protected BatchTransaction openTransaction() {
+    if (config.iceberg().multiTableTransaction()) {
+      validateMultiTableTransactionSupport();
+      RESTCatalog restCatalog = (RESTCatalog) icebergCatalog;
+      IcebergOffsetBackingStore.registerSharedCatalog(restCatalog);
+      return new MultiTableTransaction(restCatalog);
+    }
+    return new NoOpBatchTransaction();
+  }
+
   @PreDestroy
   void close() {
+    IcebergOffsetBackingStore.clearSharedCatalog(icebergCatalog);
     try {
       LOGGER.info("Shutting down executor service.");
       executor.shutdown();
@@ -138,9 +166,14 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   public void handle(CapturingEvents<BatchEvent> events) throws InterruptedException {
     Instant start = Instant.now();
 
-    // group events by destination (per iceberg table)
-    Map<String, List<EventConverter>> result =
+    // Filter skipped heartbeat events and group events by mapped TableIdentifier (per iceberg
+    // table)
+    Map<TableIdentifier, List<EventConverter>> result =
         events.records().stream()
+            .filter(
+                (BatchEvent e) ->
+                    !(config.debezium().isHeartbeatTopic(e.destination())
+                        && config.debezium().topicHeartbeatSkipConsuming()))
             .map(
                 (BatchEvent e) -> {
                   return switch (keyValueChangeEventFormat) {
@@ -153,18 +186,20 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
                 })
             .collect(
                 Collectors.groupingBy(
-                    EventConverter::destination, LinkedHashMap::new, Collectors.toList()));
+                    e -> mapDestination(e.destination()), LinkedHashMap::new, Collectors.toList()));
 
-    // consume list of events for each destination table
-    if (numConcurrentUploads > 1) {
-      this.processTablesInParallel(result);
-    } else {
-      this.processTablesSequentially(result);
-    }
-
-    for (BatchEvent record : events.records()) {
-      LOGGER.trace("Processed event '{}'", record);
-      record.commit();
+    // 1. Open transaction (multi-table when enabled, no-op otherwise)
+    try (BatchTransaction tx = openTransaction()) {
+      // 2. Consume and upload batches to all destination tables (parallel or sequential)
+      if (numConcurrentUploads > 1) {
+        this.processTablesInParallel(result, tx);
+      } else {
+        this.processTablesSequentially(result, tx);
+      }
+      // 3. Commit the offset
+      tx.commitOffset(events.records());
+      // 4. Commit the multi-table transaction
+      tx.commit();
     }
     this.logConsumerProgress(events.records().size());
 
@@ -176,42 +211,32 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   /**
    * Processes events for each destination table sequentially in a single thread.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of
+   * @param eventsByTable A map where keys are destination table identifiers and values are lists of
    *     events for that table.
+   * @param tx Active batch transaction.
    */
-  private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
-    for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
-
-      if (config.debezium().isHeartbeatTopic(tableEvents.getKey())
-          && config.debezium().topicHeartbeatSkipConsuming()) {
-        continue;
-      }
-
+  private void processTablesSequentially(
+      Map<TableIdentifier, List<EventConverter>> eventsByTable, BatchTransaction tx) {
+    for (Map.Entry<TableIdentifier, List<EventConverter>> tableEvents : eventsByTable.entrySet()) {
       Table icebergTable =
-          this.loadIcebergTable(
-              mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
-      icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+          this.loadIcebergTable(tableEvents.getKey(), tableEvents.getValue().get(0));
+      Table transactionalTable = tx.enlist(tableEvents.getKey(), icebergTable);
+      icebergTableOperator.addToTable(transactionalTable, tableEvents.getValue());
     }
   }
-
-  // In IcebergChangeConsumer.java
 
   /**
    * Processes events for each destination table in parallel using a virtual thread pool.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of
+   * @param eventsByTable A map where keys are destination table identifiers and values are lists of
    *     events for that table.
+   * @param tx Active batch transaction.
    */
-  private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination)
+  private void processTablesInParallel(
+      Map<TableIdentifier, List<EventConverter>> eventsByTable, BatchTransaction tx)
       throws InterruptedException {
     List<Callable<Void>> tasks = new ArrayList<>();
-    for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
-
-      if (config.debezium().isHeartbeatTopic(tableEvents.getKey())
-          && config.debezium().topicHeartbeatSkipConsuming()) {
-        continue;
-      }
-
+    for (Map.Entry<TableIdentifier, List<EventConverter>> tableEvents : eventsByTable.entrySet()) {
       tasks.add(
           () -> {
             boolean acquired = false;
@@ -228,9 +253,9 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
                   tableEvents.getKey());
 
               Table icebergTable =
-                  this.loadIcebergTable(
-                      mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
-              icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
+                  this.loadIcebergTable(tableEvents.getKey(), tableEvents.getValue().get(0));
+              Table transactionalTable = tx.enlist(tableEvents.getKey(), icebergTable);
+              icebergTableOperator.addToTable(transactionalTable, tableEvents.getValue());
               return null; // Callable must return a value
             } catch (InterruptedException e) {
               Thread.currentThread().interrupt(); // Restore interrupted status
