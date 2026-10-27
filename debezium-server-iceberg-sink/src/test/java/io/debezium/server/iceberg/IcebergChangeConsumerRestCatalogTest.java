@@ -14,8 +14,11 @@ import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
+import io.quarkus.test.junit.TestProfile;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
@@ -35,6 +38,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
+@TestProfile(IcebergChangeConsumerRestCatalogTest.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
 public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
 
@@ -64,5 +68,12 @@ public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
             TableIdentifier.of(
                 Namespace.of(consumer.config.iceberg().namespace()),
                 "debeziumcdc_testc_inventory_customers")));
+  }
+
+  public static class TestProfile implements QuarkusTestProfile {
+    @Override
+    public Map<String, String> getConfigOverrides() {
+      return Map.of("debezium.sink.iceberg.multi-table-transaction", "true");
+    }
   }
 }

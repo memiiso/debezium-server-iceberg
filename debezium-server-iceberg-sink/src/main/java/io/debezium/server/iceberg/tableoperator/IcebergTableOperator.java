@@ -30,10 +30,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.iceberg.AppendFiles;
+import org.apache.iceberg.BaseTable;
+import org.apache.iceberg.HasTableOperations;
 import org.apache.iceberg.RowDelta;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
-import org.apache.iceberg.UpdateSchema;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.exceptions.CleanableFailure;
 import org.apache.iceberg.io.BaseTaskWriter;
@@ -97,19 +98,26 @@ public class IcebergTableOperator {
    * @param newSchema
    */
   private void applyFieldAddition(Table icebergTable, Schema newSchema) {
-
-    UpdateSchema us =
-        icebergTable
+    Table schemaPreviewTable =
+        (icebergTable instanceof HasTableOperations opsTable)
+            ? new BaseTable(opsTable.operations(), icebergTable.name())
+            : icebergTable;
+    Schema newSchemaCombined =
+        schemaPreviewTable
             .updateSchema()
             .unionByNameWith(newSchema)
-            .setIdentifierFields(newSchema.identifierFieldNames());
-    Schema newSchemaCombined = us.apply();
+            .setIdentifierFields(newSchema.identifierFieldNames())
+            .apply();
 
     // @NOTE avoid committing when there is no schema change. commit creates new commit even when
     // there is no change!
     if (!icebergTable.schema().sameSchema(newSchemaCombined)) {
       LOGGER.warn("Extending schema of {}", icebergTable.name());
-      us.commit();
+      icebergTable
+          .updateSchema()
+          .unionByNameWith(newSchema)
+          .setIdentifierFields(newSchema.identifierFieldNames())
+          .commit();
     }
   }
 

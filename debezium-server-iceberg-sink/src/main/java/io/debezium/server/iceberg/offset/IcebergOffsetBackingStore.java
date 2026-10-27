@@ -16,8 +16,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.config.Configuration;
+import io.debezium.runtime.BatchEvent;
 import io.debezium.server.iceberg.IcebergUtil;
 import io.debezium.server.iceberg.tableoperator.UnpartitionedAppendWriter;
+import io.debezium.server.iceberg.transaction.BatchTransaction;
 import io.debezium.util.Strings;
 import jakarta.enterprise.context.Dependent;
 import java.io.File;
@@ -29,8 +31,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -55,7 +61,10 @@ import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.types.Types;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.json.JsonConverterConfig;
 import org.apache.kafka.connect.runtime.WorkerConfig;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.util.Callback;
@@ -76,7 +85,15 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   protected static final ObjectMapper mapper = new ObjectMapper();
   public static final String CONFIGURATION_FIELD_PREFIX_STRING = "offset.storage.";
   private static final Logger LOG = LoggerFactory.getLogger(IcebergOffsetBackingStore.class);
+  private static volatile Catalog sharedCatalog;
+  private static volatile IcebergOffsetBackingStore activeInstance;
+
   protected Map<String, String> data = new HashMap<>();
+  private Map<String, String> stagedBackup;
+  private volatile boolean dirty = false;
+  private String engineName = "debezium";
+  private final JsonConverter keyConverter = new JsonConverter();
+  private final JsonConverter valueConverter = new JsonConverter();
   Catalog icebergCatalog;
   private String tableFullName;
   private TableIdentifier tableId;
@@ -88,14 +105,47 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
 
   public IcebergOffsetBackingStore() {}
 
+  public static void registerSharedCatalog(Catalog catalog) {
+    sharedCatalog = catalog;
+    IcebergOffsetBackingStore instance = activeInstance;
+    if (instance != null && catalog != null) {
+      instance.useCatalog(catalog);
+    }
+  }
+
+  public static void clearSharedCatalog(Catalog catalog) {
+    if (sharedCatalog == catalog) {
+      sharedCatalog = null;
+    }
+  }
+
+  public static IcebergOffsetBackingStore getActiveInstance() {
+    return activeInstance;
+  }
+
+  private synchronized void useCatalog(Catalog catalog) {
+    if (this.icebergCatalog != catalog) {
+      this.icebergCatalog = catalog;
+      if (this.tableId != null) {
+        initializeTable();
+      }
+    }
+  }
+
   @Override
   public void configure(WorkerConfig config) {
     super.configure(config);
 
+    keyConverter.configure(
+        Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false"), true);
+    valueConverter.configure(
+        Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, "false"), false);
+    engineName = config.originalsStrings().getOrDefault("name", "debezium");
+
     storageConfig =
         new IcebergOffsetBackingStoreConfig(
             Configuration.from(config.originalsStrings()), CONFIGURATION_FIELD_PREFIX_STRING);
-    icebergCatalog = storageConfig.icebergCatalog();
+    icebergCatalog = (sharedCatalog != null) ? sharedCatalog : storageConfig.icebergCatalog();
     tableFullName = storageConfig.tableFullName();
     tableId = storageConfig.tableIdentifier();
   }
@@ -104,12 +154,19 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   public synchronized void start() {
     super.start();
     LOG.info("Starting IcebergOffsetBackingStore table:{}", tableFullName);
+    if (sharedCatalog != null && icebergCatalog != sharedCatalog) {
+      icebergCatalog = sharedCatalog;
+    }
     initializeTable();
     load();
+    activeInstance = this;
   }
 
   @Override
   public synchronized void stop() {
+    if (activeInstance == this) {
+      activeInstance = null;
+    }
     if (executor != null) {
       shutdownExecutorServiceQuietly(executor, 30, TimeUnit.SECONDS);
       executor = null;
@@ -196,6 +253,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   }
 
   protected void save() {
+    save(offsetTable);
+    dirty = false;
+  }
+
+  protected void save(Table targetTable) {
     LOG.debug("Saving offset data to iceberg table...");
     try {
       String dataJson = mapper.writeValueAsString(data);
@@ -211,17 +273,17 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
 
       try (BaseTaskWriter<Record> writer =
           new UnpartitionedAppendWriter(
-              offsetTable.spec(),
+              targetTable.spec(),
               format,
               fileWriterFactory,
               fileFactory,
-              offsetTable.io(),
+              targetTable.io(),
               Long.MAX_VALUE)) {
         writer.write(row);
         writer.close();
         WriteResult files = writer.complete();
 
-        OverwriteFiles overwrite = offsetTable.newOverwrite();
+        OverwriteFiles overwrite = targetTable.newOverwrite();
         overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
         Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
         overwrite.commit();
@@ -232,6 +294,61 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  public synchronized void stageBatchOffsets(BatchTransaction tx, List<BatchEvent> records) {
+    if (offsetTable == null) {
+      return;
+    }
+    this.stagedBackup = new HashMap<>(this.data);
+    boolean updated = false;
+    if (records != null && !records.isEmpty()) {
+      Map<Map<String, ?>, Map<String, ?>> latestByPartition = new LinkedHashMap<>();
+      for (BatchEvent event : records) {
+        if (event == null) {
+          continue;
+        }
+        SourceRecord sr = event.record();
+        if (sr != null && sr.sourcePartition() != null && sr.sourceOffset() != null) {
+          latestByPartition.put(sr.sourcePartition(), sr.sourceOffset());
+        }
+      }
+      for (Map.Entry<Map<String, ?>, Map<String, ?>> entry : latestByPartition.entrySet()) {
+        byte[] rawKey =
+            keyConverter.fromConnectData(
+                engineName, null, Arrays.asList(engineName, entry.getKey()));
+        byte[] rawVal = valueConverter.fromConnectData(engineName, null, entry.getValue());
+        String keyStr = fromByteBuffer(rawKey != null ? ByteBuffer.wrap(rawKey) : null);
+        String valStr = fromByteBuffer(rawVal != null ? ByteBuffer.wrap(rawVal) : null);
+        if (keyStr != null) {
+          if (!this.data.containsKey(keyStr) || !Objects.equals(this.data.get(keyStr), valStr)) {
+            this.data.put(keyStr, valStr);
+            updated = true;
+          }
+        }
+      }
+    }
+    if (updated || dirty) {
+      this.offsetTable = icebergCatalog.loadTable(tableId);
+      Table transactionalOffsetTable = tx.enlist(tableId, offsetTable);
+      save(transactionalOffsetTable);
+    }
+  }
+
+  public synchronized void onBatchTransactionCommitted() {
+    this.stagedBackup = null;
+    this.dirty = false;
+  }
+
+  public synchronized void onBatchTransactionAborted() {
+    if (this.stagedBackup != null) {
+      this.data = this.stagedBackup;
+      this.stagedBackup = null;
+    }
+  }
+
+  public TableIdentifier getTableId() {
+    return tableId;
   }
 
   private void load() {
@@ -267,13 +384,23 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     return executor.submit(
         () -> {
           try {
-            for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
-              if (entry.getKey() == null) {
-                continue;
+            synchronized (IcebergOffsetBackingStore.this) {
+              boolean changed = false;
+              for (Map.Entry<ByteBuffer, ByteBuffer> entry : values.entrySet()) {
+                if (entry.getKey() == null) {
+                  continue;
+                }
+                String k = fromByteBuffer(entry.getKey());
+                String v = fromByteBuffer(entry.getValue());
+                if (!data.containsKey(k) || !Objects.equals(data.get(k), v)) {
+                  data.put(k, v);
+                  changed = true;
+                }
               }
-              data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
+              if (changed || dirty) {
+                save();
+              }
             }
-            save();
             if (callback != null) {
               callback.onCompletion(null, null);
             }

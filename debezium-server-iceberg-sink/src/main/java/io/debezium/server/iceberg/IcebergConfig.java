@@ -131,6 +131,10 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean openlineageEnabled();
 
+  @WithName("debezium.sink.iceberg.multi-table-transaction")
+  @WithDefault("false")
+  boolean multiTableTransaction();
+
   /** Gets the partitionBy value for a given table, falling back to global if not specified. */
   default List<String> partitionByForTable(String destination) {
     String tableKey = PROP_PREFIX + ".partition-by." + destination;

@@ -241,6 +241,16 @@ debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBa
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_table
 ```
 
+### Multi-Table Transaction & Atomic Offset Commit
+
+When using an Iceberg `RESTCatalog` that supports `/v1/{prefix}/transactions/commit`, you can enable batch-level multi-table transactions so that all destination data tables modified in a batch and `IcebergOffsetBackingStore` are committed together in a single atomic catalog transaction:
+
+```properties
+debezium.sink.iceberg.multi-table-transaction=true
+```
+
+See [ADR-0001](adr/0001-multi-table-transaction.md) for architecture details and failure guarantees.
+
 ## Debezium Database History Storage
 
 Stores database change history in Iceberg table.
