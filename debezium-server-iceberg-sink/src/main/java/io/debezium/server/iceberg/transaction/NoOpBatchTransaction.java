@@ -8,12 +8,8 @@
 
 package io.debezium.server.iceberg.transaction;
 
-import io.debezium.runtime.BatchEvent;
-import java.util.List;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Default {@link BatchTransaction} implementation used when multi-table transactions are disabled.
@@ -21,28 +17,13 @@ import org.slf4j.LoggerFactory;
  */
 public class NoOpBatchTransaction implements BatchTransaction {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(NoOpBatchTransaction.class);
-
   @Override
   public Table enlist(TableIdentifier tableId, Table icebergTable) {
     return icebergTable;
   }
 
   @Override
-  public void commitOffset(List<BatchEvent> records) {
-    for (BatchEvent record : records) {
-      LOGGER.trace("Processed event '{}'", record);
-      record.commit();
-    }
-  }
-
-  @Override
   public void commit() {
-    // No-op: each table and offset commit is handled independently
-  }
-
-  @Override
-  public void close() {
-    // No-op
+    // No-op: each table commit is handled independently
   }
 }

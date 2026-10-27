@@ -8,14 +8,10 @@
 
 package io.debezium.server.iceberg.transaction;
 
-import io.debezium.runtime.BatchEvent;
-import java.util.List;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.TableIdentifier;
 
-/**
- * Abstraction for a batch-level transaction across one or more Iceberg tables and offset storage.
- */
+/** Abstraction for a batch-level transaction across one or more Iceberg tables. */
 public interface BatchTransaction extends AutoCloseable {
 
   /**
@@ -28,16 +24,9 @@ public interface BatchTransaction extends AutoCloseable {
    */
   Table enlist(TableIdentifier tableId, Table icebergTable);
 
-  /**
-   * Stages or commits the batch offsets for the given Debezium batch records.
-   *
-   * @param records the Debezium batch events consumed in this batch
-   */
-  void commitOffset(List<BatchEvent> records);
-
-  /** Commits all enlisted table changes and offset updates atomically. */
+  /** Commits all enlisted table changes atomically. */
   void commit();
 
   @Override
-  void close();
+  default void close() {}
 }

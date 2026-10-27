@@ -18,7 +18,6 @@ import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.StructEventConverter;
 import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.mapper.IcebergTableMapper;
-import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.server.iceberg.transaction.BatchTransaction;
 import io.debezium.server.iceberg.transaction.MultiTableTransaction;
@@ -110,7 +109,6 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
             config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
     if (config.iceberg().multiTableTransaction()) {
       validateMultiTableTransactionSupport();
-      IcebergOffsetBackingStore.registerSharedCatalog(icebergCatalog);
     }
     batchSizeWait =
         IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
@@ -127,7 +125,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
     }
   }
 
-  void validateMultiTableTransactionSupport() {
+  public void validateMultiTableTransactionSupport() {
     if (!(icebergCatalog instanceof RESTCatalog)) {
       throw new DebeziumException(
           "Multi-table transaction (debezium.sink.iceberg.multi-table-transaction=true) requires a RESTCatalog, but found: "
@@ -137,17 +135,13 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
 
   protected BatchTransaction openTransaction() {
     if (config.iceberg().multiTableTransaction()) {
-      validateMultiTableTransactionSupport();
-      RESTCatalog restCatalog = (RESTCatalog) icebergCatalog;
-      IcebergOffsetBackingStore.registerSharedCatalog(restCatalog);
-      return new MultiTableTransaction(restCatalog);
+      return new MultiTableTransaction((RESTCatalog) icebergCatalog);
     }
     return new NoOpBatchTransaction();
   }
 
   @PreDestroy
   void close() {
-    IcebergOffsetBackingStore.clearSharedCatalog(icebergCatalog);
     try {
       LOGGER.info("Shutting down executor service.");
       executor.shutdown();
@@ -196,10 +190,13 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
       } else {
         this.processTablesSequentially(result, tx);
       }
-      // 3. Commit the offset
-      tx.commitOffset(events.records());
-      // 4. Commit the multi-table transaction
+      // 3. Commit the multi-table transaction
       tx.commit();
+      // 4. Commit the offset
+      for (BatchEvent record : events.records()) {
+        LOGGER.trace("Processed event '{}'", record);
+        record.commit();
+      }
     }
     this.logConsumerProgress(events.records().size());
 

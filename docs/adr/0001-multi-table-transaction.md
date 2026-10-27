@@ -1,4 +1,4 @@
-# ADR-0001: Multi-Table Batch Transaction Synchronized with Offset Commit
+# ADR-0001: Multi-Table Batch Transaction
 
 * **Status**: Proposed / Draft
 * **Date**: 2026-10-27
@@ -12,8 +12,7 @@ In `IcebergChangeConsumer`, a single Debezium CDC batch often spans multiple sou
 
 1. **Per-Table Independent Commits**: Each destination table was committed to the Iceberg catalog independently via `icebergTable.newAppend().commit()` / `icebergTable.newRowDelta().commit()` (and `icebergTable.updateSchema().commit()`).
 2. **Global Source Offset vs. Partial Table Commits**: Unlike Kafka (where offsets are tracked per topic-partition), a relational database CDC stream has a **single global stream offset** (e.g., PostgreSQL LSN, MySQL binlog coordinates, Oracle SCN). If a batch updates 5 tables and fails on the 3rd table, tables 1 and 2 are already committed in Iceberg while the batch offset is not committed—leading to duplicate records on retry in append mode or cross-table inconsistency.
-3. **Asynchronous Offset Persistence**: In Debezium Embedded Engine (`AsyncEmbeddedEngine`), calling `BatchEvent.commit()` inside `handle()` only buffers `(sourcePartition, sourceOffset)` in memory inside `OffsetStorageWriter`. The actual `IcebergOffsetBackingStore.set()` runs asynchronously after `handle()` returns (subject to `OffsetCommitPolicy`), and any exception thrown by `OffsetBackingStore.set()` is logged and swallowed by Debezium.
-4. **Multiple Topics Mapped to the Same Table ([#761](https://github.com/memiiso/debezium-server-iceberg/issues/761))**: Grouping batch events by raw `EventConverter::destination` (topic name) before applying `mapDestination()` caused multiple commits to the same Iceberg table within a single batch (and concurrent conflicting commits when `concurrent-uploads > 1`).
+3. **Multiple Topics Mapped to the Same Table ([#761](https://github.com/memiiso/debezium-server-iceberg/issues/761))**: Grouping batch events by raw `EventConverter::destination` (topic name) before applying `mapDestination()` caused multiple commits to the same Iceberg table within a single batch (and concurrent conflicting commits when `concurrent-uploads > 1`).
 
 ---
 
@@ -25,14 +24,14 @@ In `IcebergChangeConsumer`, a single Debezium CDC batch often spans multiple sou
 2. **Opt-In Multi-Table Transaction (`debezium.sink.iceberg.multi-table-transaction`)**:
    Introduce an opt-in configuration property `debezium.sink.iceberg.multi-table-transaction=true|false` (default `false`):
    - When `false` (default), the existing per-table commit behavior is preserved without changes.
-   - When `true`, `IcebergChangeConsumer` verifies at startup that the configured catalog supports multi-table transactions (`RESTCatalog`), failing fast otherwise.
+   - When `true`, `IcebergChangeConsumer` verifies once during `@PostConstruct` initialization (`validateMultiTableTransactionSupport()`) that the configured catalog supports multi-table transactions (`RESTCatalog`), failing fast otherwise.
 
 3. **4-Step Batch Lifecycle**:
    Every batch in `IcebergChangeConsumer.handle()` executes a unified 4-step flow through a `BatchTransaction` abstraction:
-   1. **Open multi-table transaction** (`try (BatchTransaction tx = openTransaction())`)
+   1. **Open transaction** (`try (BatchTransaction tx = openTransaction())`)
    2. **Consume batch & upload to tables** (supporting both **parallel** and **sequential** table processing)
-   3. **Commit the offset** (`tx.commitOffset(events.records())` — stages `_debezium_offset_storage` update into the transaction)
-   4. **Commit the multi-table transaction** (`tx.commit()` — executes a single atomic `RESTCatalog.commitTransaction(List<TableCommit>)` across all modified data tables and the offset table, and only then marks Debezium `BatchEvent`s as committed)
+   3. **Commit the multi-table transaction** (`tx.commit()` — executes a single atomic `RESTCatalog.commitTransaction(List<TableCommit>)` across all modified destination tables)
+   4. **Commit the offset** (`record.commit()` on each `BatchEvent`, allowing Debezium's `RecordCommitter.markBatchFinished()` to persist the offset only after all tables in the batch are atomically committed)
 
 ---
 
@@ -44,7 +43,6 @@ sequenceDiagram
     participant ICC as IcebergChangeConsumer
     participant TX as BatchTransaction
     participant ITO as IcebergTableOperator
-    participant OBS as IcebergOffsetBackingStore
     participant CAT as RESTCatalog
 
     DBZ->>ICC: handle(CapturingEvents<BatchEvent>)
@@ -56,15 +54,11 @@ sequenceDiagram
         ICC->>ITO: addToTable(TransactionTable, tableEvents)
         Note over ITO: Uploads Parquet/ORC & manifest files;<br/>stages schema + data ops in BaseTransaction
     end
-    ICC->>TX: 3. commitOffset(events.records())
-    TX->>OBS: stageBatchOffsets(tx, records)
-    Note over OBS: Writes offset file & stages OverwriteFiles<br/>on offset table's TransactionTable
-    ICC->>TX: 4. tx.commit()
+    ICC->>TX: 3. tx.commit()
     TX->>CAT: commitTransaction(List<TableCommit>)
-    Note over CAT: Single atomic POST /v1/transactions/commit<br/>(all data tables + _debezium_offset_storage)
-    TX->>OBS: onBatchTransactionCommitted()
-    TX->>DBZ: record.commit() for all BatchEvents
-    ICC-->>DBZ: return (Debezium confirms LSN to source DB)
+    Note over CAT: Single atomic POST /v1/transactions/commit<br/>across all modified data tables
+    ICC->>DBZ: 4. record.commit() for all BatchEvents
+    ICC-->>DBZ: return -> committer.markBatchFinished() flushes offset
 ```
 
 ---
@@ -75,7 +69,7 @@ sequenceDiagram
 
 In Apache Iceberg, `Transaction tx = table.newTransaction()` returns a `BaseTransaction`, and `tx.table()` returns a `BaseTransaction.TransactionTable` implementing `org.apache.iceberg.Table`.
 
-Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, List<EventConverter> events)` requires **no changes** to `IcebergTableOperator`'s schema evolution or data writing logic:
+Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, List<EventConverter> events)` requires no changes to `IcebergTableOperator`'s data writing logic:
 - `icebergTable.updateSchema()...commit()` stages schema changes in memory inside `BaseTransaction` (`currentMetadata()`), and subsequent `icebergTable.schema()` calls within the same batch immediately reflect added columns.
 - `icebergTable.newAppend()...commit()` and `icebergTable.newRowDelta()...commit()` upload data files and manifest files to object storage immediately and update `BaseTransaction.currentMetadata()` in memory without contacting the catalog.
 - Because each `TableIdentifier` has its own isolated `Transaction` instance in `MultiTableTransaction`, parallel table uploads (`concurrent-uploads > 1`) execute concurrently without lock contention.
@@ -84,31 +78,19 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 
 - **`BatchTransaction`** (`AutoCloseable`):
   - `Table enlist(TableIdentifier tableId, Table icebergTable)`
-  - `void commitOffset(List<BatchEvent<Object, Object>> records)`
   - `void commit()`
 - **`NoOpBatchTransaction`** (used when `multi-table-transaction=false`):
   - `enlist` returns `icebergTable` directly (operations commit immediately per table).
-  - `commitOffset` marks each `BatchEvent` committed via `record.commit()`.
-  - `commit` and `close` are no-ops.
+  - `commit` is a no-op.
 - **`MultiTableTransaction`** (used when `multi-table-transaction=true`):
-  - `enlist` creates or retrieves `table.newTransaction()` in a thread-safe map and returns `tx.table()`.
-  - `commitOffset` stages the batch's source offsets into `IcebergOffsetBackingStore` on the enlisted offset table (`_debezium_offset_storage`).
-  - `commit` builds `TableCommit.create(tableId, baseTx.startMetadata(), baseTx.currentMetadata())` for every modified table, calls `restCatalog.commitTransaction(tableCommits)`, invalidates committed tables in the catalog cache, marks the offset store committed, and calls `record.commit()` on all `BatchEvent`s.
-  - `close` rolls back any uncommitted in-memory state in `IcebergOffsetBackingStore` if `commit()` did not complete.
-
-### 3. Synchronized Offset Commit in `IcebergOffsetBackingStore`
-
-- When `multi-table-transaction=true`, `IcebergOffsetBackingStore` reuses the `RESTCatalog` instance and exposes `stageBatchOffsets(BatchTransaction tx, List<BatchEvent<Object, Object>> records)`.
-- During Step 3 (`commitOffset`), `IcebergOffsetBackingStore` snapshots its in-memory `data` map, serializes the batch's `(sourcePartition, sourceOffset)` pairs using the standard Kafka Connect `JsonConverter` format (`[engineName, partition]` -> `offset`), writes the new offset data file, and stages `OverwriteFiles` onto `tx.enlist(offsetTableId, offsetTable)`.
-- When Debezium's periodic `OffsetStorageWriter` flush later invokes `IcebergOffsetBackingStore.set()`, `IcebergOffsetBackingStore` detects that `data` has no uncommitted changes (`dirty == false`) and skips redundant single-table commits.
+  - `enlist` creates or retrieves `table.newTransaction()` in a thread-safe `ConcurrentHashMap` and returns `tx.table()`.
+  - `commit` builds `TableCommit.create(tableId, baseTx.startMetadata(), baseTx.currentMetadata())` for every modified table, calls `restCatalog.commitTransaction(tableCommits)`, and invalidates committed tables in the catalog cache.
 
 ---
 
 ## Failure Modes & Guarantees
 
-| Failure Point | Data Tables | Offset Table (`_debezium_offset_storage`) | Source DB Replication Slot (LSN) | Recovery Behavior |
-| :--- | :--- | :--- | :--- | :--- |
-| **Crash / Exception during Step 2 (Table upload)** | Uncommitted (`BaseTransaction` never sent to catalog) | Uncommitted | Unconfirmed (`handle()` throws before `record.commit()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
-| **Crash / Exception during Step 3 (Offset staging)** | Uncommitted | Uncommitted; in-memory `data` restored on `tx.close()` | Unconfirmed | Debezium replays the batch from previous offset; zero duplicate rows. |
-| **Crash / Exception during Step 4 (`RESTCatalog.commitTransaction`)** | Atomically rejected by catalog | Atomically rejected by catalog; in-memory `data` restored | Unconfirmed | Debezium replays the batch from previous offset; zero duplicate rows. |
-| **Crash after Step 4 (`commitTransaction` succeeded, before source DB ack)** | Committed | Committed with new offset | Unconfirmed at source DB | On restart, `IcebergOffsetBackingStore` loads the committed offset from `_debezium_offset_storage` and resumes after the committed batch. |
+| Failure Point | Data Tables | Debezium Offset & Source DB Replication Slot | Recovery Behavior |
+| :--- | :--- | :--- | :--- |
+| **Crash / Exception during Step 2 (Table upload)** | Uncommitted (`BaseTransaction` never sent to catalog) | Uncommitted (`handle()` throws before `record.commit()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
+| **Crash / Exception during Step 3 (`RESTCatalog.commitTransaction`)** | Atomically rejected by catalog | Uncommitted (`handle()` throws before `record.commit()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
