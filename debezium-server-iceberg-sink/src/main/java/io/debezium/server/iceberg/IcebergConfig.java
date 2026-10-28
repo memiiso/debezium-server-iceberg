@@ -131,6 +131,14 @@ public interface IcebergConfig {
   @WithDefault("false")
   boolean openlineageEnabled();
 
+  @WithName("debezium.sink.iceberg.atomic-offset-commit")
+  @WithDefault("false")
+  boolean atomicOffsetCommit();
+
+  @WithName("debezium.sink.iceberg.atomic-offset-commit-retries")
+  @WithDefault("3")
+  int atomicOffsetCommitRetries();
+
   /** Gets the partitionBy value for a given table, falling back to global if not specified. */
   default List<String> partitionByForTable(String destination) {
     String tableKey = PROP_PREFIX + ".partition-by." + destination;

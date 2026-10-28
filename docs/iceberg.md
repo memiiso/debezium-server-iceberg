@@ -44,6 +44,8 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.batch.concurrent-uploads`                     | `1`                                                           | The number of parallel threads to use for uploading data to Iceberg tables. When set to a value greater than 1, the consumer will write to multiple tables concurrently.                                                                                                                                          |
 | `debezium.sink.batch.concurrent-uploads.timeout-minutes`     | `60`                                                          | The maximum time in minutes to wait for all parallel uploads to complete before timing out. This is only effective when `debezium.sink.batch.concurrent-uploads` is greater than 1.                                                                                                                               |
 | `debezium.sink.iceberg.openlineage-enabled`                  | `false`                                                       | Enables OpenLineage metadata logging for Iceberg commits.                                                                                                                                                                                                                                                         |
+| `debezium.sink.iceberg.atomic-offset-commit`                 | `false`                                                       | Commits the data tables and the offset table in one REST catalog transaction. See [Atomic offset commit](#atomic-offset-commit).                                                                                                                                                                                  |
+| `debezium.sink.iceberg.atomic-offset-commit-retries`         | `3`                                                           | Number of retries of the transaction on commit conflict, with `atomic-offset-commit`.                                                                                                                                                                                                                             |
 | `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                                               | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) These Iceberg settings are passed to Iceberg without the `debezium.sink.iceberg.` prefix.                                                                                                                                                 |
 | `debezium.source.offset.storage`                             | `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming). Set to `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` to use Iceberg table                 |
 | `debezium.source.offset.storage.iceberg.table-name`          | `_debezium_offset_storage`                                    | Destination Iceberg table name to store connector offset information.                                                                                                                                                                                                                                             |
@@ -240,6 +242,37 @@ binlog position.
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_table
 ```
+
+### Atomic offset commit
+
+By default the data tables and the offset table are committed separately. When the consumer stops between the data
+commit and the offset commit, the events are replayed on restart. In append mode, the replayed events are duplicated;
+upsert mode absorbs them.
+
+With `debezium.sink.iceberg.atomic-offset-commit=true`, each batch is committed in **one atomic multi-table
+transaction**: all the destination tables of the batch and the offset table, using the REST catalog endpoint
+`POST /v1/{prefix}/transactions/commit`. Either everything is committed or nothing is, so a batch is never written
+twice. This covers streaming: an interrupted initial snapshot is restarted by the connector, and its rows can be
+duplicated in append mode. For Postgres, the LSN is confirmed to the replication slot only after the transaction.
+
+```
+debezium.sink.iceberg.type=rest
+debezium.sink.iceberg.uri=http://catalog:8181
+debezium.sink.iceberg.atomic-offset-commit=true
+debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
+```
+
+Requirements:
+
+- a REST catalog supporting multi-table transactions, for example Lakekeeper, Apache Polaris or the Iceberg REST
+  fixture (`apache/iceberg-rest-fixture`). With another catalog type, the consumer doesn't start. With a REST server
+  that doesn't support the endpoint, the first commit fails.
+- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables (same `uri`).
+
+Events are grouped by destination table, so topics mapped to the same table (`destination-regexp`, custom table
+mapper) are committed with a single snapshot per batch. Schema changes and table creations are still committed
+before the transaction; they are idempotent and replayed safely. On commit conflict (e.g. a concurrent compaction),
+the tables are reloaded and the commit retried with the same data files.
 
 ## Debezium Database History Storage
 

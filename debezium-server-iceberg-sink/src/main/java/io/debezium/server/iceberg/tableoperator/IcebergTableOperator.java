@@ -23,6 +23,7 @@ import io.debezium.server.iceberg.deduplication.TimestampAndOpBatchDeduplicator;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -127,6 +128,27 @@ public class IcebergTableOperator {
    * @param events
    */
   public void addToTable(Table icebergTable, List<EventConverter> events) {
+    addToTable(icebergTable, events, null);
+  }
+
+  /**
+   * Writes list of events to data files of the iceberg table, without committing them.
+   *
+   * <p>Used to commit several tables in one transaction, the returned files must be committed in
+   * order.
+   *
+   * @param icebergTable
+   * @param events
+   * @return the written files, one per group of events having the same schema
+   */
+  public List<WriteResult> writeToTable(Table icebergTable, List<EventConverter> events) {
+    List<WriteResult> pendingFiles = new ArrayList<>();
+    addToTable(icebergTable, events, pendingFiles);
+    return pendingFiles;
+  }
+
+  private void addToTable(
+      Table icebergTable, List<EventConverter> events, List<WriteResult> pendingFiles) {
 
     // when operation mode is not upsert deduplicate the events to avoid inserting duplicate row
     if (config.iceberg().upsert() && !icebergTable.schema().identifierFieldIds().isEmpty()) {
@@ -135,7 +157,7 @@ public class IcebergTableOperator {
 
     if (!config.iceberg().allowFieldAddition()) {
       // if field additions not enabled add set of events to table
-      addToTablePerSchema(icebergTable, events);
+      addToTablePerSchema(icebergTable, events, pendingFiles);
     } else {
       Map<SchemaConverter, List<EventConverter>> eventsGroupedBySchema =
           events.stream()
@@ -157,7 +179,7 @@ public class IcebergTableOperator {
                 .get(0)
                 .icebergSchema(config.iceberg().createIdentifierFields()));
         // add set of events to table
-        addToTablePerSchema(icebergTable, schemaEvents.getValue());
+        addToTablePerSchema(icebergTable, schemaEvents.getValue(), pendingFiles);
       }
     }
   }
@@ -167,8 +189,10 @@ public class IcebergTableOperator {
    *
    * @param icebergTable
    * @param events
+   * @param pendingFiles when not null the written files are added to it instead of being committed
    */
-  private void addToTablePerSchema(Table icebergTable, List<EventConverter> events) {
+  private void addToTablePerSchema(
+      Table icebergTable, List<EventConverter> events, List<WriteResult> pendingFiles) {
     // Initialize a task writer to write both INSERT and equality DELETE.
     final Schema tableSchema = icebergTable.schema();
     BaseTaskWriter<Record> writer = writerFactory.create(icebergTable);
@@ -183,6 +207,10 @@ public class IcebergTableOperator {
       }
 
       files = writer.complete();
+      if (pendingFiles != null) {
+        pendingFiles.add(files);
+        return;
+      }
       if (files.deleteFiles().length > 0) {
         RowDelta newRowDelta = icebergTable.newRowDelta();
         Arrays.stream(files.dataFiles()).forEach(newRowDelta::addRows);
@@ -207,7 +235,17 @@ public class IcebergTableOperator {
           "Failed to write data to table:`" + icebergTable.name() + "`", ex);
     }
 
-    LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
+    afterCommit(icebergTable, events.size());
+  }
+
+  /**
+   * Logs and emits OpenLineage metadata after events are committed to the table.
+   *
+   * @param icebergTable
+   * @param numEvents number of events committed
+   */
+  public void afterCommit(Table icebergTable, int numEvents) {
+    LOGGER.info("Committed {} events to table! {}", numEvents, icebergTable.location());
 
     // Emit OpenLineage output dataset metadata after successful commit
     if (config.iceberg().openlineageEnabled()) {

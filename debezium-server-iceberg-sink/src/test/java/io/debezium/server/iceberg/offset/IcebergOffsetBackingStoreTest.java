@@ -13,22 +13,29 @@ import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.fromBy
 import static io.debezium.server.iceberg.offset.IcebergOffsetBackingStore.toByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.debezium.server.iceberg.BaseTest;
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
+import io.debezium.storage.kafka.offset.KafkaOffsetStoreConverter;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.WorkerConfig;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.storage.OffsetStorageWriter;
 import org.apache.kafka.connect.util.Callback;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.junit.jupiter.api.Assertions;
@@ -125,6 +132,56 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
     assertEquals("value", fromByteBuffer(values.get(toByteBuffer("key"))));
     assertEquals(toByteBuffer("value1secondSet"), values2.get(toByteBuffer("key1secondSet")));
     assertEquals(toByteBuffer("value2secondSet"), values3.get(toByteBuffer("key2secondSet")));
+  }
+
+  @Test
+  public void testPreparedOffsetMatchesEngineFlush() throws Exception {
+    Map<String, String> conf = config();
+    conf.put("name", "test-engine");
+    IcebergOffsetBackingStore store = new IcebergOffsetBackingStore();
+    store.configure(new TestWorkerConfig(conf));
+    store.start();
+
+    Map<String, ?> partition = Map.of("server", "testc");
+    List<SourceRecord> records =
+        List.of(
+            new SourceRecord(partition, Map.of("lsn", 1L), "topic", null, null),
+            new SourceRecord(partition, Map.of("lsn", 2L, "txId", 5L), "topic", null, null));
+    IcebergOffsetBackingStore.PendingOffset pending = store.prepare(records);
+
+    // commit the prepared offset row, as AtomicOffsetCommitter does in the multi-table transaction
+    Table offsetTable = store.icebergCatalog.loadTable(store.tableIdentifier());
+    OffsetStorageWriter engineWriter =
+        new OffsetStorageWriter(
+            store,
+            "test-engine",
+            KafkaOffsetStoreConverter.jsonConverter(true),
+            KafkaOffsetStoreConverter.jsonConverter(false));
+    Transaction tx = offsetTable.newTransaction();
+    pending.applyTo(tx);
+    tx.commitTransaction();
+    store.committed(pending);
+    offsetTable.refresh();
+    long snapshotId = offsetTable.currentSnapshot().snapshotId();
+
+    // the engine flushes the offsets of the same records once the batch is processed
+    records.forEach(r -> engineWriter.offset(r.sourcePartition(), r.sourceOffset()));
+    Assertions.assertTrue(engineWriter.beginFlush());
+    engineWriter.doFlush(null).get();
+
+    offsetTable.refresh();
+    Assertions.assertEquals(snapshotId, offsetTable.currentSnapshot().snapshotId());
+    Map<ByteBuffer, ByteBuffer> values =
+        store.get(List.of(toByteBuffer("[\"test-engine\",{\"server\":\"testc\"}]"))).get();
+    // offset map key order is not fixed
+    assertEquals(
+        Map.of("lsn", 2, "txId", 5),
+        new ObjectMapper()
+            .readValue(
+                fromByteBuffer(
+                    values.get(toByteBuffer("[\"test-engine\",{\"server\":\"testc\"}]"))),
+                Map.class));
+    store.stop();
   }
 
   public static class TestWorkerConfig extends WorkerConfig {
