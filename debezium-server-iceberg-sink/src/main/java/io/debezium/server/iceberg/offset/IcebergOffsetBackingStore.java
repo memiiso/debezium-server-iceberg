@@ -43,10 +43,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.DataFile;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.OverwriteFiles;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.GenericRecord;
@@ -85,7 +87,8 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   public static final String CONFIGURATION_FIELD_PREFIX_STRING = "offset.storage.";
   private static final Logger LOG = LoggerFactory.getLogger(IcebergOffsetBackingStore.class);
   // the store started by the Debezium engine, used by the consumer to commit the offsets
-  // atomically with the data, see debezium.sink.iceberg.atomic-offset-commit
+  // atomically with the data, see debezium.sink.iceberg.atomic-offset-commit. Static because the
+  // engine instantiates the store by reflection, outside of CDI.
   private static volatile IcebergOffsetBackingStore instance;
   protected Map<String, String> data = new HashMap<>();
   // offset data as currently stored in the offset table
@@ -120,6 +123,10 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   public synchronized void start() {
     super.start();
     LOG.info("Starting IcebergOffsetBackingStore table:{}", tableFullName);
+    if (storageConfig.atomicOffsetCommit() && Strings.isNullOrEmpty(engineName)) {
+      throw new DebeziumException(
+          "Engine name not found in offset storage configuration, required by atomic offset commit!");
+    }
     initializeTable();
     load();
     instance = this;
@@ -217,13 +224,16 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
 
   protected void save() {
     LOG.debug("Saving offset data to iceberg table...");
-    WriteResult files = writeOffsetFile(data);
-    OverwriteFiles overwrite = offsetTable.newOverwrite();
-    overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
-    Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
-    overwrite.commit();
+    replaceOffsetRow(offsetTable.newOverwrite(), writeOffsetFile(data)).commit();
     persistedData = new HashMap<>(data);
     LOG.debug("Successfully saved offset data to iceberg table");
+  }
+
+  // the offset table holds a single row, replaced on each save
+  private static OverwriteFiles replaceOffsetRow(OverwriteFiles overwrite, WriteResult files) {
+    overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
+    Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
+    return overwrite;
   }
 
   /**
@@ -315,7 +325,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
       }
       data.put(fromByteBuffer(entry.getKey()), fromByteBuffer(entry.getValue()));
     }
-    // offsets already committed atomically with the data by the consumer
+    // skip when unchanged, e.g. already committed with the data by the consumer
     if (data.equals(persistedData)) {
       LOG.debug("Offset data unchanged, skipping save");
       return;
@@ -329,13 +339,13 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
         () -> {
           Map<ByteBuffer, ByteBuffer> result = new HashMap<>();
           for (ByteBuffer key : keys) {
-            result.put(key, toByteBuffer(value(fromByteBuffer(key))));
+            result.put(key, toByteBuffer(offsetValue(fromByteBuffer(key))));
           }
           return result;
         });
   }
 
-  private synchronized String value(String key) {
+  private synchronized String offsetValue(String key) {
     return data.get(key);
   }
 
@@ -382,9 +392,6 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
    * @return the merged offset data and the data file holding it
    */
   public synchronized PendingOffset prepare(List<SourceRecord> records) {
-    if (Strings.isNullOrEmpty(engineName)) {
-      throw new DebeziumException("Engine name not found in offset storage configuration!");
-    }
     Map<String, String> merged = new HashMap<>(data);
     serializeOffsets(records)
         .forEach(
@@ -401,6 +408,17 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     data = new HashMap<>(pendingOffset.data());
     persistedData = new HashMap<>(pendingOffset.data());
     offsetTable.refresh();
+  }
+
+  /** Deletes the data file of offsets that were not committed. */
+  public void abort(PendingOffset pendingOffset) {
+    for (DataFile file : pendingOffset.files().dataFiles()) {
+      try {
+        offsetTable.io().deleteFile(file.location());
+      } catch (Exception e) {
+        LOG.warn("Failed to delete uncommitted offset file {}", file.location(), e);
+      }
+    }
   }
 
   private Map<ByteBuffer, ByteBuffer> serializeOffsets(List<SourceRecord> records) {
@@ -450,5 +468,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
    * @param data the offset data, including the offsets of the batch
    * @param files the data file holding the offset data row
    */
-  public record PendingOffset(Map<String, String> data, WriteResult files) {}
+  public record PendingOffset(Map<String, String> data, WriteResult files) {
+
+    /** Replaces the offset table row in the transaction. */
+    public void applyTo(Transaction tx) {
+      replaceOffsetRow(tx.newOverwrite(), files).commit();
+    }
+  }
 }

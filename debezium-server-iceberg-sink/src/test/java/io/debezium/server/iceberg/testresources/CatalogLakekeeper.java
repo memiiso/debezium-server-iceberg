@@ -67,8 +67,9 @@ public class CatalogLakekeeper implements QuarkusTestResourceLifecycleManager {
 
     String url =
         String.format("http://%s:%s", lakekeeper.getHost(), lakekeeper.getMappedPort(PORT));
-    TestUtil.postJson(url + "/management/v1/bootstrap", "{\"accept-terms-of-use\": true}", null);
-    TestUtil.postJson(
+    CatalogSetup.postJson(
+        url + "/management/v1/bootstrap", "{\"accept-terms-of-use\": true}", null);
+    CatalogSetup.postJson(
         url + "/management/v1/warehouse",
         """
         {

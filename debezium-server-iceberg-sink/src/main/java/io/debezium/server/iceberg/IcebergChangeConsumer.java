@@ -18,9 +18,9 @@ import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.StructEventConverter;
 import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.mapper.IcebergTableMapper;
+import io.debezium.server.iceberg.offset.AtomicOffsetCommitter;
 import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
-import io.debezium.server.iceberg.tableoperator.MultiTableCommitter;
 import io.debezium.util.Clock;
 import io.debezium.util.Strings;
 import io.debezium.util.Threads;
@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
@@ -92,7 +93,13 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
   private Semaphore concurrencyLimiter;
   // set when tables and offset are committed in one transaction
-  private MultiTableCommitter multiTableCommitter;
+  private AtomicOffsetCommitter atomicOffsetCommitter;
+
+  /** Writes the events of one destination table. */
+  @FunctionalInterface
+  private interface TableWriter {
+    void write(TableIdentifier tableId, Table icebergTable, List<EventConverter> events);
+  }
 
   @PostConstruct
   void connect() {
@@ -135,8 +142,11 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
             "`debezium.sink.iceberg.atomic-offset-commit` requires `debezium.source.offset.storage` to be "
                 + IcebergOffsetBackingStore.class.getName());
       }
-      multiTableCommitter =
-          new MultiTableCommitter(restCatalog, config.iceberg().atomicOffsetCommitRetries());
+      atomicOffsetCommitter =
+          new AtomicOffsetCommitter(
+              restCatalog,
+              config.iceberg().icebergConfigs().get(CatalogProperties.URI),
+              config.iceberg().atomicOffsetCommitRetries());
       LOGGER.info(
           "Atomic offset commit enabled, tables and offset are committed in one transaction");
     }
@@ -164,6 +174,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
 
     List<EventConverter> converted =
         events.records().stream()
+            // both converters are EventConverter, the stream type is inferred from them otherwise
             .<EventConverter>map(
                 (BatchEvent e) -> {
                   return switch (keyValueChangeEventFormat) {
@@ -180,7 +191,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
                         && config.debezium().topicHeartbeatSkipConsuming()))
             .toList();
 
-    if (multiTableCommitter != null) {
+    if (atomicOffsetCommitter != null) {
       this.commitAtomically(converted, events.records());
     } else {
       // group events by destination (per iceberg table)
@@ -222,28 +233,14 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
    */
   private void commitAtomically(List<EventConverter> events, List<BatchEvent> records)
       throws InterruptedException {
-    IcebergOffsetBackingStore offsetStore =
-        IcebergOffsetBackingStore.instance()
-            .orElseThrow(() -> new DebeziumException("Iceberg offset storage is not started!"));
-    String sinkCatalogUri = config.iceberg().icebergConfigs().get("uri");
-    if (!Objects.equals(offsetStore.catalogUri(), sinkCatalogUri)) {
-      throw new DebeziumException(
-          "Offset storage catalog `"
-              + offsetStore.catalogUri()
-              + "` must be the sink catalog `"
-              + sinkCatalogUri
-              + "` to commit the offset atomically with the data");
-    }
-
     Map<TableIdentifier, List<EventConverter>> eventsByTable =
         events.stream()
             .collect(
                 Collectors.groupingBy(
                     e -> mapDestination(e.destination()), LinkedHashMap::new, Collectors.toList()));
 
-    Map<TableIdentifier, MultiTableCommitter.PendingTable> pendingTables =
+    Map<TableIdentifier, AtomicOffsetCommitter.PendingTable> pendingTables =
         new ConcurrentHashMap<>();
-    IcebergOffsetBackingStore.PendingOffset pendingOffset = null;
     try {
       this.processTables(
           eventsByTable,
@@ -251,32 +248,20 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
           (tableId, icebergTable, tableEvents) ->
               pendingTables.put(
                   tableId,
-                  new MultiTableCommitter.PendingTable(
+                  new AtomicOffsetCommitter.PendingTable(
                       tableId,
                       icebergTable,
                       icebergTableOperator.writeToTable(icebergTable, tableEvents),
                       tableEvents.size())));
-      pendingOffset =
-          offsetStore.prepare(
-              records.stream().map(BatchEvent::record).filter(Objects::nonNull).toList());
     } catch (InterruptedException | RuntimeException e) {
-      multiTableCommitter.abort(
-          pendingTables.values(),
-          offsetStore.tableIdentifier(),
-          pendingOffset == null ? null : pendingOffset.files());
+      atomicOffsetCommitter.abort(pendingTables.values());
       throw e;
     }
 
-    multiTableCommitter.commit(
-        pendingTables.values(), offsetStore.tableIdentifier(), pendingOffset.files());
-    offsetStore.committed(pendingOffset);
+    atomicOffsetCommitter.commit(
+        pendingTables.values(),
+        records.stream().map(BatchEvent::record).filter(Objects::nonNull).toList());
     pendingTables.values().forEach(p -> icebergTableOperator.afterCommit(p.table(), p.numEvents()));
-  }
-
-  /** Writes the events of one destination table. */
-  @FunctionalInterface
-  private interface TableWriter {
-    void write(TableIdentifier tableId, Table icebergTable, List<EventConverter> events);
   }
 
   /**

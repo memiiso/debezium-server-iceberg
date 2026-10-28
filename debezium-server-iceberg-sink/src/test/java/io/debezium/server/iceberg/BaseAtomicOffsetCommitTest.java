@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
  * Verifies the tables and the offset are committed in one transaction, run against each REST
  * catalog supporting multi-table transactions.
  */
-public abstract class AtomicOffsetCommitTestBase extends BaseTest {
+public abstract class BaseAtomicOffsetCommitTest extends BaseTest {
 
   @Test
   public void testTablesAndOffsetCommittedTogether() throws Exception {

@@ -16,4 +16,9 @@ public class IcebergOffsetBackingStoreConfig extends BaseIcebergStorageConfig {
   public String getMigrateOffsetFile() {
     return this.config.getProperty("migrate-offset-file", "");
   }
+
+  /** Sink property, the offsets are committed by the consumer in the same transaction as data. */
+  public boolean atomicOffsetCommit() {
+    return Boolean.parseBoolean(this.config.getProperty("atomic-offset-commit", "false"));
+  }
 }

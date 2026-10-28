@@ -21,7 +21,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = CatalogLakekeeper.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(AtomicOffsetCommitTestBase.TestProfile.class)
+@TestProfile(BaseAtomicOffsetCommitTest.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
 public class IcebergChangeConsumerAtomicOffsetCommitLakekeeperTest
-    extends AtomicOffsetCommitTestBase {}
+    extends BaseAtomicOffsetCommitTest {}

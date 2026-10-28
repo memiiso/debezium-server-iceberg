@@ -27,11 +27,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.iceberg.OverwriteFiles;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.WorkerConfig;
@@ -158,10 +157,9 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
             "test-engine",
             KafkaOffsetStoreConverter.jsonConverter(true),
             KafkaOffsetStoreConverter.jsonConverter(false));
-    OverwriteFiles overwrite = offsetTable.newOverwrite();
-    overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
-    Arrays.stream(pending.files().dataFiles()).forEach(overwrite::addFile);
-    overwrite.commit();
+    Transaction tx = offsetTable.newTransaction();
+    pending.applyTo(tx);
+    tx.commitTransaction();
     store.committed(pending);
     offsetTable.refresh();
     long snapshotId = offsetTable.currentSnapshot().snapshotId();

@@ -48,7 +48,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
     String token = token(url);
 
     String location = "s3://" + TestConfigSource.S3_BUCKET_NAME + "/polaris";
-    TestUtil.postJson(
+    CatalogSetup.postJson(
         url + "/api/management/v1/catalogs",
         """
         {
@@ -77,7 +77,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
                 S3Minio.getS3UrlFromContainers(),
                 TestConfigSource.S3_REGION),
         token);
-    TestUtil.send(
+    CatalogSetup.send(
         "PUT",
         url + "/api/management/v1/catalogs/" + CATALOG + "/catalog-roles/catalog_admin/grants",
         "application/json",
@@ -97,7 +97,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
   private static String token(String url) {
     String[] credential = CREDENTIAL.split(":");
     String response =
-        TestUtil.send(
+        CatalogSetup.send(
             "POST",
             url + "/api/catalog/v1/oauth/tokens",
             "application/x-www-form-urlencoded",
