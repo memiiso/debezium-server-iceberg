@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -60,6 +61,25 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   @Override
   public void stop() {
     container.stop();
+  }
+
+  /**
+   * S3 url reachable from the host and from the other containers, through the gateway of the docker
+   * bridge network. Used by the catalogs writing to the bucket themselves, they return it to the
+   * clients.
+   */
+  public static String getS3UrlFromContainers() {
+    String gateway =
+        DockerClientFactory.instance()
+            .client()
+            .inspectNetworkCmd()
+            .withNetworkId("bridge")
+            .exec()
+            .getIpam()
+            .getConfig()
+            .get(0)
+            .getGateway();
+    return String.format("http://%s:%s", gateway, container.getMappedPort(9000));
   }
 
   public static String getS3WebURL() {
