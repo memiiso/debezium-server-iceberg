@@ -229,7 +229,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     LOG.debug("Successfully saved offset data to iceberg table");
   }
 
-  // the offset table holds a single row, replaced on each save
+  // the offset table holds a single row, replaced on each save and atomic commit
   private static OverwriteFiles replaceOffsetRow(OverwriteFiles overwrite, WriteResult files) {
     overwrite.overwriteByRowFilter(Expressions.alwaysTrue());
     Arrays.stream(files.dataFiles()).forEach(overwrite::addFile);
@@ -375,7 +375,7 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   }
 
   /**
-   * @return uri of the catalog holding the offset table, null for non REST catalogs
+   * @return the uri of the catalog holding the offset table, null when not set
    */
   public String catalogUri() {
     return storageConfig.icebergProperties().get(CatalogProperties.URI);

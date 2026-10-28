@@ -252,8 +252,8 @@ upsert mode absorbs them.
 With `debezium.sink.iceberg.atomic-offset-commit=true`, each batch is committed in **one atomic multi-table
 transaction**: all the destination tables of the batch and the offset table, using the REST catalog endpoint
 `POST /v1/{prefix}/transactions/commit`. Either everything is committed or nothing is, so a batch is never written
-twice. The source position (Postgres LSN, MySQL binlog position...) is confirmed to the database only after the
-transaction.
+twice. This covers streaming: an interrupted initial snapshot is restarted by the connector, and its rows can be
+duplicated in append mode. For Postgres, the LSN is confirmed to the replication slot only after the transaction.
 
 ```
 debezium.sink.iceberg.type=rest
@@ -264,9 +264,10 @@ debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBa
 
 Requirements:
 
-- a REST catalog supporting multi-table transactions, for example Lakekeeper or Apache Polaris. The consumer fails at
-  startup with other catalogs, and at the first commit when the server does not support the endpoint.
-- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables.
+- a REST catalog supporting multi-table transactions, for example Lakekeeper, Apache Polaris or the Iceberg REST
+  fixture (`apache/iceberg-rest-fixture`). With another catalog type, the consumer doesn't start. With a REST server
+  that doesn't support the endpoint, the first commit fails.
+- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables (same `uri`).
 
 Events are grouped by destination table, so topics mapped to the same table (`destination-regexp`, custom table
 mapper) are committed with a single snapshot per batch. Schema changes and table creations are still committed

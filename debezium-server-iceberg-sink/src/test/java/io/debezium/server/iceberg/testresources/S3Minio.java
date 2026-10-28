@@ -65,8 +65,8 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
 
   /**
    * S3 url reachable from the host and from the other containers, through the gateway of the docker
-   * bridge network. Used by the catalogs writing to the bucket themselves, they return it to the
-   * clients.
+   * bridge network. Used by the catalogs, which write to the bucket themselves and return this url
+   * to the clients. Requires Docker on Linux.
    */
   public static String getS3UrlFromContainers() {
     String gateway =

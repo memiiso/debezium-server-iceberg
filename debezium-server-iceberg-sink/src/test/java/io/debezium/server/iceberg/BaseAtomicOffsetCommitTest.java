@@ -52,8 +52,8 @@ public abstract class BaseAtomicOffsetCommitTest extends BaseTest {
         new ObjectMapper()
             .readValue(
                 (String) offsetRows.get(0).getField("offset_data"), new TypeReference<>() {});
-    // the engine flushes the offsets after the transaction, a second key means it did not find
-    // the offset committed by the consumer
+    // the engine flushes the same offsets after the transaction, a second key means its key differs
+    // from the one committed with the data
     Assertions.assertEquals(1, offsetData.size(), offsetData.toString());
     Assertions.assertTrue(offsetData.values().iterator().next().contains("lsn"));
   }

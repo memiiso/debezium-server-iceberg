@@ -149,7 +149,7 @@ public class IcebergOffsetBackingStoreTest extends BaseTest {
             new SourceRecord(partition, Map.of("lsn", 2L, "txId", 5L), "topic", null, null));
     IcebergOffsetBackingStore.PendingOffset pending = store.prepare(records);
 
-    // commit the prepared offset row, as the consumer does in the multi-table transaction
+    // commit the prepared offset row, as AtomicOffsetCommitter does in the multi-table transaction
     Table offsetTable = store.icebergCatalog.loadTable(store.tableIdentifier());
     OffsetStorageWriter engineWriter =
         new OffsetStorageWriter(

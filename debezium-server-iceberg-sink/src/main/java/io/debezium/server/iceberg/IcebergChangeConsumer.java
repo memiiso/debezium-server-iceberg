@@ -174,7 +174,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
 
     List<EventConverter> converted =
         events.records().stream()
-            // both converters are EventConverter, the stream type is inferred from them otherwise
+            // explicit type, otherwise inferred as the converters' common supertype
             .<EventConverter>map(
                 (BatchEvent e) -> {
                   return switch (keyValueChangeEventFormat) {
