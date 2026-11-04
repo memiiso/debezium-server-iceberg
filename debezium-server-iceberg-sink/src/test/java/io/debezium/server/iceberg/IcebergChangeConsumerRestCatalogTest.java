@@ -23,7 +23,9 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.JRE;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 public class IcebergChangeConsumerRestCatalogTest extends BaseTest {
 
   @Test
+  @DisabledForJreRange(min = JRE.JAVA_24) // Hadoop incompatibility with Java 25
   public void testSimpleUpload() {
     Awaitility.await()
         .atMost(Duration.ofSeconds(120))
