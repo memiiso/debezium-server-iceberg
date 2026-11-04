@@ -34,6 +34,10 @@
         <maven.compiler.release>21</maven.compiler.release>
         <skipITs>true</skipITs>
 
+        <!-- JVM flags for the test forks that are only valid on some JDKs -->
+        <jdk.security.manager.arg />
+        <jdk.sun.security.action.arg />
+
         <!-- Iceberg -->
         <version.iceberg>1.12.0</version.iceberg>
         <!-- Following two properties defines which version of iceberg-spark-runtime is used -->
@@ -126,7 +130,7 @@
                 <version>3.6.3</version>
                 <executions>
                     <execution>
-                        <id>enforce-maven</id>
+                        <id>enforce-build-environment</id>
                         <goals>
                             <goal>enforce</goal>
                         </goals>
@@ -135,6 +139,12 @@
                                 <requireMavenVersion>
                                     <version>[3.6.3,)</version>
                                 </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[21,)</version>
+                                    <message>
+                                        This project requires JDK 21 or newer. JDK 21 is required by Debezium server.
+                                    </message>
+                                </requireJavaVersion>
                             </rules>
                         </configuration>
                     </execution>
@@ -211,5 +221,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>jdk-pre-24-test-flags</id>
+            <activation>
+                <jdk>(,24)</jdk>
+            </activation>
+            <properties>
+                <jdk.security.manager.arg>-Djava.security.manager=allow</jdk.security.manager.arg>
+                <jdk.sun.security.action.arg>--add-opens=java.base/sun.security.action=ALL-UNNAMED</jdk.sun.security.action.arg>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>
