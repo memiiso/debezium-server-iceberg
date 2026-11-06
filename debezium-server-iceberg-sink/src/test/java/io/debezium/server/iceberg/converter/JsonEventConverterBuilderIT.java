@@ -29,7 +29,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTest
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-class JsonEventConverterBuilderTest extends BaseTest {
+class JsonEventConverterBuilderIT extends BaseTest {
 
   @Test
   public void testIcebergChangeEventBuilder() {

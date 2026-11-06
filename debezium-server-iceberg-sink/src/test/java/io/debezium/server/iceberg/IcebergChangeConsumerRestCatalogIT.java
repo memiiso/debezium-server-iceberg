@@ -9,16 +9,23 @@
 package io.debezium.server.iceberg;
 
 import com.google.common.collect.Lists;
-import io.debezium.server.iceberg.testresources.CatalogJdbc;
+import io.debezium.server.iceberg.testresources.CatalogRest;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import java.time.Duration;
+import java.util.List;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.JRE;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
@@ -27,12 +34,14 @@ import org.junit.jupiter.api.Test;
  * @author Ismail Simsek
  */
 @QuarkusTest
+@QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-public class IcebergChangeConsumerJdbcCatalogTest extends BaseTest {
+@DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
+public class IcebergChangeConsumerRestCatalogIT extends BaseTest {
 
   @Test
+  @DisabledForJreRange(min = JRE.JAVA_24) // Hadoop incompatibility with Java 25
   public void testSimpleUpload() {
     Awaitility.await()
         .atMost(Duration.ofSeconds(120))
@@ -45,5 +54,18 @@ public class IcebergChangeConsumerJdbcCatalogTest extends BaseTest {
                 return false;
               }
             });
+
+    List<TableIdentifier> tables =
+        consumer.icebergCatalog.listTables(Namespace.of(consumer.config.iceberg().namespace()));
+    Assertions.assertTrue(
+        tables.contains(
+            TableIdentifier.of(
+                Namespace.of(consumer.config.iceberg().namespace()),
+                "debezium_offset_storage_table")));
+    Assertions.assertTrue(
+        tables.contains(
+            TableIdentifier.of(
+                Namespace.of(consumer.config.iceberg().namespace()),
+                "debeziumcdc_testc_inventory_customers")));
   }
 }

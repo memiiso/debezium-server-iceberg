@@ -31,8 +31,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerUpsertDeleteDeletesTest.TestProfile.class)
-public class IcebergChangeConsumerUpsertDeleteDeletesTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerUpsertDeleteDeletesIT.TestProfile.class)
+public class IcebergChangeConsumerUpsertDeleteDeletesIT extends BaseSparkTest {
 
   static final Long TEST_EPOCH_MS = 1577840461000L;
 
