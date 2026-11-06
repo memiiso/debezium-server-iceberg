@@ -40,7 +40,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-public class IcebergOffsetBackingStoreTest extends BaseTest {
+public class IcebergOffsetBackingStoreIT extends BaseTest {
 
   private static final Map<ByteBuffer, ByteBuffer> firstSet = new HashMap<>();
   private static final Map<ByteBuffer, ByteBuffer> secondSet = new HashMap<>();

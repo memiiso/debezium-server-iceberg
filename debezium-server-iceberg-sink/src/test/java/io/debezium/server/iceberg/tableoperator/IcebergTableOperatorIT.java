@@ -37,7 +37,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-class IcebergTableOperatorTest extends BaseTest {
+class IcebergTableOperatorIT extends BaseTest {
 
   static String testTable = "inventory.test_table_operator";
 

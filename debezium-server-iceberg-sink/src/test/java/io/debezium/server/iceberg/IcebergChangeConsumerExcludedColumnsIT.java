@@ -35,8 +35,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerExcludedColumnsTest.TestProfile.class)
-public class IcebergChangeConsumerExcludedColumnsTest extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerExcludedColumnsIT.TestProfile.class)
+public class IcebergChangeConsumerExcludedColumnsIT extends BaseSparkTest {
 
   @Test
   public void testSupportExcludedColumns() throws Exception {

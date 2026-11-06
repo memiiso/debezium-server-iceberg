@@ -35,10 +35,10 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergEventsChangeConsumerTest.TestProfile.class)
+@TestProfile(IcebergEventsChangeConsumerIT.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 @Deprecated
-public class IcebergEventsChangeConsumerTest extends BaseSparkTest {
+public class IcebergEventsChangeConsumerIT extends BaseSparkTest {
   @ConfigProperty(name = "debezium.sink.type")
   String sinkType;
 

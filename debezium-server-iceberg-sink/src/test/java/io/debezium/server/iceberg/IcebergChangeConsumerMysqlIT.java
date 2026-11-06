@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerMysqlTest.TestProfile.class)
-public class IcebergChangeConsumerMysqlTest extends BaseTest {
+@TestProfile(IcebergChangeConsumerMysqlIT.TestProfile.class)
+public class IcebergChangeConsumerMysqlIT extends BaseTest {
 
   @Test
   public void testSimpleUpload() throws Exception {

@@ -59,4 +59,4 @@ jobs:
           java-version: 21
           cache: 'maven'
       - name: Build with Maven (${{ matrix.format.name }})
-        run: mvn -B --no-transfer-progress package --file pom.xml -Dsurefire.skipAfterFailureCount=1 -Dspotless.check.skip=true
+        run: mvn -B --no-transfer-progress verify --file pom.xml -Dsurefire.skipAfterFailureCount=1 -Dspotless.check.skip=true

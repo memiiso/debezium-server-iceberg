@@ -38,9 +38,9 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergSchemaHistoryTest.TestProfile.class)
+@TestProfile(IcebergSchemaHistoryIT.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-public class IcebergSchemaHistoryTest extends BaseSparkTest {
+public class IcebergSchemaHistoryIT extends BaseSparkTest {
   @Test
   public void testSimpleUpload() throws SQLException, ClassNotFoundException {
     String sqlCreate =

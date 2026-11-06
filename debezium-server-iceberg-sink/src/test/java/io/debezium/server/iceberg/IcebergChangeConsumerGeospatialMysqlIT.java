@@ -43,8 +43,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourceMysqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerGeospatialMysqlTest.TestProfile.class)
-public class IcebergChangeConsumerGeospatialMysqlTest extends BaseTest {
+@TestProfile(IcebergChangeConsumerGeospatialMysqlIT.TestProfile.class)
+public class IcebergChangeConsumerGeospatialMysqlIT extends BaseTest {
 
   // column -> {mysql type, value}, WKT in longitude-latitude order
   private static final Map<String, String[]> COLUMNS = new LinkedHashMap<>();

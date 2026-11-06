@@ -44,8 +44,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerGeospatialTest.TestProfile.class)
-public class IcebergChangeConsumerGeospatialTest extends BaseTest {
+@TestProfile(IcebergChangeConsumerGeospatialIT.TestProfile.class)
+public class IcebergChangeConsumerGeospatialIT extends BaseTest {
 
   // column -> {postgres type, value}
   private static final Map<String, String[]> GEOMETRY_COLUMNS = new LinkedHashMap<>();
