@@ -28,13 +28,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
-@TestProfile(MaxBatchSizeWaitTest.TestProfile.class)
+@TestProfile(MaxBatchSizeWaitIT.TestProfile.class)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
 @Disabled
-class MaxBatchSizeWaitTest extends BaseSparkTest {
+class MaxBatchSizeWaitIT extends BaseSparkTest {
 
   @ConfigProperty(name = "debezium.source.max.batch.size", defaultValue = "1000")
   Integer maxBatchSize;

@@ -42,9 +42,9 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergSchemaEvolutionTest.LegacyTimePrecisionProfile.class)
+@TestProfile(IcebergSchemaEvolutionIT.LegacyTimePrecisionProfile.class)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-class IcebergSchemaEvolutionTest extends BaseTest {
+class IcebergSchemaEvolutionIT extends BaseTest {
 
   /**
    * Creates an Iceberg table based on the provided event.

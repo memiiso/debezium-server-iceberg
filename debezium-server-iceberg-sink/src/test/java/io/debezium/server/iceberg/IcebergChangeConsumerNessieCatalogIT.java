@@ -8,23 +8,18 @@
 
 package io.debezium.server.iceberg;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.QuarkusTestProfile;
-import io.quarkus.test.junit.TestProfile;
+import java.sql.SQLException;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 /**
  * Integration test that verifies basic reading from PostgreSQL database and writing to iceberg
@@ -36,36 +31,39 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerConnectTest.TestProfile.class)
-@EnabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-public class IcebergChangeConsumerConnectTest extends BaseSparkTest {
+@DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
+public class IcebergChangeConsumerNessieCatalogIT extends BaseSparkTest {
 
   @Test
-  public void testSimpleUpload() {
-    assertEquals("connect", config.debezium().keyValueChangeEventFormat());
-
+  public void testSimpleUpload() throws InterruptedException, SQLException, ClassNotFoundException {
     Awaitility.await()
         .atMost(Duration.ofSeconds(120))
         .until(
             () -> {
               try {
-                Dataset<Row> ds = getTableData("testc.inventory.customers");
-                ds.show(false);
-                return ds.count() >= 3;
+                Dataset<Row> df = getTableData("testc.inventory.customers");
+                df.show(false);
+                return df.count() >= 3;
               } catch (Exception e) {
-                e.printStackTrace();
                 return false;
               }
             });
-  }
 
-  public static class TestProfile implements QuarkusTestProfile {
-    @Override
-    public Map<String, String> getConfigOverrides() {
-      Map<String, String> config = new HashMap<>();
-      config.put("debezium.format.value", "connect");
-      config.put("debezium.format.key", "connect");
-      return config;
+    int startId = 1005;
+    int numberOfRecords = 5; // You can change this value
+    for (int i = 0; i < numberOfRecords; i++) {
+      int currentId = startId + i;
+      String firstName = "FirstName" + currentId;
+      String lastName = "LastName" + currentId;
+      String email = "user" + currentId + "@example.com";
+      String insertStatement =
+          String.format(
+              "INSERT INTO inventory.customers (id, first_name, last_name, email) VALUES (%d, '%s', '%s', '%s');",
+              currentId, firstName, lastName, email);
+      SourcePostgresqlDB.runSQL(insertStatement);
+      Thread.sleep(3000);
+      Dataset<Row> df = getTableData("testc.inventory.customers");
+      df.show(false);
     }
   }
 }
