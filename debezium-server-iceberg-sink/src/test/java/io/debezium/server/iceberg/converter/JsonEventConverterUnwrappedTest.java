@@ -32,9 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 @QuarkusTest
-@TestProfile(JsonEventConverterTestUnwrapped.TestProfile.class)
+@TestProfile(JsonEventConverterUnwrappedTest.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "DEBEZIUM_FORMAT_VALUE", matches = "connect")
-class JsonEventConverterTestUnwrapped extends BaseTest {
+class JsonEventConverterUnwrappedTest extends BaseTest {
 
   @Test
   public void testIcebergSchemaConverterWithNestedKey() throws IOException {
