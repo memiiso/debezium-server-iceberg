@@ -40,6 +40,7 @@ public class CatalogLakekeeper implements QuarkusTestResourceLifecycleManager {
   private GenericContainer<?> lakekeeperContainer() {
     return new GenericContainer<>(DockerImageName.parse(LAKEKEEPER_IMAGE))
         .withNetwork(network)
+        .withAccessToHost(true)
         .withEnv("LAKEKEEPER__PG_ENCRYPTION_KEY", "This-is-NOT-Secure!")
         .withEnv(
             "LAKEKEEPER__PG_DATABASE_URL_READ", "postgresql://postgres:postgres@db:5432/postgres")
@@ -49,6 +50,7 @@ public class CatalogLakekeeper implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
+    String s3Url = S3Minio.getS3UrlFromContainers();
     db.start();
     // create the catalog schema then start the server
     try (GenericContainer<?> migrate =
@@ -95,7 +97,7 @@ public class CatalogLakekeeper implements QuarkusTestResourceLifecycleManager {
             .formatted(
                 WAREHOUSE,
                 TestConfigSource.S3_BUCKET_NAME,
-                S3Minio.getS3UrlFromContainers(),
+                s3Url,
                 TestConfigSource.S3_REGION,
                 TestConfigSource.S3_MINIO_ACCESS_KEY,
                 TestConfigSource.S3_MINIO_SECRET_KEY),

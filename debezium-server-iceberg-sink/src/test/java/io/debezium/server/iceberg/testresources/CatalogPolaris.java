@@ -32,6 +32,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
   private final GenericContainer<?> polaris =
       new GenericContainer<>(DockerImageName.parse(POLARIS_IMAGE))
           .withExposedPorts(PORT, MANAGEMENT_PORT)
+          .withAccessToHost(true)
           .withEnv("POLARIS_BOOTSTRAP_CREDENTIALS", "POLARIS," + CREDENTIAL.replace(':', ','))
           .withEnv("polaris.realm-context.realms", "POLARIS")
           .withEnv("quarkus.otel.sdk.disabled", "true")
@@ -43,6 +44,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
 
   @Override
   public Map<String, String> start() {
+    String s3Url = S3Minio.getS3UrlFromContainers();
     polaris.start();
     String url = String.format("http://%s:%s", polaris.getHost(), polaris.getMappedPort(PORT));
     String token = token(url);
@@ -69,13 +71,7 @@ public class CatalogPolaris implements QuarkusTestResourceLifecycleManager {
           }
         }
         """
-            .formatted(
-                CATALOG,
-                location,
-                location,
-                S3Minio.getS3UrlFromContainers(),
-                S3Minio.getS3UrlFromContainers(),
-                TestConfigSource.S3_REGION),
+            .formatted(CATALOG, location, location, s3Url, s3Url, TestConfigSource.S3_REGION),
         token);
     CatalogSetup.send(
         "PUT",

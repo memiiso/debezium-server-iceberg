@@ -8,17 +8,17 @@
 
 package io.debezium.server.iceberg;
 
-import io.debezium.server.iceberg.testresources.CatalogPolaris;
+import io.debezium.server.iceberg.testresources.CatalogLakekeeper;
 import io.debezium.server.iceberg.testresources.S3Minio;
 import io.debezium.server.iceberg.testresources.SourcePostgresqlDB;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
-/** Writes to the Apache Polaris REST catalog. */
+/** Writes to the Lakekeeper REST catalog. */
 @QuarkusTest
-@QuarkusTestResource(value = CatalogPolaris.class, restrictToAnnotatedClass = true)
+@QuarkusTestResource(value = CatalogLakekeeper.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
-public class IcebergChangeConsumerPolarisCatalogTest extends BaseRestCatalogTest {}
+public class IcebergChangeConsumerLakekeeperCatalogIT extends BaseRestCatalogTest {}
