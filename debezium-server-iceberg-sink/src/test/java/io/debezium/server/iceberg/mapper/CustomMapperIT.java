@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogJdbc.class, restrictToAnnotatedClass = true)
-@TestProfile(CustomMapperTest.TestProfile.class)
-public class CustomMapperTest extends BaseSparkTest {
+@TestProfile(CustomMapperIT.TestProfile.class)
+public class CustomMapperIT extends BaseSparkTest {
 
   @Test
   public void testCustomMapper() throws Exception {

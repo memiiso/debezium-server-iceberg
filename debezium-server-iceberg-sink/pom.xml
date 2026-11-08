@@ -20,6 +20,30 @@
     <name>Debezium Server Iceberg Consumer</name>
     <packaging>jar</packaging>
 
+    <properties>
+        <!-- JVM arguments shared by surefire (unit tests) and failsafe (integration tests) -->
+        <test.jvm.args>
+            @{argLine}
+            -Djava.util.concurrent.ForkJoinPool.common.parallelism=0
+            -XX:+EnableDynamicAgentLoading
+            --enable-native-access=ALL-UNNAMED
+            ${jdk.security.manager.arg}
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+            --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+            --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+            --add-opens=java.base/java.io=ALL-UNNAMED
+            --add-opens=java.base/java.net=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/java.util=ALL-UNNAMED
+            --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+            --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
+            ${jdk.sun.security.action.arg}
+            --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
+        </test.jvm.args>
+    </properties>
+
     <dependencies>
         <!-- Debezium  -->
         <dependency>
@@ -435,31 +459,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <argLine>
-                        @{argLine}
-                        -Djava.util.concurrent.ForkJoinPool.common.parallelism=0
-                        -XX:+EnableDynamicAgentLoading
-                        --enable-native-access=ALL-UNNAMED
-                        ${jdk.security.manager.arg}
-                        --add-opens=java.base/java.lang=ALL-UNNAMED
-                        --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
-                        --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
-                        --add-opens=java.base/java.io=ALL-UNNAMED
-                        --add-opens=java.base/java.net=ALL-UNNAMED
-                        --add-opens=java.base/java.nio=ALL-UNNAMED
-                        --add-opens=java.base/java.util=ALL-UNNAMED
-                        --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
-                        --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
-                        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-                        --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
-                        ${jdk.sun.security.action.arg}
-                        --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
-                    </argLine>
-                    <environmentVariables>
-                        <SPARK_USER>test</SPARK_USER>
-                        <PYSPARK_PYTHON>/nonexistent/python</PYSPARK_PYTHON>
-                        <PYSPARK_DRIVER_PYTHON>/nonexistent/python</PYSPARK_DRIVER_PYTHON>
-                    </environmentVariables>
+                    <argLine>${test.jvm.args}</argLine>
                     <systemPropertyVariables>
                         <maven.settings>${session.request.userSettingsFile.path}</maven.settings>
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
@@ -497,32 +497,12 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <skipTests>${skipITs}</skipTests>
                     <enableAssertions>true</enableAssertions>
-                    <argLine>
-                        @{argLine}
-                        -Djava.util.concurrent.ForkJoinPool.common.parallelism=0
-                        -XX:+EnableDynamicAgentLoading
-                        ${jdk.security.manager.arg}
-                        --add-opens=java.base/java.lang=ALL-UNNAMED
-                        --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
-                        --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
-                        --add-opens=java.base/java.io=ALL-UNNAMED
-                        --add-opens=java.base/java.net=ALL-UNNAMED
-                        --add-opens=java.base/java.nio=ALL-UNNAMED
-                        --add-opens=java.base/java.util=ALL-UNNAMED
-                        --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
-                        --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
-                        --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-                        --add-opens=java.base/sun.nio.cs=ALL-UNNAMED
-                        ${jdk.sun.security.action.arg}
-                        --add-opens=java.base/sun.util.calendar=ALL-UNNAMED
-                    </argLine>
-                    <environmentVariables>
-                        <SPARK_USER>test</SPARK_USER>
-                    </environmentVariables>
+                    <argLine>${test.jvm.args}</argLine>
                     <systemPropertyVariables>
                         <test.type>IT</test.type>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

@@ -1,7 +1,7 @@
 package io.debezium.server.iceberg.tableoperator;
 
 import io.debezium.server.iceberg.BaseTest;
-import io.debezium.server.iceberg.IcebergChangeConsumerTest;
+import io.debezium.server.iceberg.IcebergChangeConsumerIT;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.testresources.CatalogNessie;
 import io.debezium.server.iceberg.testresources.S3Minio;
@@ -19,8 +19,8 @@ import org.mockito.Mockito;
 @QuarkusTest
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerTest.TestProfile.class)
-class IcebergChangeConsumerLoadTableTest extends BaseTest {
+@TestProfile(IcebergChangeConsumerIT.TestProfile.class)
+class IcebergChangeConsumerLoadTableIT extends BaseTest {
   final String schemaName = "inventory";
 
   @Test

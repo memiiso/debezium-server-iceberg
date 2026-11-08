@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = CatalogNessie.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerUpsertV3Test.TestProfile.class)
-public class IcebergChangeConsumerUpsertV3Test extends BaseSparkTest {
+@TestProfile(IcebergChangeConsumerUpsertV3IT.TestProfile.class)
+public class IcebergChangeConsumerUpsertV3IT extends BaseSparkTest {
 
   @Test
   public void testSimpleUpsertV3() throws Exception {

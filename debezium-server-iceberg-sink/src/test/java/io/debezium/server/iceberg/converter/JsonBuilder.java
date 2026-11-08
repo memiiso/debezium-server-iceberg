@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.IcebergChangeConsumerTest;
+import io.debezium.server.iceberg.IcebergChangeConsumerIT;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.Iterator;
@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 @ApplicationScoped
 public class JsonBuilder {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerTest.class);
+  protected static final Logger LOGGER = LoggerFactory.getLogger(IcebergChangeConsumerIT.class);
   ObjectNode payload = JsonNodeFactory.instance.objectNode();
   ObjectNode keyPayload = JsonNodeFactory.instance.objectNode();
   String destination = "test";
