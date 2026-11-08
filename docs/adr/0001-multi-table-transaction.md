@@ -143,6 +143,7 @@ Requirements, checked at startup or on the first batch:
 
 - the catalog is a `RESTCatalog`,
 - `debezium.source.offset.storage` is `IcebergOffsetBackingStore`, with the same catalog `uri` as the sink.
+- `debezium.source.tasks.max` is 1. With several tasks (SQL Server capturing several databases), `handle()` runs concurrently and every batch replaces the single offset row: a task retrying after a commit conflict re-applies the row it prepared before the other task's commit, moving the other task's offset back. Supporting several tasks needs the offset row to be rebuilt on retry from the reloaded table, with the commits serialized in the offset store.
 
 The engine creates the offset store by reflection from its class name, not through CDI, so the started instance registers itself in a static field (`IcebergOffsetBackingStore.instance()`) for the consumer.
 

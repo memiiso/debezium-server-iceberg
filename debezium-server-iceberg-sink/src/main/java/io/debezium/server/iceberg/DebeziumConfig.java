@@ -62,6 +62,10 @@ public interface DebeziumConfig {
   @WithName("debezium.source.offset.commit.policy")
   Optional<String> offsetCommitPolicy();
 
+  @WithName("debezium.source.tasks.max")
+  @WithDefault("1")
+  int tasksMax();
+
   default boolean isSynchronousOffsetCommitEnabled() {
     return offsetFlushIntervalMs().map(ms -> ms <= 0L).orElse(false)
         || offsetCommitPolicy()

@@ -202,6 +202,25 @@ public class MultiTableTransactionTest {
   }
 
   @Test
+  void testAtomicOffsetCommitRequiresSingleTask() {
+    when(icebergConfig.atomicOffsetCommit()).thenReturn(true);
+    when(debeziumConfig.offsetStorage()).thenReturn(IcebergOffsetBackingStore.class.getName());
+
+    when(debeziumConfig.tasksMax()).thenReturn(1);
+    consumer.validateMultiTableTransactionSupport();
+
+    when(debeziumConfig.tasksMax()).thenReturn(2);
+    DebeziumException ex =
+        assertThrows(
+            DebeziumException.class, () -> consumer.validateMultiTableTransactionSupport());
+    assertTrue(ex.getMessage().contains("debezium.source.tasks.max"), ex.getMessage());
+
+    // multi-table transaction alone does not commit the offsets, several tasks are allowed
+    when(icebergConfig.atomicOffsetCommit()).thenReturn(false);
+    consumer.validateMultiTableTransactionSupport();
+  }
+
+  @Test
   void testMultiTableTransactionSequential() throws Exception {
     BatchEvent event1 = createBatchEvent("inventory.customers", 1, "Alice", 101L);
     BatchEvent event2 = createBatchEvent("inventory.orders", 10, "Order-10", 102L);

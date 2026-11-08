@@ -282,6 +282,8 @@ Requirements:
 - a REST catalog supporting multi-table transactions (`POST /v1/{prefix}/transactions/commit`), for example Lakekeeper,
   Apache Polaris or the Iceberg REST fixture.
 - the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables (same `uri`).
+- a single connector task (`debezium.source.tasks.max=1`, the default). Only the SQL Server connector capturing several
+  databases runs more than one task, the tasks would overwrite each other's offsets in the shared offset row.
 
 The offsets are serialized like the Debezium engine does, so the engine's own flush after the batch finds them already
 stored and skips the write. For Postgres, the LSN is confirmed to the replication slot only after the transaction. An

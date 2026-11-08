@@ -142,6 +142,14 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
             "Atomic offset commit (debezium.sink.iceberg.atomic-offset-commit=true) requires `debezium.source.offset.storage` to be "
                 + IcebergOffsetBackingStore.class.getName());
       }
+      // the tasks call handle() concurrently and share the single offset row: a task retrying its
+      // commit after a conflict would write back the offsets of the other task as they were
+      // before, and they would be replayed on restart
+      if (config.debezium().tasksMax() > 1) {
+        throw new DebeziumException(
+            "Atomic offset commit (debezium.sink.iceberg.atomic-offset-commit=true) requires a single connector task, but `debezium.source.tasks.max` is "
+                + config.debezium().tasksMax());
+      }
       LOGGER.info(
           "Atomic offset commit enabled, data tables and offset are committed in one transaction");
     } else if (!config.debezium().isSynchronousOffsetCommitEnabled()) {
