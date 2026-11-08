@@ -44,6 +44,7 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.batch.concurrent-uploads`                     | `1`                                                           | The number of parallel threads to use for uploading data to Iceberg tables. When set to a value greater than 1, the consumer will write to multiple tables concurrently.                                                                                                                                          |
 | `debezium.sink.batch.concurrent-uploads.timeout-minutes`     | `60`                                                          | The maximum time in minutes to wait for all parallel uploads to complete before timing out. This is only effective when `debezium.sink.batch.concurrent-uploads` is greater than 1.                                                                                                                               |
 | `debezium.sink.iceberg.openlineage-enabled`                  | `false`                                                       | Enables OpenLineage metadata logging for Iceberg commits.                                                                                                                                                                                                                                                         |
+| `debezium.sink.iceberg.multi-table-transaction`              | `false`                                                       | Commits all destination Iceberg tables modified in a batch atomically in a single `RESTCatalog.commitTransaction` call before committing batch offsets. Requires an Iceberg `RESTCatalog`.                                                                                                                        |
 | `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                                               | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) These Iceberg settings are passed to Iceberg without the `debezium.sink.iceberg.` prefix.                                                                                                                                                 |
 | `debezium.source.offset.storage`                             | `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming). Set to `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` to use Iceberg table                 |
 | `debezium.source.offset.storage.iceberg.table-name`          | `_debezium_offset_storage`                                    | Destination Iceberg table name to store connector offset information.                                                                                                                                                                                                                                             |
@@ -240,6 +241,20 @@ binlog position.
 debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
 debezium.source.offset.storage.iceberg.table-name=debezium_offset_storage_table
 ```
+
+### Multi-Table Batch Transactions
+
+When using an Iceberg `RESTCatalog` that supports `/v1/{prefix}/transactions/commit`, you can enable batch-level multi-table transactions so that all destination tables modified in a batch are committed together in a single atomic catalog transaction before Debezium marks the batch offset as processed:
+
+```properties
+debezium.sink.iceberg.multi-table-transaction=true
+# Recommended: flush Debezium offsets synchronously after every batch commit
+debezium.source.offset.flush.interval.ms=0
+# Alternatively:
+# debezium.source.offset.commit.policy=io.debezium.engine.spi.OffsetCommitPolicy$AlwaysCommitOffsetPolicy
+```
+
+See [ADR-0001](adr/0001-multi-table-transaction.md) for architecture details and failure guarantees.
 
 ## Debezium Database History Storage
 
