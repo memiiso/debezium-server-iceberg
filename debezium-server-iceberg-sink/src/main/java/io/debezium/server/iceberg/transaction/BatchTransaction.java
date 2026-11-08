@@ -24,9 +24,18 @@ public interface BatchTransaction extends AutoCloseable {
    */
   Table enlist(TableIdentifier tableId, Table icebergTable);
 
-  /** Commits all enlisted table changes atomically. */
+  /**
+   * Registers an action to run once the batch is committed, e.g. logging or lineage events. Not run
+   * when the commit fails.
+   *
+   * @param action the action, its failures are logged and ignored
+   */
+  void onCommit(Runnable action);
+
+  /** Commits all enlisted table changes atomically, then runs the {@link #onCommit} actions. */
   void commit();
 
+  /** Releases the transaction, deleting the files written when it was not committed. */
   @Override
   default void close() {}
 }

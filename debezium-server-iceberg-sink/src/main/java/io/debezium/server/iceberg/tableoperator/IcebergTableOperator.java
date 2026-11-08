@@ -214,8 +214,19 @@ public class IcebergTableOperator {
       throw new DebeziumException(
           "Failed to write data to table:`" + icebergTable.name() + "`", ex);
     }
+  }
 
-    LOGGER.info("Committed {} events to table! {}", events.size(), icebergTable.location());
+  /**
+   * Logs and emits OpenLineage metadata once the events are committed to the table.
+   *
+   * <p>When the table is part of a multi-table transaction, {@link #addToTable} only stages the
+   * changes, this is called once the transaction is committed.
+   *
+   * @param icebergTable
+   * @param numEvents number of events committed
+   */
+  public void afterCommit(Table icebergTable, int numEvents) {
+    LOGGER.info("Committed {} events to table! {}", numEvents, icebergTable.location());
 
     // Emit OpenLineage output dataset metadata after successful commit
     if (config.iceberg().openlineageEnabled()) {

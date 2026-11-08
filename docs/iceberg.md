@@ -45,6 +45,8 @@ When event and key schema information is enabled (`debezium.format.value.schemas
 | `debezium.sink.batch.concurrent-uploads.timeout-minutes`     | `60`                                                          | The maximum time in minutes to wait for all parallel uploads to complete before timing out. This is only effective when `debezium.sink.batch.concurrent-uploads` is greater than 1.                                                                                                                               |
 | `debezium.sink.iceberg.openlineage-enabled`                  | `false`                                                       | Enables OpenLineage metadata logging for Iceberg commits.                                                                                                                                                                                                                                                         |
 | `debezium.sink.iceberg.multi-table-transaction`              | `false`                                                       | Commits all destination Iceberg tables modified in a batch atomically in a single `RESTCatalog.commitTransaction` call before committing batch offsets. Requires an Iceberg `RESTCatalog`.                                                                                                                        |
+| `debezium.sink.iceberg.multi-table-transaction-retries`      | `3`                                                           | Number of retries of the multi-table transaction on commit conflict, e.g. with a concurrent compaction.                                                                                                                                                                                                           |
+| `debezium.sink.iceberg.atomic-offset-commit`                 | `false`                                                       | Commits the Debezium offset in the same multi-table transaction as the data (exactly-once). Implies `multi-table-transaction`. See [Exactly-once](#exactly-once-atomic-offset-commit).                                                                                                                            |
 | `debezium.sink.iceberg.{iceberg.prop.name}`                  |                                                               | [Iceberg config](https://iceberg.apache.org/docs/latest/configuration/) These Iceberg settings are passed to Iceberg without the `debezium.sink.iceberg.` prefix.                                                                                                                                                 |
 | `debezium.source.offset.storage`                             | `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` | The name of the Java class that is responsible for persistence of connector offsets. see [debezium doc](https://debezium.io/documentation/reference/stable/development/engine.html#advanced-consuming). Set to `io.debezium.server.iceberg.offset.IcebergOffsetBackingStore` to use Iceberg table                 |
 | `debezium.source.offset.storage.iceberg.table-name`          | `_debezium_offset_storage`                                    | Destination Iceberg table name to store connector offset information.                                                                                                                                                                                                                                             |
@@ -253,6 +255,37 @@ debezium.source.offset.flush.interval.ms=0
 # Alternatively:
 # debezium.source.offset.commit.policy=io.debezium.engine.spi.OffsetCommitPolicy$AlwaysCommitOffsetPolicy
 ```
+
+On commit conflict (e.g. a concurrent compaction), the tables are reloaded and the batch changes are re-applied on top
+of them, reusing the written data files (`debezium.sink.iceberg.multi-table-transaction-retries`). When the transaction
+fails, the files written for the batch are deleted.
+
+The offset is still committed by Debezium after the transaction, so a crash between the data commit and the offset
+flush replays the batch on restart (at-least-once): upsert mode absorbs the replayed events, append mode duplicates them.
+Use [atomic offset commit](#exactly-once-atomic-offset-commit) to close that gap.
+
+#### Exactly-once (atomic offset commit)
+
+With `debezium.sink.iceberg.atomic-offset-commit=true`, the offset of the batch is committed in the **same** catalog
+transaction as the data tables, in the offset table of `IcebergOffsetBackingStore`. Either the batch and its offset are
+committed, or none of them, so a batch is never written twice, in append mode too.
+
+```properties
+debezium.sink.iceberg.type=rest
+debezium.sink.iceberg.uri=http://catalog:8181
+debezium.sink.iceberg.atomic-offset-commit=true
+debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBackingStore
+```
+
+Requirements:
+
+- a REST catalog supporting multi-table transactions (`POST /v1/{prefix}/transactions/commit`), for example Lakekeeper,
+  Apache Polaris or the Iceberg REST fixture.
+- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables (same `uri`).
+
+The offsets are serialized like the Debezium engine does, so the engine's own flush after the batch finds them already
+stored and skips the write. For Postgres, the LSN is confirmed to the replication slot only after the transaction. An
+interrupted initial snapshot is restarted by the connector, its rows can still be duplicated in append mode.
 
 See [ADR-0001](adr/0001-multi-table-transaction.md) for architecture details and failure guarantees.
 

@@ -101,13 +101,20 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 
 - **`BatchTransaction`** (`AutoCloseable`):
   - `Table enlist(TableIdentifier tableId, Table icebergTable)`
+  - `void onCommit(Runnable action)`: post commit actions (commit log, OpenLineage event), only run once the data is committed.
   - `void commit()`
+  - `void close()`: deletes the files written for the batch when it was not committed.
 - **`NoOpBatchTransaction`** (used when `multi-table-transaction=false`):
   - `enlist` returns `icebergTable` directly (operations commit immediately per table).
+  - `onCommit` runs the action right away, the table is already committed.
   - `commit` is a no-op.
 - **`MultiTableTransaction`** (used when `multi-table-transaction=true`):
   - `enlist` creates or retrieves `table.newTransaction()` in a thread-safe `ConcurrentHashMap` and returns `tx.table()`.
   - `commit` builds `TableCommit.create(tableId, baseTx.startMetadata(), baseTx.currentMetadata())` for every modified table, calls `restCatalog.commitTransaction(tableCommits)`, and invalidates committed tables in the catalog cache.
+  - On `CommitFailedException` (e.g. a concurrent compaction), each table is reloaded and the staged changes are re-applied on a new transaction: the staged schema change (only when the table schema did not change concurrently, so the field ids of the written files stay valid), then the data and delete files added by each staged snapshot. No data file is rewritten. Up to `multi-table-transaction-retries` retries.
+  - `close` deletes the data, delete, manifest and manifest list files of every attempt when the transaction is not committed, unless a commit request failed with an unknown outcome (e.g. `CommitStateUnknownException`), then the files are kept.
+- **`AtomicOffsetTransaction`** (used when `atomic-offset-commit=true`), extends `MultiTableTransaction`:
+  - adds the offset table of `IcebergOffsetBackingStore` to the same `commitTransaction` call, see [Exactly-once](#exactly-once-atomic-offset-commit).
 
 ---
 
@@ -118,3 +125,29 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 | **Crash / Exception during Step 2 (Table upload)** | Uncommitted (`BaseTransaction` never sent to catalog) | Uncommitted (`handle()` throws before `record.commit()` and `markBatchFinished()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
 | **Crash / Exception during Step 3 (`RESTCatalog.commitTransaction`)** | Atomically rejected by catalog | Uncommitted (`handle()` throws before `record.commit()` and `markBatchFinished()`) | Debezium replays the batch from previous offset; zero duplicate rows. |
 | **Step 3 succeeds -> Step 4 & 5 (`record.commit()` + synchronous `markBatchFinished()`)** | All batch tables committed atomically in a single catalog transaction | Flushed synchronously via `flushFuture.get()` before polling the next batch (when `offset.flush.interval.ms=0` or `AlwaysCommitOffsetPolicy`) | Batch data and source offset are persisted before the next batch begins. |
+| **Crash after Step 3, before the offset flush of Step 5** | Committed | Not flushed, two separate writes | Debezium replays the batch: upsert mode absorbs it, append mode duplicates it (at-least-once). Closed by `atomic-offset-commit`. |
+
+---
+
+## Exactly-once (atomic offset commit)
+
+`multi-table-transaction` alone is at-least-once: the data commit and the offset flush are two writes, a crash between them replays the batch. A synchronous offset flush makes the window shorter, it cannot remove it.
+
+With `debezium.sink.iceberg.atomic-offset-commit=true`, `AtomicOffsetTransaction` commits the offset of the batch in the same `commitTransaction` call as the data tables:
+
+1. `IcebergOffsetBackingStore.prepare(records)` serializes the offsets of all the batch records (heartbeats included) with the same `OffsetStorageWriter` and converters as the Debezium engine, merges them with the stored offsets and writes the offset row data file, without committing it.
+2. The offset table replacement (`overwriteByRowFilter(alwaysTrue)` + the new file) is added as one more `TableCommit` of the transaction. On retry, the offset table is reloaded and the replacement re-applied.
+3. Once committed, the store marks the offsets as persisted. The engine flush that follows (`markBatchFinished()`) finds the same offsets and skips the write, a concurrent engine write to the offset table is handled as a commit conflict.
+
+Requirements, checked at startup or on the first batch:
+
+- the catalog is a `RESTCatalog`,
+- `debezium.source.offset.storage` is `IcebergOffsetBackingStore`, with the same catalog `uri` as the sink.
+
+The engine creates the offset store by reflection from its class name, not through CDI, so the started instance registers itself in a static field (`IcebergOffsetBackingStore.instance()`) for the consumer.
+
+| Failure Point | Data Tables | Offset | Recovery Behavior |
+| :--- | :--- | :--- | :--- |
+| **Before or during `commitTransaction`** | Not committed | Not committed | Batch replayed from the previous offset, no duplicates. |
+| **After `commitTransaction`** | Committed | Committed in the same transaction | Restart from the batch offset, nothing replayed. |
+| **`commitTransaction` outcome unknown** | Committed or not, together with the offset | Same as the data | Files kept; on restart the stored offset tells whether the batch is replayed. |

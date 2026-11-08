@@ -40,7 +40,7 @@ import org.junit.jupiter.api.condition.JRE;
 @QuarkusTestResource(value = CatalogRest.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = S3Minio.class, restrictToAnnotatedClass = true)
 @QuarkusTestResource(value = SourcePostgresqlDB.class, restrictToAnnotatedClass = true)
-@TestProfile(IcebergChangeConsumerRestCatalogTest.TestProfile.class)
+@TestProfile(IcebergChangeConsumerRestCatalogIT.TestProfile.class)
 @DisabledIfEnvironmentVariable(named = "GITHUB_ACTIONS", matches = "true")
 public class IcebergChangeConsumerRestCatalogIT extends BaseTest {
 
