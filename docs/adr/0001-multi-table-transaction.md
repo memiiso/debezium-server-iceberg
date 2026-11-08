@@ -111,7 +111,8 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 - **`MultiTableTransaction`** (used when `multi-table-transaction=true`):
   - `enlist` creates or retrieves `table.newTransaction()` in a thread-safe `ConcurrentHashMap` and returns `tx.table()`.
   - `commit` builds `TableCommit.create(tableId, baseTx.startMetadata(), baseTx.currentMetadata())` for every modified table, calls `restCatalog.commitTransaction(tableCommits)`, and invalidates committed tables in the catalog cache.
-  - On `CommitFailedException` (e.g. a concurrent compaction), each table is reloaded and the staged changes are re-applied on a new transaction: the staged schema change (only when the table schema did not change concurrently, so the field ids of the written files stay valid), then the data and delete files added by each staged snapshot. No data file is rewritten. Up to `multi-table-transaction-retries` retries.
+  - On `CommitFailedException` (e.g. a concurrent compaction), each table is reloaded and the staged changes are re-applied on a new transaction: the staged schema change (only when the table schema did not change concurrently, so the field ids of the written files stay valid), then the data and delete files added by each staged snapshot. No data file is rewritten. Up to `multi-table-transaction-retries` retries. Once a retry is committed, the manifest and manifest list files of the rejected attempts are deleted, their data and delete files are kept (reused by the committed attempt).
+  - The transaction is per batch, not per source transaction: a source transaction split across batches is visible partially between two commits.
   - `close` deletes the data, delete, manifest and manifest list files of every attempt when the transaction is not committed, unless a commit request failed with an unknown outcome (e.g. `CommitStateUnknownException`), then the files are kept.
 - **`AtomicOffsetTransaction`** (used when `atomic-offset-commit=true`), extends `MultiTableTransaction`:
   - adds the offset table of `IcebergOffsetBackingStore` to the same `commitTransaction` call, see [Exactly-once](#exactly-once-atomic-offset-commit).
@@ -136,13 +137,13 @@ Passing `tx.table()` to `IcebergTableOperator.addToTable(Table icebergTable, Lis
 With `debezium.sink.iceberg.atomic-offset-commit=true`, `AtomicOffsetTransaction` commits the offset of the batch in the same `commitTransaction` call as the data tables:
 
 1. `IcebergOffsetBackingStore.prepare(records)` serializes the offsets of all the batch records (heartbeats included) with the same `OffsetStorageWriter` and converters as the Debezium engine, merges them with the stored offsets and writes the offset row data file, without committing it.
-2. The offset table replacement (`overwriteByRowFilter(alwaysTrue)` + the new file) is added as one more `TableCommit` of the transaction. On retry, the offset table is reloaded and the replacement re-applied.
-3. Once committed, the store marks the offsets as persisted. The engine flush that follows (`markBatchFinished()`) finds the same offsets and skips the write, a concurrent engine write to the offset table is handled as a commit conflict.
+2. The offset table replacement (`overwriteByRowFilter(alwaysTrue)` + the new file) is added as one more `TableCommit` of the transaction. The offset table is loaded through the sink catalog on every attempt, so the replacement is applied on the current table, on retry too.
+3. Once committed, the store marks the offsets as persisted, in memory only, so nothing can fail after the commit. The engine flush that follows (`markBatchFinished()`) finds the same offsets and skips the write, a concurrent engine write to the offset table is handled as a commit conflict.
 
 Requirements, checked at startup or on the first batch:
 
 - the catalog is a `RESTCatalog`,
-- `debezium.source.offset.storage` is `IcebergOffsetBackingStore`, with the same catalog `uri` as the sink.
+- `debezium.source.offset.storage` is `IcebergOffsetBackingStore`, and its offset table is the table the sink catalog commits to: on the first batch, the table loaded through the sink catalog must have the uuid of the table read by the offset store. Comparing the `uri` is not enough, the offset storage can override the `warehouse` or `prefix` of the same server, the offset would then be committed to a table the store does not read on restart.
 - `debezium.source.tasks.max` is 1. With several tasks (SQL Server capturing several databases), `handle()` runs concurrently and every batch replaces the single offset row: a task retrying after a commit conflict re-applies the row it prepared before the other task's commit, moving the other task's offset back. Supporting several tasks needs the offset row to be rebuilt on retry from the reloaded table, with the commits serialized in the offset store.
 
 The engine creates the offset store by reflection from its class name, not through CDI, so the started instance registers itself in a static field (`IcebergOffsetBackingStore.instance()`) for the consumer.

@@ -260,6 +260,9 @@ On commit conflict (e.g. a concurrent compaction), the tables are reloaded and t
 of them, reusing the written data files (`debezium.sink.iceberg.multi-table-transaction-retries`). When the transaction
 fails, the files written for the batch are deleted.
 
+The transaction is per **batch** of events, not per source transaction: a large source transaction can be split
+across batches (`debezium.source.max.batch.size`), readers can then see a part of it until the next batch is committed.
+
 The offset is still committed by Debezium after the transaction, so a crash between the data commit and the offset
 flush replays the batch on restart (at-least-once): upsert mode absorbs the replayed events, append mode duplicates them.
 Use [atomic offset commit](#exactly-once-atomic-offset-commit) to close that gap.
@@ -281,13 +284,20 @@ Requirements:
 
 - a REST catalog supporting multi-table transactions (`POST /v1/{prefix}/transactions/commit`), for example Lakekeeper,
   Apache Polaris or the Iceberg REST fixture.
-- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables (same `uri`).
+- the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables: same `uri`, and same
+  `warehouse` and `prefix` when `debezium.source.offset.storage.iceberg.*` overrides them. On the first batch, the offset
+  table loaded through the sink catalog must be the table of the offset storage (same table uuid).
 - a single connector task (`debezium.source.tasks.max=1`, the default). Only the SQL Server connector capturing several
   databases runs more than one task, the tasks would overwrite each other's offsets in the shared offset row.
 
 The offsets are serialized like the Debezium engine does, so the engine's own flush after the batch finds them already
 stored and skips the write. For Postgres, the LSN is confirmed to the replication slot only after the transaction. An
 interrupted initial snapshot is restarted by the connector, its rows can still be duplicated in append mode.
+
+Every batch adds a snapshot to the offset table, and each commit of a table rewrites its metadata with all its
+snapshots. The offset table is in the commit of every batch, expire its snapshots regularly like the data tables, for
+example with Trino `ALTER TABLE <namespace>.<offset table> EXECUTE expire_snapshots(retention_threshold => '1d')` or
+Spark `CALL <catalog>.system.expire_snapshots(table => '<namespace>.<offset table>', older_than => ...)`.
 
 See [ADR-0001](adr/0001-multi-table-transaction.md) for architecture details and failure guarantees.
 

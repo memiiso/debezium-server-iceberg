@@ -43,8 +43,9 @@ import org.slf4j.LoggerFactory;
  * commits them atomically via {@link RESTCatalog#commitTransaction(List)}.
  *
  * <p>On commit conflict (e.g. a concurrent compaction), the tables are reloaded and the staged
- * changes are re-applied on top of them, reusing the written data files. When the transaction is
- * not committed, the written files are deleted, unless the outcome of the commit is unknown.
+ * changes are re-applied on top of them, reusing the written data files, and the manifests of the
+ * rejected attempts are deleted once committed. When the transaction is not committed, the written
+ * files are deleted, unless the outcome of the commit is unknown.
  */
 public class MultiTableTransaction implements BatchTransaction {
 
@@ -90,6 +91,7 @@ public class MultiTableTransaction implements BatchTransaction {
       }
     }
 
+    List<BaseTransaction> committedTxs = List.of();
     for (int attempt = 1; ; attempt++) {
       boolean retry = attempt > 1;
       Map<TableIdentifier, Transaction> attemptTxs = new LinkedHashMap<>();
@@ -97,12 +99,14 @@ public class MultiTableTransaction implements BatchTransaction {
       attemptTxs.putAll(additionalTransactions(retry));
 
       List<TableCommit> tableCommits = new ArrayList<>();
+      List<BaseTransaction> attemptBaseTxs = new ArrayList<>();
       attemptTxs.forEach(
           (id, tx) -> {
             BaseTransaction baseTx = asBaseTransaction(tx);
             if (!attempts.contains(baseTx)) {
               attempts.add(baseTx);
             }
+            attemptBaseTxs.add(baseTx);
             tableCommits.add(
                 TableCommit.create(id, baseTx.startMetadata(), baseTx.currentMetadata()));
           });
@@ -115,6 +119,7 @@ public class MultiTableTransaction implements BatchTransaction {
             "Committing multi-table transaction with {} table commits", tableCommits.size());
         restCatalog.commitTransaction(tableCommits);
         tableCommits.forEach(tc -> restCatalog.invalidateTable(tc.identifier()));
+        committedTxs = attemptBaseTxs;
         break;
       } catch (CommitFailedException e) {
         if (attempt > maxRetries) {
@@ -138,6 +143,7 @@ public class MultiTableTransaction implements BatchTransaction {
     committed = true;
     afterCommitted();
     onCommitActions.forEach(NoOpBatchTransaction::runAction);
+    deleteRejectedAttempts(committedTxs);
   }
 
   @Override
@@ -154,7 +160,24 @@ public class MultiTableTransaction implements BatchTransaction {
         .map(MultiTableTransaction::asBaseTransaction)
         .filter(tx -> !attempts.contains(tx))
         .forEach(attempts::add);
-    deleteWrittenFiles(attempts);
+    deleteFiles(writtenFiles(attempts, true));
+  }
+
+  /**
+   * Deletes the manifest and manifest list files written by the attempts rejected before the
+   * commit. Their data and delete files are kept, the committed attempt reuses them.
+   */
+  private void deleteRejectedAttempts(List<BaseTransaction> committedTxs) {
+    List<Transaction> rejected =
+        attempts.stream().filter(tx -> !committedTxs.contains(tx)).toList();
+    Map<String, FileIO> rejectedFiles = writtenFiles(rejected, false);
+    if (rejectedFiles.isEmpty()) {
+      return;
+    }
+    // the committed attempt writes its own manifests, never delete a file it references
+    rejectedFiles.keySet().removeAll(writtenFiles(committedTxs, false).keySet());
+    LOGGER.debug("Deleting {} files of the rejected commit attempts", rejectedFiles.size());
+    deleteFiles(rejectedFiles);
   }
 
   /**
@@ -236,10 +259,15 @@ public class MultiTableTransaction implements BatchTransaction {
   }
 
   /**
-   * Deletes the data, delete, manifest and manifest list files added by the transactions, which
-   * were not committed. The retries reuse the data files of the first attempt.
+   * Lists the files written by the snapshots the transactions added. The retries reuse the data and
+   * delete files of the first attempt.
+   *
+   * @param contentFiles true to list the data and delete files too, false for the manifest and
+   *     manifest list files only
+   * @return the file locations, with the file io to delete them
    */
-  private static void deleteWrittenFiles(List<Transaction> txs) {
+  private static Map<String, FileIO> writtenFiles(
+      List<? extends Transaction> txs, boolean contentFiles) {
     Map<String, FileIO> locations = new LinkedHashMap<>();
     for (Transaction tx : txs) {
       BaseTransaction baseTx = asBaseTransaction(tx);
@@ -247,8 +275,10 @@ public class MultiTableTransaction implements BatchTransaction {
       try {
         for (Snapshot snapshot :
             stagedSnapshots(baseTx.startMetadata(), baseTx.currentMetadata())) {
-          snapshot.addedDataFiles(io).forEach(f -> locations.putIfAbsent(f.location(), io));
-          snapshot.addedDeleteFiles(io).forEach(f -> locations.putIfAbsent(f.location(), io));
+          if (contentFiles) {
+            snapshot.addedDataFiles(io).forEach(f -> locations.putIfAbsent(f.location(), io));
+            snapshot.addedDeleteFiles(io).forEach(f -> locations.putIfAbsent(f.location(), io));
+          }
           snapshot.allManifests(io).stream()
               .filter(m -> Objects.equals(m.snapshotId(), snapshot.snapshotId()))
               .forEach(m -> locations.putIfAbsent(m.path(), io));
@@ -257,9 +287,14 @@ public class MultiTableTransaction implements BatchTransaction {
           }
         }
       } catch (Exception e) {
-        LOGGER.warn("Failed to list uncommitted files of table {}", baseTx.table().name(), e);
+        LOGGER.warn("Failed to list the files written for table {}", baseTx.table().name(), e);
       }
     }
+    return locations;
+  }
+
+  /** Deletes the files, failures are logged and ignored, the files are then orphan files. */
+  private static void deleteFiles(Map<String, FileIO> locations) {
     locations.forEach(
         (location, io) -> {
           try {

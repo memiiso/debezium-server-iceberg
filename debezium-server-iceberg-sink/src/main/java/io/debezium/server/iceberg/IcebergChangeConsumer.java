@@ -41,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -51,7 +53,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
@@ -190,18 +191,33 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
         IcebergOffsetBackingStore.instance()
             .orElseThrow(() -> new DebeziumException("Iceberg offset storage is not started!"));
     if (offsetStore != validatedOffsetStore) {
-      String catalogUri = config.iceberg().icebergConfigs().get(CatalogProperties.URI);
-      if (!Objects.equals(offsetStore.catalogUri(), catalogUri)) {
-        throw new DebeziumException(
-            "Offset storage catalog `"
-                + offsetStore.catalogUri()
-                + "` must be the sink catalog `"
-                + catalogUri
-                + "` to commit the offset atomically with the data");
-      }
+      validateOffsetTableInSinkCatalog(offsetStore);
       validatedOffsetStore = offsetStore;
     }
     return offsetStore;
+  }
+
+  /**
+   * Checks the offset table read by the offset store is the table the sink catalog commits to.
+   *
+   * <p>The offset is committed through the sink catalog, but read on restart by the offset store
+   * from its own catalog. Comparing the uri is not enough: the offset storage can set another
+   * warehouse or prefix of the same server, the table uuid identifies the table.
+   */
+  private void validateOffsetTableInSinkCatalog(IcebergOffsetBackingStore offsetStore) {
+    TableIdentifier offsetTableId = offsetStore.tableIdentifier();
+    UUID storeTableUuid = offsetStore.offsetTable().uuid();
+    Optional<UUID> sinkTableUuid =
+        IcebergUtil.loadIcebergTable(icebergCatalog, offsetTableId).map(Table::uuid);
+    if (!sinkTableUuid.equals(Optional.of(storeTableUuid))) {
+      throw new DebeziumException(
+          "Offset table `"
+              + offsetTableId
+              + "` of the offset storage is "
+              + (sinkTableUuid.isEmpty() ? "not found in" : "another table than the one of")
+              + " the sink catalog: the offset storage must use the same catalog (uri, warehouse,"
+              + " prefix) as the sink to commit the offset atomically with the data");
+    }
   }
 
   @PreDestroy

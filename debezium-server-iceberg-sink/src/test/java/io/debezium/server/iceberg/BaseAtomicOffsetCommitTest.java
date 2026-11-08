@@ -22,6 +22,8 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 /**
  * Verifies the tables and the offset are committed in one transaction, run against each REST
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.Test;
 public abstract class BaseAtomicOffsetCommitTest extends BaseTest {
 
   @Test
+  @DisabledForJreRange(min = JRE.JAVA_24) // Hadoop incompatibility with Java 25
   public void testTablesAndOffsetCommittedTogether() throws Exception {
     Awaitility.await()
         .atMost(Duration.ofSeconds(120))

@@ -42,7 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.OverwriteFiles;
 import org.apache.iceberg.Schema;
@@ -378,17 +377,11 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
   }
 
   /**
-   * @return the offset table, as last committed by this store
+   * @return the offset table, as loaded from the catalog of the offset storage. Its metadata is not
+   *     refreshed after the atomic commits, the commits of this store refresh it themselves.
    */
   public Table offsetTable() {
     return offsetTable;
-  }
-
-  /**
-   * @return the uri of the catalog holding the offset table, null when not set
-   */
-  public String catalogUri() {
-    return storageConfig.icebergProperties().get(CatalogProperties.URI);
   }
 
   /**
@@ -413,11 +406,16 @@ public class IcebergOffsetBackingStore extends MemoryOffsetBackingStore
     return new PendingOffset(merged, writeOffsetFile(merged));
   }
 
-  /** Marks the prepared offsets as committed to the offset table. */
+  /**
+   * Marks the prepared offsets as committed to the offset table.
+   *
+   * <p>In memory only, it runs after the transaction is committed and must not fail. {@link #save}
+   * does not need the offset table to be refreshed: each commit attempt refreshes the table
+   * metadata.
+   */
   public synchronized void committed(PendingOffset pendingOffset) {
     data = new HashMap<>(pendingOffset.data());
     persistedData = new HashMap<>(pendingOffset.data());
-    offsetTable.refresh();
   }
 
   private Map<ByteBuffer, ByteBuffer> serializeOffsets(List<SourceRecord> records) {

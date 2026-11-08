@@ -11,7 +11,6 @@ package io.debezium.server.iceberg.transaction;
 import io.debezium.server.iceberg.offset.IcebergOffsetBackingStore;
 import java.util.List;
 import java.util.Map;
-import org.apache.iceberg.Table;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.rest.RESTCatalog;
@@ -52,9 +51,9 @@ public class AtomicOffsetTransaction extends MultiTableTransaction {
     if (pendingOffset == null) {
       pendingOffset = offsetStore.prepare(records);
     }
+    // loaded from the sink catalog on every attempt, it is the catalog committing the transaction
     TableIdentifier offsetTableId = offsetStore.tableIdentifier();
-    Table offsetTable = reload ? restCatalog.loadTable(offsetTableId) : offsetStore.offsetTable();
-    Transaction tx = offsetTable.newTransaction();
+    Transaction tx = restCatalog.loadTable(offsetTableId).newTransaction();
     pendingOffset.applyTo(tx);
     return Map.of(offsetTableId, tx);
   }

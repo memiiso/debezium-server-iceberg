@@ -43,6 +43,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -364,6 +365,38 @@ public class MultiTableTransactionTest {
   }
 
   @Test
+  void testRetryDeletesManifestsOfRejectedAttempt() throws Exception {
+    BatchEvent b1Event = createBatchEvent("inventory.customers", 1, "Alice", 100L);
+    consumer.handle(createCapturingEvents(List.of(b1Event)));
+
+    // the first attempt of batch 2 is rejected, the retry commits
+    restCatalog.failCommitTransactions = 1;
+    BatchEvent b2Event1 = createBatchEvent("inventory.customers", 2, "Bob", 200L);
+    BatchEvent b2Event2 = createBatchEvent("inventory.orders", 20, "Order-20", 201L);
+    consumer.handle(createCapturingEvents(List.of(b2Event1, b2Event2)));
+    assertEquals(3, restCatalog.commitTransactionCalls);
+
+    TableIdentifier customersId = TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_customers");
+    FileIO io = restCatalog.loadTable(customersId).io();
+    assertFalse(restCatalog.rejectedManifests.isEmpty());
+    for (String location : restCatalog.rejectedManifests) {
+      assertFalse(fileExists(io, location), location);
+    }
+    // the data files of the rejected attempt are committed by the retry, they are kept
+    List<String> rejectedDataFiles =
+        restCatalog.rejectedFiles.stream()
+            .filter(f -> !restCatalog.rejectedManifests.contains(f))
+            .toList();
+    assertFalse(rejectedDataFiles.isEmpty());
+    for (String location : rejectedDataFiles) {
+      assertTrue(fileExists(io, location), location);
+    }
+    assertEquals(2, readTableRecords(customersId).size());
+    assertEquals(
+        1, readTableRecords(TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_orders")).size());
+  }
+
+  @Test
   void testRetryReplaysSchemaChange() throws Exception {
     BatchEvent b1Event = createBatchEvent("inventory.customers", 1, "Alice", 100L);
     consumer.handle(createCapturingEvents(List.of(b1Event)));
@@ -472,6 +505,55 @@ public class MultiTableTransactionTest {
     verify(event, never()).commit();
   }
 
+  @Test
+  void testAtomicOffsetCommitRequiresOffsetTableOfSinkCatalog() throws Exception {
+    when(icebergConfig.atomicOffsetCommit()).thenReturn(true);
+    TableIdentifier offsetId = TableIdentifier.of(NAMESPACE, "offsets");
+    // the offset storage reads its table from another catalog, e.g. another warehouse of the same
+    // server
+    InMemoryCatalog otherCatalog = new InMemoryCatalog();
+    otherCatalog.initialize(
+        "other", Map.of(CatalogProperties.WAREHOUSE_LOCATION, tempDir.resolve("other").toString()));
+    otherCatalog.createNamespace(Namespace.of(NAMESPACE));
+    mockOffsetStore(offsetId, otherCatalog.createTable(offsetId, OFFSET_SCHEMA));
+    setStaticField(IcebergOffsetBackingStore.class, "instance", offsetStore);
+    try {
+      BatchEvent event = createBatchEvent("inventory.customers", 1, "Alice", 100L);
+
+      DebeziumException notFound =
+          assertThrows(
+              DebeziumException.class,
+              () -> consumer.handle(createCapturingEvents(List.of(event))));
+      assertTrue(
+          notFound.getMessage().contains("not found in the sink catalog"), notFound.getMessage());
+
+      // a table with the same name in the sink catalog is not the table of the offset storage
+      Table sinkOffsetTable = restCatalog.createTable(offsetId, OFFSET_SCHEMA);
+      DebeziumException otherTable =
+          assertThrows(
+              DebeziumException.class,
+              () -> consumer.handle(createCapturingEvents(List.of(event))));
+      assertTrue(otherTable.getMessage().contains("another table"), otherTable.getMessage());
+      assertEquals(0, restCatalog.commitTransactionCalls);
+      verify(event, never()).commit();
+
+      when(offsetStore.offsetTable()).thenReturn(sinkOffsetTable);
+      consumer.handle(createCapturingEvents(List.of(event)));
+      assertEquals(1, restCatalog.commitTransactionCalls);
+      assertEquals(
+          Set.of(TableIdentifier.of(NAMESPACE, "debeziumcdc_inventory_customers"), offsetId),
+          restCatalog.committedBatches.get(0).stream()
+              .map(TableCommit::identifier)
+              .collect(Collectors.toSet()));
+      verify(event, times(1)).commit();
+    } finally {
+      setStaticField(IcebergOffsetBackingStore.class, "instance", null);
+    }
+  }
+
+  private static final Schema OFFSET_SCHEMA =
+      new Schema(Types.NestedField.optional(1, "offset_data", Types.StringType.get()));
+
   private IcebergOffsetBackingStore offsetStore;
 
   /**
@@ -480,10 +562,23 @@ public class MultiTableTransactionTest {
    */
   private IcebergOffsetBackingStore.PendingOffset useAtomicOffsetTransaction(
       TableIdentifier offsetId) throws Exception {
-    Table offsetTable =
-        restCatalog.createTable(
-            offsetId,
-            new Schema(Types.NestedField.optional(1, "offset_data", Types.StringType.get())));
+    IcebergOffsetBackingStore.PendingOffset pending =
+        mockOffsetStore(offsetId, restCatalog.createTable(offsetId, OFFSET_SCHEMA));
+    IcebergChangeConsumer atomicConsumer =
+        new IcebergChangeConsumer() {
+          @Override
+          protected BatchTransaction openTransaction(List<BatchEvent> records) {
+            return new AtomicOffsetTransaction(restCatalog, 3, offsetStore, List.of());
+          }
+        };
+    wireConsumer(atomicConsumer);
+    consumer = atomicConsumer;
+    return pending;
+  }
+
+  /** Mocks the offset store reading the given offset table, it prepares a single offset file. */
+  private IcebergOffsetBackingStore.PendingOffset mockOffsetStore(
+      TableIdentifier offsetId, Table offsetTable) {
     DataFile offsetFile =
         DataFiles.builder(PartitionSpec.unpartitioned())
             .withPath(offsetTable.location() + "/data/offset.parquet")
@@ -498,16 +593,6 @@ public class MultiTableTransactionTest {
     when(offsetStore.tableIdentifier()).thenReturn(offsetId);
     when(offsetStore.offsetTable()).thenReturn(offsetTable);
     when(offsetStore.prepare(org.mockito.ArgumentMatchers.anyList())).thenReturn(pending);
-
-    IcebergChangeConsumer atomicConsumer =
-        new IcebergChangeConsumer() {
-          @Override
-          protected BatchTransaction openTransaction(List<BatchEvent> records) {
-            return new AtomicOffsetTransaction(restCatalog, 3, offsetStore, List.of());
-          }
-        };
-    wireConsumer(atomicConsumer);
-    consumer = atomicConsumer;
     return pending;
   }
 
@@ -662,6 +747,8 @@ public class MultiTableTransactionTest {
     int commitTransactionCalls = 0;
     // files added by the commits rejected by failCommitTransactions
     final List<String> rejectedFiles = new ArrayList<>();
+    // manifest list and manifest files written by the commits rejected by failCommitTransactions
+    final List<String> rejectedManifests = new ArrayList<>();
     // runs once before the next commit, e.g. a concurrent writer
     Runnable beforeNextCommit = null;
 
@@ -753,6 +840,10 @@ public class MultiTableTransactionTest {
                   snapshot -> {
                     snapshot.addedDataFiles(io).forEach(f -> rejectedFiles.add(f.location()));
                     rejectedFiles.add(snapshot.manifestListLocation());
+                    rejectedManifests.add(snapshot.manifestListLocation());
+                    snapshot.allManifests(io).stream()
+                        .filter(m -> Objects.equals(m.snapshotId(), snapshot.snapshotId()))
+                        .forEach(m -> rejectedManifests.add(m.path()));
                   });
         }
         throw new CommitFailedException("Simulated atomic multi-table commit failure");
