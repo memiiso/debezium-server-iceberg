@@ -284,7 +284,7 @@ public class StructSchemaConverter implements SchemaConverter {
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    final Schema keyFieldSchema = withIdentifierFields ? this.keyFieldSchema() : null;
+    final Schema keyFieldSchema = this.keyFieldSchema();
 
     icebergSchemaFields(valueSchema, keyFieldSchema, schemaData);
 

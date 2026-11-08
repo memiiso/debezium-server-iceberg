@@ -240,7 +240,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     }
 
     IcebergSchemaInfo schemaData = new IcebergSchemaInfo();
-    final JsonNode keySchemaNode = withIdentifierFields ? this.keySchemaNode() : null;
+    final JsonNode keySchemaNode = this.keySchemaNode();
 
     icebergSchemaFields(valueSchema, keySchemaNode, schemaData);
 
