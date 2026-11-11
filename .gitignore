@@ -113,3 +113,11 @@ fabric.properties
 spark-warehouse/
 metastore_db/
 derby.log
+
+
+# JaCoCo code coverage
+*.exec
+jacoco.exec
+jacoco-ut.exec
+jacoco-it.exec
+jacoco-merged.exec
