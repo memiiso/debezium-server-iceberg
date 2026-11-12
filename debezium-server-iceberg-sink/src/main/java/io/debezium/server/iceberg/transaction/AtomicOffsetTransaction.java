@@ -50,6 +50,9 @@ public class AtomicOffsetTransaction extends MultiTableTransaction {
   protected Map<TableIdentifier, Transaction> additionalTransactions(boolean reload) {
     if (pendingOffset == null) {
       pendingOffset = offsetStore.prepare(records);
+      // no transaction references the offset file until it is applied, e.g. when loading the
+      // offset table fails on the first attempt
+      trackWrittenFiles(offsetStore.offsetTable().io(), pendingOffset.files());
     }
     // loaded from the sink catalog on every attempt, it is the catalog committing the transaction
     TableIdentifier offsetTableId = offsetStore.tableIdentifier();

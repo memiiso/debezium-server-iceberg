@@ -11,6 +11,7 @@ package io.debezium.server.iceberg.transaction;
 import io.debezium.DebeziumException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.exceptions.CleanableFailure;
 import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.io.FileIO;
+import org.apache.iceberg.io.WriteResult;
 import org.apache.iceberg.relocated.com.google.common.collect.Lists;
 import org.apache.iceberg.rest.RESTCatalog;
 import org.slf4j.Logger;
@@ -57,6 +59,8 @@ public class MultiTableTransaction implements BatchTransaction {
   private final List<Runnable> onCommitActions = new CopyOnWriteArrayList<>();
   // every transaction built to commit the batch, their files are deleted when not committed
   private final List<Transaction> attempts = new ArrayList<>();
+  // files written for the batch outside of the transactions, deleted with the files of the attempts
+  private final Map<String, FileIO> trackedFiles = new LinkedHashMap<>();
   private boolean committed = false;
   // a commit request failed without telling whether it was applied, the files must be kept
   private boolean outcomeUnknown = false;
@@ -103,6 +107,7 @@ public class MultiTableTransaction implements BatchTransaction {
       attemptTxs.forEach(
           (id, tx) -> {
             BaseTransaction baseTx = asBaseTransaction(tx);
+            // the staged and rebased transactions are already tracked, the additional ones not
             if (!attempts.contains(baseTx)) {
               attempts.add(baseTx);
             }
@@ -160,7 +165,22 @@ public class MultiTableTransaction implements BatchTransaction {
         .map(MultiTableTransaction::asBaseTransaction)
         .filter(tx -> !attempts.contains(tx))
         .forEach(attempts::add);
-    deleteFiles(writtenFiles(attempts, true));
+    Map<String, FileIO> files = writtenFiles(attempts, true);
+    trackedFiles.forEach(files::putIfAbsent);
+    deleteFiles(files);
+  }
+
+  /**
+   * Registers files written for the batch before a transaction references them. Like the files of
+   * the transactions, they are deleted when the transaction is not committed, unless the outcome of
+   * the commit is unknown.
+   *
+   * @param io the file io that wrote the files
+   * @param files the written data and delete files
+   */
+  protected void trackWrittenFiles(FileIO io, WriteResult files) {
+    Arrays.stream(files.dataFiles()).forEach(f -> trackedFiles.putIfAbsent(f.location(), io));
+    Arrays.stream(files.deleteFiles()).forEach(f -> trackedFiles.putIfAbsent(f.location(), io));
   }
 
   /**
@@ -174,7 +194,8 @@ public class MultiTableTransaction implements BatchTransaction {
     if (rejectedFiles.isEmpty()) {
       return;
     }
-    // the committed attempt writes its own manifests, never delete a file it references
+    // safety net: no-op today, retries write new manifests, but deleting a file the committed
+    // attempt references would corrupt the table
     rejectedFiles.keySet().removeAll(writtenFiles(committedTxs, false).keySet());
     LOGGER.debug("Deleting {} files of the rejected commit attempts", rejectedFiles.size());
     deleteFiles(rejectedFiles);
@@ -201,28 +222,26 @@ public class MultiTableTransaction implements BatchTransaction {
     TableMetadata start = staged.startMetadata();
     TableMetadata current = staged.currentMetadata();
     Table table = restCatalog.loadTable(tableId);
-    Transaction tx = table.newTransaction();
+    BaseTransaction tx = asBaseTransaction(table.newTransaction());
+    // tracked before replaying, the manifests it writes are deleted if a later step fails, e.g.
+    // replaying another table or the additional transactions
+    attempts.add(tx);
 
-    if (current.currentSchemaId() != start.currentSchemaId()) {
-      // the data files are written with the field ids assigned by the staged schema change, it
-      // can only be replayed on the same schema
-      Schema stagedSchema = current.schema();
-      if (table.schema().schemaId() != start.currentSchemaId()) {
-        throw new DebeziumException(
-            "Schema of table " + tableId + " changed concurrently, cannot retry the commit");
-      }
-      tx.updateSchema()
-          .unionByNameWith(stagedSchema)
-          .setIdentifierFields(stagedSchema.identifierFieldNames())
-          .commit();
-      if (!tx.table().schema().asStruct().equals(stagedSchema.asStruct())) {
-        throw new DebeziumException(
-            "Schema change of table " + tableId + " cannot be replayed, cannot retry the commit");
-      }
+    // the data files are written with the field ids assigned by the staged schema changes, they
+    // can only be replayed on the same schema
+    boolean schemaChanged = current.currentSchemaId() != start.currentSchemaId();
+    if (schemaChanged && table.schema().schemaId() != start.currentSchemaId()) {
+      throw new DebeziumException(
+          "Schema of table " + tableId + " changed concurrently, cannot retry the commit");
     }
 
     FileIO io = staged.table().io();
     for (Snapshot snapshot : stagedSnapshots(start, current)) {
+      // the batch writes the events grouped by schema, each snapshot is replayed under the schema
+      // it was staged with, in the same order
+      if (schemaChanged && snapshot.schemaId() != null) {
+        replaySchema(tx, tableId, current.schemasById().get(snapshot.schemaId()));
+      }
       List<DataFile> dataFiles = Lists.newArrayList(snapshot.addedDataFiles(io));
       List<DeleteFile> deleteFiles = Lists.newArrayList(snapshot.addedDeleteFiles(io));
       if (!snapshot.removedDataFiles(io).iterator().hasNext()
@@ -242,7 +261,26 @@ public class MultiTableTransaction implements BatchTransaction {
             "Snapshot of table " + tableId + " removes files, cannot retry the commit");
       }
     }
+    if (schemaChanged) {
+      // a schema change staged after the last snapshot
+      replaySchema(tx, tableId, current.schema());
+    }
     return tx;
+  }
+
+  /** Applies the staged schema to the transaction, with the field ids it was staged with. */
+  private static void replaySchema(Transaction tx, TableIdentifier tableId, Schema stagedSchema) {
+    if (tx.table().schema().sameSchema(stagedSchema)) {
+      return;
+    }
+    tx.updateSchema()
+        .unionByNameWith(stagedSchema)
+        .setIdentifierFields(stagedSchema.identifierFieldNames())
+        .commit();
+    if (!tx.table().schema().sameSchema(stagedSchema)) {
+      throw new DebeziumException(
+          "Schema change of table " + tableId + " cannot be replayed, cannot retry the commit");
+    }
   }
 
   /** The snapshots added by the transaction, oldest first. */
