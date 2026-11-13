@@ -51,7 +51,7 @@
         <version.testcontainers>2.0.5</version.testcontainers>
 
         <!-- Maven Plugin Versions -->
-        <version.maven.enforcer>3.6.3</version.maven.enforcer>
+        <version.maven.enforcer>3.7.0</version.maven.enforcer>
         <version.maven.flatten>1.7.3</version.maven.flatten>
         <version.maven.spotless>3.10.3</version.maven.spotless>
         <version.maven.jandex>3.2.7</version.maven.jandex>
