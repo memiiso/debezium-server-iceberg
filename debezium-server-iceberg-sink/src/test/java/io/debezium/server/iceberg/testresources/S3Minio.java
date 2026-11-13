@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.Testcontainers;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -60,6 +62,20 @@ public class S3Minio implements QuarkusTestResourceLifecycleManager {
   @Override
   public void stop() {
     container.stop();
+  }
+
+  /**
+   * S3 url reachable from the other containers and from the test JVM. Used by the catalogs, which
+   * write to the bucket themselves and return this url to the clients.
+   *
+   * <p>The containers reach the exposed host port through {@code host.testcontainers.internal}, the
+   * test JVM resolves the same name to the loopback address with {@link
+   * TestcontainersHostResolverProvider}. Must be called before starting the containers using it.
+   */
+  public static String getS3UrlFromContainers() {
+    int port = container.getMappedPort(9000);
+    Testcontainers.exposeHostPorts(port);
+    return String.format("http://%s:%s", GenericContainer.INTERNAL_HOST_HOSTNAME, port);
   }
 
   public static String getS3WebURL() {
