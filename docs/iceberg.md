@@ -282,8 +282,10 @@ debezium.source.offset.storage=io.debezium.server.iceberg.offset.IcebergOffsetBa
 
 Requirements:
 
-- a REST catalog supporting multi-table transactions (`POST /v1/{prefix}/transactions/commit`), for example Lakekeeper,
-  Apache Polaris or the Iceberg REST fixture.
+- a REST catalog supporting multi-table transactions (`POST /v1/{prefix}/transactions/commit`), for example Lakekeeper
+  or Apache Polaris. Not the Iceberg REST fixture or the Hive REST catalog: on a concurrent commit they can drop a table
+  of the transaction and still commit the others, losing a batch
+  ([apache/iceberg#18758](https://github.com/apache/iceberg/issues/18758)).
 - the offset storage must be `IcebergOffsetBackingStore`, in the same catalog as the data tables: same `uri`, and same
   `warehouse` and `prefix` when `debezium.source.offset.storage.iceberg.*` overrides them. On the first batch, the offset
   table loaded through the sink catalog must be the table of the offset storage (same table uuid).
