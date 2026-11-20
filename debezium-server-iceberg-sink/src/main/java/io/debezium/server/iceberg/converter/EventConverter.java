@@ -1,5 +1,6 @@
 package io.debezium.server.iceberg.converter;
 
+import io.debezium.converters.iceberg.SchemaConverter;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import jakarta.annotation.Nonnull;

@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergSchemaInfo;
+import io.debezium.converters.iceberg.SchemaConverter;
+import io.debezium.converters.iceberg.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.iceberg.Schema;
@@ -17,17 +19,31 @@ import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonSchemaConverter implements io.debezium.server.iceberg.converter.SchemaConverter {
+public class JsonSchemaConverter implements SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
   private final GlobalConfig config;
+  private final IcebergConverterConfig converterConfig;
   protected static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaConverter.class);
   protected static final ObjectMapper mapper = new ObjectMapper();
 
   public JsonSchemaConverter(JsonNode valueSchema, JsonNode keySchema, GlobalConfig config) {
+    this(
+        valueSchema,
+        keySchema,
+        config,
+        SinkIcebergConverterConfig.from(Objects.requireNonNull(config, "config must not be null")));
+  }
+
+  public JsonSchemaConverter(
+      JsonNode valueSchema,
+      JsonNode keySchema,
+      GlobalConfig config,
+      IcebergConverterConfig converterConfig) {
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;
+    this.converterConfig = Objects.requireNonNull(converterConfig, "converterConfig must not be null");
   }
 
   protected JsonNode valueSchema() {
@@ -82,21 +98,21 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     }
 
     boolean isPkField = !(keySchemaNode == null || keySchemaNode.isNull());
-    boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
+    boolean isOptional = converterConfig.preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
-        if (GeospatialTypes.isGeospatialType(fieldTypeName, config.iceberg())) {
+        if (GeospatialTypes.isGeospatialType(fieldTypeName, converterConfig)) {
           final Types.NestedField geospatialField =
               Types.NestedField.of(
                   schemaData.nextFieldId().getAndIncrement(),
                   isOptional,
                   fieldName,
-                  GeospatialTypes.icebergType(fieldTypeName, config.iceberg()));
+                  GeospatialTypes.icebergType(fieldTypeName, converterConfig));
           schemaData.fields().add(geospatialField);
           if (isPkField) schemaData.identifierFieldIds().add(geospatialField.fieldId());
           return schemaData;
         }
-        if (config.iceberg().nestedAsVariant()) {
+        if (converterConfig.nestedAsVariant()) {
           // here we are keeping nested fields in variant
           int variantFieldId = schemaData.nextFieldId().getAndIncrement();
           final Types.NestedField variantField =
@@ -199,7 +215,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   }
 
   private JsonNode keySchemaNode() {
-    if (!config.debezium().isEventFlatteningEnabled() && keySchema != null) {
+    if (!converterConfig.eventFlatteningEnabled() && keySchema != null) {
       ObjectNode nestedKeySchema = mapper.createObjectNode();
       nestedKeySchema.put("type", "struct");
       nestedKeySchema.putArray("fields").add(((ObjectNode) keySchema).put("field", "after"));
@@ -209,15 +225,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   }
 
   /***
-   * Converts debezium event fields to iceberg equivalent and returns list of iceberg fields.
+   * Converts debezium event fields to iceberg equivalent and returns list of
+   * iceberg fields.
+   * 
    * @param schemaNode
    * @return
    */
   private IcebergSchemaInfo icebergSchemaFields(
       JsonNode schemaNode, JsonNode keySchemaNode, IcebergSchemaInfo schemaData) {
     LOGGER.debug("Converting iceberg schema to debezium:{}", schemaNode);
-    List<String> excludedColumns =
-        this.config.iceberg().excludedColumns().orElse(Collections.emptyList());
+    List<String> excludedColumns = converterConfig.excludedColumns();
 
     for (JsonNode field : getNodeFieldsArray(schemaNode)) {
       String fieldName = field.get("field").textValue();
@@ -250,8 +267,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     }
 
     if (withIdentifierFields) {
-      if (!config.debezium().isEventFlatteningEnabled()
-          && !schemaData.identifierFieldIds().isEmpty()) {
+      if (!converterConfig.eventFlatteningEnabled() && !schemaData.identifierFieldIds().isEmpty()) {
         // While Iceberg supports nested key fields, they cannot be set with nested events(unwrapped
         // events, Without event flattening)
         // due to inconsistency in the after and before fields.
@@ -261,7 +277,9 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
         throw new DebeziumException(
             "Debezium events are unnested, Identifier fields are not supported for unnested events! "
                 + "Pleas enable event flattening SMT see: https://debezium.io/documentation/reference/stable/transformations/event-flattening.html "
-                + " Or disable identifier field creation `debezium.sink.iceberg.create-identifier-fields=false`");
+                + " Or disable identifier field creation `"
+                + converterConfig.propertyName("create.identifier.fields")
+                + "=false`");
       }
       // @TODO validate key fields are correctly set!?
       return new Schema(schemaData.fields(), schemaData.identifierFieldIds());
@@ -274,13 +292,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
   public SortOrder sortOrder(Schema schema) {
     SortOrder.Builder sob = SortOrder.builderFor(schema);
     for (JsonNode field : getNodeFieldsArray(keySchemaNode())) {
-      if (!field.has("field")) continue;
+      if (!field.has("field"))
+        continue;
       String fieldName = field.get("field").textValue();
       // Only add field to sort order if it exists in the Iceberg schema.
       // This handles cases where:
-      // - Transforms like ByLogicalTableRouter add key fields that may not be present in the value
+      // - Transforms like ByLogicalTableRouter add key fields that may not be present
+      // in the value
       // schema
-      // - Fields are excluded via excludedColumns config (they won't be in the Iceberg schema)
+      // - Fields are excluded via excludedColumns config (they won't be in the
+      // Iceberg schema)
       if (schema.findField(fieldName) == null) {
         LOGGER.debug(
             "Skipping sort order field '{}' as it does not exist in the Iceberg schema", fieldName);
@@ -305,16 +326,16 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
       case "int32": // int 4 bytes
         return switch (fieldTypeName) {
           case "io.debezium.time.Date", "org.apache.kafka.connect.data.Date" ->
-              Types.DateType.get();
+            Types.DateType.get();
           // NOTE: Time type is disable for the moment, it's not supported by spark
-          //          //"Represents the number of milliseconds"
-          //          case "io.debezium.time.Time" -> Types.TimeType.get();
-          //          //"Represents the time value in microseconds
-          //          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
-          //          //"Represents the time value in nanoseconds"
-          //          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
-          //          //"Represents the time value in microseconds"
-          //          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
+          // //"Represents the number of milliseconds"
+          // case "io.debezium.time.Time" -> Types.TimeType.get();
+          // //"Represents the time value in microseconds
+          // case "io.debezium.time.MicroTime" -> Types.TimeType.get();
+          // //"Represents the time value in nanoseconds"
+          // case "io.debezium.time.NanoTime" -> Types.TimeType.get();
+          // //"Represents the time value in microseconds"
+          // case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
           default -> Types.IntegerType.get();
         };
       case "int64": // long 8 bytes
@@ -330,14 +351,14 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
           case "io.debezium.time.NanoTimestamp" -> Types.TimestampType.withoutZone();
           case "org.apache.kafka.connect.data.Timestamp" -> Types.TimestampType.withoutZone();
           // NOTE: Time type is disable for the moment, it's not supported by spark
-          //          //"Represents the number of milliseconds"
-          //          case "io.debezium.time.Time" -> Types.TimeType.get();
-          //          //"Represents the time value in microseconds
-          //          case "io.debezium.time.MicroTime" -> Types.TimeType.get();
-          //          //"Represents the time value in nanoseconds"
-          //          case "io.debezium.time.NanoTime" -> Types.TimeType.get();
-          //          //"Represents the time value in microseconds"
-          //          case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
+          // //"Represents the number of milliseconds"
+          // case "io.debezium.time.Time" -> Types.TimeType.get();
+          // //"Represents the time value in microseconds
+          // case "io.debezium.time.MicroTime" -> Types.TimeType.get();
+          // //"Represents the time value in nanoseconds"
+          // case "io.debezium.time.NanoTime" -> Types.TimeType.get();
+          // //"Represents the time value in microseconds"
+          // case "org.apache.kafka.connect.data.Time" -> Types.TimeType.get();
           default -> Types.LongType.get();
         };
       case "float8":
@@ -363,17 +384,17 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
       case "uuid":
         return Types.UUIDType.get();
       case "bytes":
-        // With `decimal.handling.mode` set to `precise` debezium relational source connector would
+        // With `decimal.handling.mode` set to `precise` debezium relational source
+        // connector would
         // encode decimals
         // as byte arrays. We want to write them out as Iceberg decimals.
         if (fieldTypeName.equals("org.apache.kafka.connect.data.Decimal")) {
           JsonNode params = fieldSchema.get("parameters");
           if (params != null && !params.isNull() && !params.isEmpty()) {
             int scale = params.has("scale") ? params.get("scale").asInt() : 10;
-            int precision =
-                params.has("connect.decimal.precision")
-                    ? params.get("connect.decimal.precision").asInt()
-                    : 38;
+            int precision = params.has("connect.decimal.precision")
+                ? params.get("connect.decimal.precision").asInt()
+                : 38;
             // Basic validation
             if (precision <= 0) {
               LOGGER.warn(
@@ -406,15 +427,18 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
             fieldType,
             fieldName);
         return Types.StringType.get();
-        // throw new RuntimeException("'" + fieldName + "' has "+fieldType+" type, "+fieldType+" not
-        // supported!");
+      // throw new RuntimeException("'" + fieldName + "' has "+fieldType+" type,
+      // "+fieldType+" not
+      // supported!");
     }
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
     JsonSchemaConverter that = (JsonSchemaConverter) o;
     return Objects.equals(valueSchema, that.valueSchema)
         && Objects.equals(keySchema, that.keySchema);
