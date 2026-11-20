@@ -32,6 +32,12 @@ import org.junit.jupiter.api.BeforeAll;
  */
 public class BaseSparkTest extends BaseTest {
 
+  static {
+    // Set HADOOP_USER_NAME early to avoid Java 21 Subject.getSubject() issue
+    // This must be set before Hadoop classes are loaded
+    System.setProperty("HADOOP_USER_NAME", "testuser");
+  }
+
   protected static SparkSession spark;
 
   @BeforeAll

@@ -494,7 +494,7 @@
                 </executions>
                 <configuration>
                     <enableAssertions>true</enableAssertions>
-                    <argLine>${test.jvm.args}</argLine>
+                    <argLine>${test.jvm.args} -DHADOOP_USER_NAME=testuser</argLine>
                     <systemPropertyVariables>
                         <test.type>IT</test.type>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
