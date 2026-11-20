@@ -17,6 +17,7 @@ theme:
 nav:
   - Home: index.md
   - Iceberg Consumer: iceberg.md
+  - Iceberg Converter: iceberg-converter.md
   - IcebergEvents Consumer: icebergevents.md
   - Python Runner: python-runner.md
   - Migration Guideline: migration.md

@@ -1,7 +1,7 @@
 package io.debezium.server.iceberg.converter.geospatial;
 
-import static io.debezium.server.iceberg.converter.geospatial.GeospatialTypes.GEOGRAPHY_LOGICAL_NAME;
-import static io.debezium.server.iceberg.converter.geospatial.GeospatialTypes.GEOMETRY_LOGICAL_NAME;
+import static io.debezium.converters.iceberg.geospatial.GeospatialTypes.GEOGRAPHY_LOGICAL_NAME;
+import static io.debezium.converters.iceberg.geospatial.GeospatialTypes.GEOMETRY_LOGICAL_NAME;
 import static org.apache.kafka.connect.data.Schema.BYTES_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_INT32_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.OPTIONAL_STRING_SCHEMA;

@@ -9,13 +9,17 @@
 package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.DateTimeUtils;
+import io.debezium.converters.iceberg.IcebergValueConverter;
+import io.debezium.converters.iceberg.geospatial.GeospatialTypes;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.runtime.BatchEvent;
+import io.debezium.serde.DebeziumSerdes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
-import io.debezium.server.iceberg.converter.geospatial.GeospatialValues;
+import io.debezium.server.iceberg.converter.geospatial.JsonGeospatialValues;
 import io.debezium.server.iceberg.tableoperator.Operation;
 import io.debezium.server.iceberg.tableoperator.RecordWrapper;
 import io.debezium.time.IsoDate;
@@ -28,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +42,8 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.variants.Variant;
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +53,16 @@ import org.slf4j.LoggerFactory;
  *
  * @author Ismail Simsek
  */
-public class JsonEventConverter extends AbstractEventConverter implements EventConverter {
+public class JsonEventConverter extends IcebergValueConverter implements EventConverter {
 
   protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
+  protected static final ObjectMapper mapper = new ObjectMapper();
+  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
+  protected static Deserializer<JsonNode> valDeserializer;
+  protected static Deserializer<JsonNode> keyDeserializer;
+
+  protected final GlobalConfig config;
   protected final String destination;
   protected final byte[] valueData;
   protected final byte[] keyData;
@@ -56,6 +70,13 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   private final JsonNode key;
   private boolean newKey = false;
   private JsonSchemaConverter schemaConverter;
+
+  public static void initializeStaticSerdes() {
+    valSerde.configure(Collections.emptyMap(), false);
+    valDeserializer = valSerde.deserializer();
+    keySerde.configure(Collections.emptyMap(), true);
+    keyDeserializer = keySerde.deserializer();
+  }
 
   public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
     this(e.destination(), e.value(), e.key(), config);
@@ -68,7 +89,8 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
   // Testing only
   public JsonEventConverter(
       String destination, Object valueData, Object keyData, GlobalConfig config) {
-    super(config);
+    super(SinkIcebergConverterConfig.from(config));
+    this.config = config;
     this.destination = destination;
     this.valueData = getBytes(valueData);
     this.keyData = getBytes(keyData);
@@ -381,7 +403,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         }
       case GEOMETRY:
       case GEOGRAPHY:
-        return GeospatialValues.fromJson(
+        return JsonGeospatialValues.fromJson(
             node, field.name(), field.type(), config.iceberg().geospatialAllowMissingSrid());
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
@@ -393,7 +415,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
                       listVal.add(
                           element.isNull()
                               ? null
-                              : GeospatialValues.fromJson(
+                              : JsonGeospatialValues.fromJson(
                                   element,
                                   field.name() + "[]",
                                   listItemsType.type(),
@@ -432,7 +454,7 @@ public class JsonEventConverter extends AbstractEventConverter implements EventC
         return mapVal;
       case VARIANT:
         JsonVariantObject val = new JsonVariantObject(node);
-        return Variant.of(val.metadata, val);
+        return Variant.of(val.metadata(), val);
       case STRUCT:
         // create it as struct, nested type
         // recursive call to get nested data/record

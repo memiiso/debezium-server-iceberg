@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergSchemaInfo;
+import io.debezium.converters.iceberg.SchemaConverter;
+import io.debezium.converters.iceberg.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.DebeziumConfig;
 import io.debezium.server.iceberg.GlobalConfig;
-import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -17,10 +20,11 @@ import org.apache.iceberg.types.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonSchemaConverter implements io.debezium.server.iceberg.converter.SchemaConverter {
+public class JsonSchemaConverter implements SchemaConverter {
   private final JsonNode valueSchema;
   private final JsonNode keySchema;
   private final GlobalConfig config;
+  private final IcebergConverterConfig converterConfig;
   protected static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaConverter.class);
   protected static final ObjectMapper mapper = new ObjectMapper();
 
@@ -28,6 +32,7 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     this.valueSchema = valueSchema;
     this.keySchema = keySchema;
     this.config = config;
+    this.converterConfig = SinkIcebergConverterConfig.from(config);
   }
 
   protected JsonNode valueSchema() {
@@ -85,13 +90,13 @@ public class JsonSchemaConverter implements io.debezium.server.iceberg.converter
     boolean isOptional = config.iceberg().preserveRequiredProperty() ? fieldIsOptional : !isPkField;
     switch (fieldType) {
       case "struct":
-        if (GeospatialTypes.isGeospatialType(fieldTypeName, config.iceberg())) {
+        if (GeospatialTypes.isGeospatialType(fieldTypeName, converterConfig)) {
           final Types.NestedField geospatialField =
               Types.NestedField.of(
                   schemaData.nextFieldId().getAndIncrement(),
                   isOptional,
                   fieldName,
-                  GeospatialTypes.icebergType(fieldTypeName, config.iceberg()));
+                  GeospatialTypes.icebergType(fieldTypeName, converterConfig));
           schemaData.fields().add(geospatialField);
           if (isPkField) schemaData.identifierFieldIds().add(geospatialField.fieldId());
           return schemaData;

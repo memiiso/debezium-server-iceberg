@@ -1,6 +1,7 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.relational.RelationalDatabaseConnectorConfig;
 import io.quarkus.runtime.annotations.ConfigRoot;
@@ -14,7 +15,7 @@ import java.util.Map;
 @ConfigMapping
 public interface DebeziumConfig {
 
-  public static final List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
+  public static final List<String> TS_MS_FIELDS = IcebergConverterConfig.TS_MS_FIELDS;
 
   @WithName("debezium.source.time.precision.mode")
   @WithDefault("isostring")

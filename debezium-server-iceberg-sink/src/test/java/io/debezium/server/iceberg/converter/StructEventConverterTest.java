@@ -8,6 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.StructSchemaConverter;
 import io.debezium.data.Uuid;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
@@ -539,7 +540,8 @@ class StructEventConverterTest {
             .build();
 
     // 3. Instantiate the Converter
-    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+    StructSchemaConverter converter =
+        new StructSchemaConverter(valueSchema, keySchema, SinkIcebergConverterConfig.from(config));
 
     // 4. Convert to Iceberg Schema
     org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();
@@ -591,7 +593,8 @@ class StructEventConverterTest {
             .build();
 
     // 3. Instantiate the Converter
-    StructSchemaConverter converter = new StructSchemaConverter(valueSchema, keySchema, config);
+    StructSchemaConverter converter =
+        new StructSchemaConverter(valueSchema, keySchema, SinkIcebergConverterConfig.from(config));
 
     // 4. Convert to Iceberg Schema
     org.apache.iceberg.Schema icebergSchema = converter.icebergSchema();

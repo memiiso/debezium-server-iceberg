@@ -15,6 +15,7 @@ import static org.apache.iceberg.TableProperties.FORMAT_VERSION;
 import com.google.common.base.Splitter;
 import com.google.common.primitives.Ints;
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.geospatial.GeospatialTypes;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.literal.NamedLiteral;
 import java.time.Instant;
@@ -307,5 +308,35 @@ public class IcebergUtil {
       throw new IllegalArgumentException("Invalid argument " + argsStr + ", should have 2 parts");
     }
     return Pair.of(parts[0].trim(), Integer.parseInt(parts[1].trim()));
+  }
+
+  public static void validateGeospatialConfig(IcebergConfig config) {
+    if (!config.geospatialTypesEnabled()) {
+      return;
+    }
+    // Iceberg ORC writers don't support geospatial types
+    if (FileFormat.ORC.name().equalsIgnoreCase(config.writeFormat())) {
+      throw new DebeziumException(
+          "debezium.sink.iceberg.geospatial-types-enabled is not supported with the orc write"
+              + " format, use parquet");
+    }
+    if (!GeospatialTypes.isValidCrs(config.geometryCrs())) {
+      throw new DebeziumException(
+          "debezium.sink.iceberg.geometry-crs must be OGC:CRS84, EPSG:<N> (N > 0) or srid:0"
+              + " (unknown CRS), got: "
+              + config.geometryCrs());
+    }
+    int formatVersion;
+    try {
+      formatVersion = Integer.parseInt(config.formatVersion());
+    } catch (NumberFormatException e) {
+      throw new DebeziumException(
+          "invalid debezium.sink.iceberg.format-version: " + config.formatVersion(), e);
+    }
+    if (formatVersion < 3) {
+      throw new DebeziumException(
+          "debezium.sink.iceberg.geospatial-types-enabled requires"
+              + " debezium.sink.iceberg.format-version 3 or higher");
+    }
   }
 }

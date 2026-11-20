@@ -21,6 +21,12 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- Iceberg Converter -->
+        <dependency>
+            <groupId>io.debezium</groupId>
+            <artifactId>debezium-iceberg-converter</artifactId>
+            <version>${revision}</version>
+        </dependency>
         <!-- Debezium  -->
         <dependency>
             <groupId>io.debezium</groupId>

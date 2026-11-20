@@ -114,6 +114,7 @@
     </dependencyManagement>
 
     <modules>
+        <module>debezium-iceberg-converter</module>
         <module>debezium-server-iceberg-sink</module>
         <module>debezium-server-iceberg-dist</module>
     </modules>

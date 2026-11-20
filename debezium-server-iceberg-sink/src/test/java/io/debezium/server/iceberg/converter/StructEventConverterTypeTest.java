@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.lenient;
 
+import io.debezium.converters.iceberg.StructSchemaConverter;
 import io.debezium.data.Uuid;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
 import io.debezium.jdbc.TemporalPrecisionMode;
@@ -560,7 +561,7 @@ class StructEventConverterTypeTest {
 
     // 3. Instantiate the Converter
     StructSchemaConverter schemaConverter =
-        new StructSchemaConverter(valueSchema, keySchema, config);
+        new StructSchemaConverter(valueSchema, keySchema, SinkIcebergConverterConfig.from(config));
     // 4. Convert to Iceberg schema and record
     org.apache.iceberg.Schema icebergSchema = schemaConverter.icebergSchema();
 

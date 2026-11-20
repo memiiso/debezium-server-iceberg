@@ -19,6 +19,7 @@
 package io.debezium.server.iceberg.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.debezium.converters.iceberg.AbstractVariantObject;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;

@@ -80,6 +80,13 @@ jobs:
           name: io.debezium.debezium-server-iceberg-sink
           version: ${{ env.RELEASE_VERSION }}
         continue-on-error: true
+      - name: Delete Maven Package Converter from Github
+        uses: paulushcgcj/delete-github-package@1.0.0
+        with:
+          type: maven
+          name: io.debezium.debezium-iceberg-converter
+          version: ${{ env.RELEASE_VERSION }}
+        continue-on-error: true
       - name: Publish ${{ env.RELEASE_VERSION }} to GitHub Packages
         run: mvn --batch-mode deploy -Passembly --file pom.xml -Drevision=${{ env.RELEASE_VERSION }} -Dmaven.test.skip=true -Dspotless.check.skip=true
         env:

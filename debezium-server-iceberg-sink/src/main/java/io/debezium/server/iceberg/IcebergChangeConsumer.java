@@ -16,7 +16,6 @@ import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
 import io.debezium.server.iceberg.converter.StructEventConverter;
-import io.debezium.server.iceberg.converter.geospatial.GeospatialTypes;
 import io.debezium.server.iceberg.mapper.IcebergTableMapper;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
 import io.debezium.util.Clock;
@@ -90,7 +89,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   @PostConstruct
   void connect() {
     config.debezium().validateTemporalPrecisionMode();
-    GeospatialTypes.validateConfig(config.iceberg());
+    IcebergUtil.validateGeospatialConfig(config.iceberg());
 
     JsonEventConverter.initializeStaticSerdes();
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
