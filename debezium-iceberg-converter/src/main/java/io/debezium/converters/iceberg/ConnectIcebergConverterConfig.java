@@ -137,7 +137,7 @@ public class ConnectIcebergConverterConfig extends ConverterConfig
           .withDisplayName("Schema cache size")
           .withType(ConfigDef.Type.INT)
           .withImportance(ConfigDef.Importance.LOW)
-          .withDefault(DEFAULT_SCHEMA_CACHE_SIZE)
+          .withDefault(IcebergStructConverter.DEFAULT_SCHEMA_CACHE_SIZE)
           .withDescription(
               "Maximum number of derived Iceberg schemas cached by Connect (valueSchema, keySchema)"
                   + " pair. Set to 0 to disable caching.");
@@ -151,6 +151,17 @@ public class ConnectIcebergConverterConfig extends ConverterConfig
           .withDescription(
               "Wire serializer for Layer 2 IcebergConverter: 'avro-envelope' (default),"
                   + " 'avro-single-object', or a custom IcebergRecordSerializer FQCN.");
+
+  public static final Field AVRO_SCHEMA_STORE_CLASS =
+      Field.create("avro.schema.store.class")
+          .withDisplayName("Avro SchemaStore class")
+          .withType(ConfigDef.Type.STRING)
+          .withImportance(ConfigDef.Importance.LOW)
+          .withDefault("")
+          .withDescription(
+              "Optional FQCN implementing org.apache.avro.message.SchemaStore (public no-arg"
+                  + " constructor) used by 'avro-single-object' to resolve unknown schema"
+                  + " fingerprints across JVMs.");
 
   private static final ConfigDef.Validator TEMPORAL_PRECISION_MODE_VALIDATOR =
       (name, value) -> {
@@ -172,7 +183,8 @@ public class ConnectIcebergConverterConfig extends ConverterConfig
           GEOMETRY_CRS,
           GEOSPATIAL_ALLOW_MISSING_SRID,
           SCHEMA_CACHE_SIZE,
-          SERIALIZER_TYPE);
+          SERIALIZER_TYPE,
+          AVRO_SCHEMA_STORE_CLASS);
 
   private static final Map<String, ConfigDef.Validator> VALIDATORS =
       Map.of(
@@ -206,11 +218,15 @@ public class ConnectIcebergConverterConfig extends ConverterConfig
     super(CONFIG, props);
     this.temporalPrecisionMode =
         TemporalPrecisionMode.parse(getString(TEMPORAL_PRECISION_MODE.name()));
+    List<String> rawExcluded = getList(EXCLUDED_COLUMNS.name());
     this.excludedColumns =
-        getList(EXCLUDED_COLUMNS.name()).stream()
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .toList();
+        rawExcluded == null
+            ? Collections.emptyList()
+            : rawExcluded.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     GeospatialTypes.validateConfig(this);
   }
 
@@ -287,12 +303,15 @@ public class ConnectIcebergConverterConfig extends ConverterConfig
     return getBoolean(GEOSPATIAL_ALLOW_MISSING_SRID.name());
   }
 
-  @Override
   public int schemaCacheSize() {
     return getInt(SCHEMA_CACHE_SIZE.name());
   }
 
   public String serializerType() {
     return getString(SERIALIZER_TYPE.name());
+  }
+
+  public String avroSchemaStoreClass() {
+    return getString(AVRO_SCHEMA_STORE_CLASS.name());
   }
 }

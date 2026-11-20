@@ -30,9 +30,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SinkIcebergConverterConfigTest {
 
-  @Mock GlobalConfig globalConfig;
-  @Mock IcebergConfig icebergConfig;
-  @Mock DebeziumConfig debeziumConfig;
+  @Mock
+  GlobalConfig globalConfig;
+  @Mock
+  IcebergConfig icebergConfig;
+  @Mock
+  DebeziumConfig debeziumConfig;
 
   @BeforeEach
   void setUp() {
@@ -68,11 +71,18 @@ class SinkIcebergConverterConfigTest {
   }
 
   @Test
-  void testHandlesEmptyExcludedColumnsOptional() {
+
+  void testHandlesEmptyExcludedColumnsOptionalAndPropertyHints() {
     when(icebergConfig.excludedColumns()).thenReturn(Optional.empty());
     IcebergConverterConfig adapter = SinkIcebergConverterConfig.from(globalConfig);
     assertEquals(List.of(), adapter.excludedColumns());
-    assertEquals(0, adapter.schemaCacheSize());
+    assertEquals("debezium.sink.iceberg.geometry-crs", adapter.propertyName("geometry.crs"));
+    assertEquals(
+        "debezium.sink.iceberg.geospatial-allow-missing-srid",
+        adapter.propertyName("geospatial.allow.missing.srid"));
+    assertEquals(
+        "debezium.sink.iceberg.create-identifier-fields",
+        adapter.propertyName("create.identifier.fields"));
   }
 
   @Test

@@ -9,6 +9,7 @@
 package io.debezium.converters.iceberg.geospatial;
 
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Optional;
@@ -18,20 +19,39 @@ import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.ByteBuffers;
 import org.apache.kafka.connect.data.Struct;
 
-/** Converts Debezium geospatial structs {@code {wkb, srid}} to Iceberg values. */
+/**
+ * Converts Debezium geospatial structs {@code {wkb, srid}} to Iceberg values.
+ */
 public final class GeospatialValues {
 
   private static final String WKB_FIELD = "wkb";
   private static final String SRID_FIELD = "srid";
   private static final Map<String, Optional<Integer>> CRS_SRIDS = new ConcurrentHashMap<>();
 
-  private GeospatialValues() {}
+  private GeospatialValues() {
+  }
 
   /**
-   * @param allowMissingSrid write values without SRID with the column CRS instead of failing
+   * @param allowMissingSrid write values without SRID with the column CRS instead
+   *                         of failing
    */
   public static ByteBuffer fromStruct(
       Object value, String fieldName, Type type, boolean allowMissingSrid) {
+    return fromStruct(value, fieldName, type, allowMissingSrid, null);
+  }
+
+  public static ByteBuffer fromStruct(
+      Object value, String fieldName, Type type, IcebergConverterConfig config) {
+    return fromStruct(
+        value, fieldName, type, config != null && config.geospatialAllowMissingSrid(), config);
+  }
+
+  private static ByteBuffer fromStruct(
+      Object value,
+      String fieldName,
+      Type type,
+      boolean allowMissingSrid,
+      IcebergConverterConfig config) {
     if (!(value instanceof Struct struct)) {
       throw invalid(fieldName, "not a Struct: " + value.getClass().getName(), null);
     }
@@ -52,28 +72,62 @@ public final class GeospatialValues {
     } else if (sridVal != null) {
       throw invalid(fieldName, "srid is not an integer: " + sridVal, null);
     }
-    checkSrid(srid, fieldName, type, allowMissingSrid);
+    checkSrid(srid, fieldName, type, allowMissingSrid, config);
     return isoWkb;
   }
 
-  /** The per-value SRID is not stored, fail when it contradicts the column CRS. */
+  /**
+   * The per-value SRID is not stored, fail when it contradicts the column CRS.
+   */
   public static void checkSrid(
       Integer srid, String fieldName, Type type, boolean allowMissingSrid) {
+    checkSrid(srid, fieldName, type, allowMissingSrid, null);
+  }
+
+  /**
+   * The per-value SRID is not stored, fail when it contradicts the column CRS.
+   */
+  public static void checkSrid(
+      Integer srid, String fieldName, Type type, IcebergConverterConfig config) {
+    checkSrid(srid, fieldName, type, config != null && config.geospatialAllowMissingSrid(), config);
+  }
+
+  private static void checkSrid(
+      Integer srid,
+      String fieldName,
+      Type type,
+      boolean allowMissingSrid,
+      IcebergConverterConfig config) {
     boolean missingSrid = srid == null || srid == 0;
     if ((missingSrid && allowMissingSrid) || sridMatchesCrs(srid, type)) {
       return;
     }
+    String geometryCrsProp = config == null ? "geometry.crs" : config.propertyName("geometry.crs");
+    String allowMissingProp =
+        config == null
+            ? "geospatial.allow.missing.srid"
+            : config.propertyName("geospatial.allow.missing.srid");
     throw invalid(
         fieldName,
         missingSrid
             ? "value without SRID doesn't match the column CRS "
                 + crs(type)
-                + ", see geometry.crs and geospatial.allow.missing.srid"
-            : "SRID " + srid + " doesn't match the column CRS " + crs(type) + ", see geometry.crs",
+                + ", see "
+                + geometryCrsProp
+                + " and "
+                + allowMissingProp
+            : "SRID "
+                + srid
+                + " doesn't match the column CRS "
+                + crs(type)
+                + ", see "
+                + geometryCrsProp,
         null);
   }
 
-  /** Values without SRID (null or 0) only match the unknown CRS {@code srid:0}. */
+  /**
+   * Values without SRID (null or 0) only match the unknown CRS {@code srid:0}.
+   */
   public static boolean sridMatchesCrs(Integer srid, Type type) {
     int valueSrid = srid == null ? 0 : srid;
     return CRS_SRIDS

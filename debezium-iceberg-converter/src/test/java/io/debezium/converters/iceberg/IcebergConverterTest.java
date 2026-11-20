@@ -260,6 +260,39 @@ class IcebergConverterTest {
   }
 
   @Test
+  void fromConnectDataWrapsConversionErrorsInDataException() {
+    IcebergConverter converter = new IcebergConverter();
+    converter.configure(Map.of(), false);
+
+    Schema emptyStructSchema = SchemaBuilder.struct().name("Empty").build();
+    Struct emptyStruct = new Struct(emptyStructSchema);
+    assertThrows(
+        DataException.class,
+        () -> converter.fromConnectData("topic", emptyStructSchema, emptyStruct));
+  }
+
+  @Test
+  void schemaCacheSizeZeroWorksForValuesAndPrimitiveKeys() {
+    IcebergConverter valueConverter = new IcebergConverter();
+    valueConverter.configure(Map.of("schema.cache.size", "0"), false);
+
+    Schema schema = SchemaBuilder.struct().field("id", Schema.INT32_SCHEMA).build();
+    byte[] bytes =
+        valueConverter.fromConnectData("topic", schema, new Struct(schema).put("id", 11));
+    assertEquals(11, valueConverter.deserializeIcebergRecord(bytes).record().getField("id"));
+
+    IcebergConverter keyConverter = new IcebergConverter();
+    keyConverter.configure(Map.of("schema.cache.size", "0"), true);
+    byte[] keyBytes = keyConverter.fromConnectData("topic", Schema.INT64_SCHEMA, 55L);
+    assertEquals(
+        55L,
+        keyConverter
+            .deserializeIcebergRecord(keyBytes)
+            .record()
+            .getField(IcebergConverter.PRIMITIVE_KEY_FIELD_NAME));
+  }
+
+  @Test
   void metadataAndServiceLoaderDiscovery() {
     IcebergConverter converter = new IcebergConverter();
     assertNotNull(converter.config());

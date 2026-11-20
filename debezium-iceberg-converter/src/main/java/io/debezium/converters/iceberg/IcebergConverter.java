@@ -9,6 +9,7 @@
 package io.debezium.converters.iceberg;
 
 import io.debezium.config.Field;
+import io.debezium.converters.iceberg.internal.LruCache;
 import io.debezium.converters.iceberg.serde.IcebergRecordSerializers;
 import io.debezium.converters.iceberg.spi.DeserializedIcebergRecord;
 import io.debezium.converters.iceberg.spi.IcebergRecordSerializer;
@@ -48,6 +49,7 @@ public class IcebergConverter implements Converter, Versioned, ConfigDescriptor 
   private boolean isKey;
   private IcebergStructConverter structConverter;
   private IcebergRecordSerializer serializer;
+  private LruCache<Schema, Schema> primitiveKeySchemaCache;
 
   @Override
   public ConfigDef config() {
@@ -65,8 +67,10 @@ public class IcebergConverter implements Converter, Versioned, ConfigDescriptor 
         isKey ? ConverterType.KEY.getName() : ConverterType.VALUE.getName());
 
     ConnectIcebergConverterConfig config = new ConnectIcebergConverterConfig(conf);
+    int cacheSize = config.schemaCacheSize();
     this.isKey = isKey;
-    this.structConverter = new IcebergStructConverter(config);
+    this.structConverter = new IcebergStructConverter(config, cacheSize);
+    this.primitiveKeySchemaCache = cacheSize == 0 ? null : new LruCache<>(cacheSize);
     this.serializer = IcebergRecordSerializers.create(config.serializerType(), conf);
   }
 
@@ -96,14 +100,25 @@ public class IcebergConverter implements Converter, Versioned, ConfigDescriptor 
       effectiveSchema = schema;
       effectiveStruct = struct;
     } else if (isKey) {
-      effectiveSchema = SchemaBuilder.struct().field(PRIMITIVE_KEY_FIELD_NAME, schema).build();
+      effectiveSchema =
+          primitiveKeySchemaCache == null
+              ? wrapPrimitiveKeySchema(schema)
+              : primitiveKeySchemaCache.getOrCompute(
+                  schema, IcebergConverter::wrapPrimitiveKeySchema);
       effectiveStruct = new Struct(effectiveSchema).put(PRIMITIVE_KEY_FIELD_NAME, value);
     } else {
       throw new DataException("Mismatching schema: expected STRUCT, got " + schema.type());
     }
 
-    ConvertedIcebergRecord converted =
-        structConverter.convert(topic, effectiveSchema, effectiveStruct, null);
+    ConvertedIcebergRecord converted;
+    try {
+      converted = structConverter.convert(topic, effectiveSchema, effectiveStruct, null);
+    } catch (DataException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw new DataException(
+          "Failed to convert Connect record to Iceberg format for topic '" + topic + "'", e);
+    }
     return serializer.serialize(converted.schema(), converted.record());
   }
 
@@ -136,6 +151,10 @@ public class IcebergConverter implements Converter, Versioned, ConfigDescriptor 
   @Override
   public Field.Set getConfigFields() {
     return ConnectIcebergConverterConfig.allFields();
+  }
+
+  private static Schema wrapPrimitiveKeySchema(Schema schema) {
+    return SchemaBuilder.struct().field(PRIMITIVE_KEY_FIELD_NAME, schema).build();
   }
 
   private void ensureConfigured() {

@@ -42,20 +42,21 @@ import org.apache.iceberg.util.ByteBuffers;
 import org.apache.iceberg.util.DateTimeUtil;
 
 /**
- * Pure value conversion helpers mapping primitive, decimal, temporal, UUID, and binary values from
- * Debezium / Kafka Connect payloads into Apache Iceberg {@code GenericRecord} field values.
+ * Pure value conversion helpers mapping primitive, decimal, temporal, UUID, and
+ * binary values from
+ * Debezium / Kafka Connect payloads into Apache Iceberg {@code GenericRecord}
+ * field values.
  */
 public class IcebergValueConverter {
 
   protected final IcebergConverterConfig converterConfig;
 
   public IcebergValueConverter(IcebergConverterConfig converterConfig) {
-    this.converterConfig =
-        Objects.requireNonNull(converterConfig, "converterConfig must not be null");
+    this.converterConfig = Objects.requireNonNull(converterConfig, "converterConfig must not be null");
   }
 
-  public BigDecimal convertDecimal(
-      Object value, Types.DecimalType decimalType, String logicalTypeName) {
+
+  public BigDecimal convertDecimal(Object value, Types.DecimalType decimalType) {
     BigDecimal bd;
     if (value instanceof BigDecimal) {
       bd = (BigDecimal) value;
@@ -67,9 +68,8 @@ public class IcebergValueConverter {
     } else if (value instanceof byte[]) { // Debezium precise decimal handling
       bd = new BigDecimal(new BigInteger((byte[]) value), decimalType.scale());
     } else if (value instanceof ByteBuffer) { // Handle ByteBuffer as well
-      bd =
-          new BigDecimal(
-              new BigInteger(ByteBuffers.toByteArray((ByteBuffer) value)), decimalType.scale());
+      bd = new BigDecimal(
+          new BigInteger(ByteBuffers.toByteArray((ByteBuffer) value)), decimalType.scale());
     } else {
       throw new IllegalArgumentException(
           "Cannot convert to BigDecimal: " + value.getClass().getName());
@@ -82,12 +82,12 @@ public class IcebergValueConverter {
   public LocalDateTime convertLocalDateTime(Object value, String logicalTypeName) {
     return switch (logicalTypeName) {
       case ZonedTimestamp.SCHEMA_NAME ->
-          LocalDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
+        LocalDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
       case IsoTimestamp.SCHEMA_NAME -> LocalDateTime.parse((String) value, IsoTimestamp.FORMATTER);
       case MicroTimestamp.SCHEMA_NAME ->
-          DateTimeUtil.timestampFromMicros(((Number) value).longValue());
+        DateTimeUtil.timestampFromMicros(((Number) value).longValue());
       case NanoTimestamp.SCHEMA_NAME ->
-          DateTimeUtil.timestampFromNanos(((Number) value).longValue());
+        DateTimeUtil.timestampFromNanos(((Number) value).longValue());
       case Timestamp.SCHEMA_NAME -> DateTimeUtils.timestampFromMillis(((Number) value).longValue());
       case org.apache.kafka.connect.data.Timestamp.LOGICAL_NAME -> {
         // org.apache.kafka.connect.data.Timestamp value is Date type in connect record.
@@ -139,7 +139,7 @@ public class IcebergValueConverter {
   public OffsetDateTime convertOffsetDateTime(Object value, String logicalTypeName) {
     return switch (logicalTypeName) {
       case ZonedTimestamp.SCHEMA_NAME ->
-          OffsetDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
+        OffsetDateTime.parse((String) value, ZonedTimestamp.FORMATTER);
       case IsoTimestamp.SCHEMA_NAME -> OffsetDateTime.parse((String) value, IsoTimestamp.FORMATTER);
       case NanoTimestamp.SCHEMA_NAME -> DateTimeUtils.timestamptzFromNanos((Long) value);
       case MicroTimestamp.SCHEMA_NAME -> DateTimeUtil.timestamptzFromMicros((Long) value);
@@ -212,7 +212,8 @@ public class IcebergValueConverter {
     throw new IllegalArgumentException("Cannot convert to float: " + value.getClass().getName());
   }
 
-  public double convertDouble(Object value, String logicalTypeName) {
+
+  public double convertDouble(Object value) {
     if (value instanceof Number) {
       return ((Number) value).doubleValue();
     } else if (value instanceof String) {
@@ -236,8 +237,7 @@ public class IcebergValueConverter {
       return value.toString();
     } else if (value instanceof Number || value instanceof Boolean) {
       return value.toString();
-    } else if (value
-        instanceof byte[]) { // Handle bytes specifically if needed (e.g., Base64 or UTF8)
+    } else if (value instanceof byte[]) { // Handle bytes specifically if needed (e.g., Base64 or UTF8)
       return new String((byte[]) value, StandardCharsets.UTF_8); // Assuming UTF-8
     } else if (value instanceof ByteBuffer) {
       return StandardCharsets.UTF_8.decode(((ByteBuffer) value).duplicate()).toString();
@@ -246,17 +246,19 @@ public class IcebergValueConverter {
     throw new IllegalArgumentException("Cannot convert to string: " + value.getClass().getName());
   }
 
-  public Object convertUUID(Object value) {
+
+  public UUID convertUUID(Object value) {
     if (value instanceof String) {
       return UUID.fromString((String) value);
-    } else if (value instanceof UUID) {
-      return value;
+    } else if (value instanceof UUID uuid) {
+      return uuid;
     }
 
     throw new IllegalArgumentException("Cannot convert to UUID: " + value.getClass().getName());
   }
 
-  public ByteBuffer convertBinary(Object value, String logicalTypeName) {
+
+  public ByteBuffer convertBinary(Object value) {
     if (value instanceof ByteBuffer) {
       return (ByteBuffer) value;
     } else if (value instanceof byte[]) {
@@ -280,7 +282,7 @@ public class IcebergValueConverter {
       case io.debezium.time.Date.SCHEMA_NAME -> DateTimeUtil.dateFromDays((Integer) value);
       case IsoDate.SCHEMA_NAME -> LocalDate.parse((String) value, IsoDate.FORMATTER);
       case org.apache.kafka.connect.data.Date.LOGICAL_NAME ->
-          DateTimeUtils.toLocalDateFromDate((Date) value);
+        DateTimeUtils.toLocalDateFromDate((Date) value);
       case null, default -> {
         if (value instanceof Integer) { // Correct handling for Debezium Date
           yield DateTimeUtil.dateFromDays((Integer) value);
@@ -310,11 +312,11 @@ public class IcebergValueConverter {
         }
       }
       case Time.SCHEMA_NAME ->
-          DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
+        DateTimeUtils.toLocalTimeFromDurationMilliseconds(((Number) value).longValue());
       case MicroTime.SCHEMA_NAME ->
-          DateTimeUtils.toLocalTimeFromDurationMicroseconds(((Number) value).longValue());
+        DateTimeUtils.toLocalTimeFromDurationMicroseconds(((Number) value).longValue());
       case NanoTime.SCHEMA_NAME ->
-          DateTimeUtils.toLocalTimeFromDurationNanoseconds(((Number) value).longValue());
+        DateTimeUtils.toLocalTimeFromDurationNanoseconds(((Number) value).longValue());
       case IsoTime.SCHEMA_NAME -> LocalTime.parse((String) value, IsoTime.FORMATTER);
       case ZonedTime.SCHEMA_NAME -> LocalTime.parse((String) value, ZonedTime.FORMATTER);
       case null, default -> {

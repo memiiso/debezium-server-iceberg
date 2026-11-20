@@ -29,12 +29,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Layer 1 in-memory converter translating Kafka Connect {@link SourceRecord} and {@link Struct}
- * instances directly into Apache Iceberg {@link org.apache.iceberg.Schema}, {@link SortOrder}, and
+ * Layer 1 in-memory converter translating Kafka Connect {@link SourceRecord}
+ * and {@link Struct}
+ * instances directly into Apache Iceberg {@link org.apache.iceberg.Schema},
+ * {@link SortOrder}, and
  * {@link GenericRecord} values with zero byte-array serialization overhead.
  */
 public class IcebergStructConverter {
 
+  public static final int DEFAULT_SCHEMA_CACHE_SIZE = 1024;
   private static final Logger LOGGER = LoggerFactory.getLogger(IcebergStructConverter.class);
 
   private final IcebergConverterConfig config;
@@ -42,7 +45,7 @@ public class IcebergStructConverter {
   private final LruCache<SchemaCacheKey, DerivedSchema> derivedSchemaCache;
 
   public IcebergStructConverter(IcebergConverterConfig config) {
-    this(config, Objects.requireNonNull(config, "config must not be null").schemaCacheSize());
+    this(config, DEFAULT_SCHEMA_CACHE_SIZE);
   }
 
   public IcebergStructConverter(IcebergConverterConfig config, int maxSchemaCacheSize) {
@@ -56,11 +59,14 @@ public class IcebergStructConverter {
   }
 
   /**
-   * Converts a full Kafka Connect {@link SourceRecord} (using both {@code keySchema} and {@code
+   * Converts a full Kafka Connect {@link SourceRecord} (using both
+   * {@code keySchema} and {@code
    * valueSchema}) into a {@link ConvertedIcebergRecord}.
    *
-   * <p>Tombstone records ({@code sourceRecord.value() == null}) return a {@link
-   * ConvertedIcebergRecord} with {@code record == null}, preserving the derived Iceberg schema when
+   * <p>
+   * Tombstone records ({@code sourceRecord.value() == null}) return a {@link
+   * ConvertedIcebergRecord} with {@code record == null}, preserving the derived
+   * Iceberg schema when
    * {@code valueSchema} is present.
    */
   public ConvertedIcebergRecord convert(SourceRecord sourceRecord) {
@@ -82,13 +88,14 @@ public class IcebergStructConverter {
   }
 
   /**
-   * Converts a Kafka Connect value {@link Struct} with explicit {@code valueSchema} and optional
-   * {@code keySchema} into a {@link ConvertedIcebergRecord}, reusing the bounded schema cache.
+   * Converts a Kafka Connect value {@link Struct} with explicit
+   * {@code valueSchema} and optional
+   * {@code keySchema} into a {@link ConvertedIcebergRecord}, reusing the bounded
+   * schema cache.
    */
   public ConvertedIcebergRecord convert(
       String topic, Schema valueSchema, Struct valueStruct, Schema keySchema) {
-    Schema effectiveValueSchema =
-        valueSchema == null && valueStruct != null ? valueStruct.schema() : valueSchema;
+    Schema effectiveValueSchema = valueSchema == null && valueStruct != null ? valueStruct.schema() : valueSchema;
 
     if (effectiveValueSchema == null) {
       return new ConvertedIcebergRecord(topic, null, SortOrder.unsorted(), null, false);
@@ -100,20 +107,19 @@ public class IcebergStructConverter {
     }
 
     SchemaCacheKey key = new SchemaCacheKey(effectiveValueSchema, keySchema);
-    DerivedSchema derived =
-        derivedSchemaCache == null
-            ? deriveSchema(key)
-            : derivedSchemaCache.getOrCompute(key, this::deriveSchema);
-    GenericRecord record =
-        valueStruct == null
-            ? null
-            : convertToIcebergRecord(derived.schema().asStruct(), valueStruct);
+    DerivedSchema derived = derivedSchemaCache == null
+        ? deriveSchema(key)
+        : derivedSchemaCache.getOrCompute(key, this::deriveSchema);
+    GenericRecord record = valueStruct == null
+        ? null
+        : convertToIcebergRecord(derived.schema().asStruct(), valueStruct);
     return new ConvertedIcebergRecord(
         topic, derived.schema(), derived.sortOrder(), record, derived.schemaChangeEvent());
   }
 
   /**
-   * Converts a Kafka Connect {@link Struct} to an Iceberg {@link GenericRecord} conforming to the
+   * Converts a Kafka Connect {@link Struct} to an Iceberg {@link GenericRecord}
+   * conforming to the
    * caller-supplied target Iceberg struct schema.
    */
   public GenericRecord convertToIcebergRecord(
@@ -131,18 +137,16 @@ public class IcebergStructConverter {
         record.setField(icebergField.name(), null);
         continue;
       }
-      Object connectValue =
-          config.replaceNullWithDefault()
-              ? connectStruct.get(field)
-              : connectStruct.getWithoutDefault(field.name());
+      Object connectValue = config.replaceNullWithDefault()
+          ? connectStruct.get(field)
+          : connectStruct.getWithoutDefault(field.name());
 
       if (connectValue == null) {
         record.setField(icebergField.name(), null);
         continue;
       }
 
-      Object icebergValue =
-          convertValue(connectValue, icebergField.type(), icebergField.name(), field.schema());
+      Object icebergValue = convertValue(connectValue, icebergField.type(), icebergField.name(), field.schema());
       record.setField(icebergField.name(), icebergValue);
     }
 
@@ -157,10 +161,11 @@ public class IcebergStructConverter {
     StructSchemaConverter schemaConverter =
         new StructSchemaConverter(key.valueSchema(), key.keySchema(), config);
     boolean schemaChange = schemaConverter.isSchemaChangeEvent();
+    boolean hasStructKey = key.keySchema() != null && key.keySchema().type() == Schema.Type.STRUCT;
     if (config.createIdentifierFields()
         && config.nestedAsVariant()
         && !schemaChange
-        && key.keySchema() != null) {
+        && hasStructKey) {
       LOGGER.warn(
           "Identifier fields are not supported when data is converted to variant fields,"
               + " creating schema without identifier fields!");
@@ -169,7 +174,7 @@ public class IcebergStructConverter {
         config.createIdentifierFields()
             && !config.nestedAsVariant()
             && !schemaChange
-            && key.keySchema() != null;
+            && hasStructKey;
     org.apache.iceberg.Schema icebergSchema =
         schemaConverter.icebergSchema(effectiveIdentifierFields);
     SortOrder sortOrder =
@@ -209,10 +214,9 @@ public class IcebergStructConverter {
           throw new IllegalArgumentException(
               "Cannot convert to List: value is not a List: " + connectValue.getClass().getName());
         }
-        Schema elementSchema =
-            connectSchema != null && connectSchema.type() == Schema.Type.ARRAY
-                ? connectSchema.valueSchema()
-                : null;
+        Schema elementSchema = connectSchema != null && connectSchema.type() == Schema.Type.ARRAY
+            ? connectSchema.valueSchema()
+            : null;
         return convertListValue(list, icebergType.asListType(), icebergFieldName, elementSchema);
 
       case MAP:
@@ -220,14 +224,12 @@ public class IcebergStructConverter {
           throw new IllegalArgumentException(
               "Cannot convert to Map: value is not a Map: " + connectValue.getClass().getName());
         }
-        Schema mapKeySchema =
-            connectSchema != null && connectSchema.type() == Schema.Type.MAP
-                ? connectSchema.keySchema()
-                : null;
-        Schema mapValueSchema =
-            connectSchema != null && connectSchema.type() == Schema.Type.MAP
-                ? connectSchema.valueSchema()
-                : null;
+        Schema mapKeySchema = connectSchema != null && connectSchema.type() == Schema.Type.MAP
+            ? connectSchema.keySchema()
+            : null;
+        Schema mapValueSchema = connectSchema != null && connectSchema.type() == Schema.Type.MAP
+            ? connectSchema.valueSchema()
+            : null;
         return convertMapValue(
             map, icebergType.asMapType(), icebergFieldName, mapKeySchema, mapValueSchema);
 
@@ -238,10 +240,9 @@ public class IcebergStructConverter {
       case FLOAT:
         return valueConverter.convertFloat(connectValue);
       case DOUBLE:
-        return valueConverter.convertDouble(connectValue, logicalTypeName);
+        return valueConverter.convertDouble(connectValue);
       case DECIMAL:
-        return valueConverter.convertDecimal(
-            connectValue, (Types.DecimalType) icebergType, logicalTypeName);
+        return valueConverter.convertDecimal(connectValue, (Types.DecimalType) icebergType);
       case BOOLEAN:
         return valueConverter.convertBoolean(connectValue);
       case STRING:
@@ -250,11 +251,10 @@ public class IcebergStructConverter {
         return valueConverter.convertUUID(connectValue);
       case BINARY:
       case FIXED:
-        return valueConverter.convertBinary(connectValue, logicalTypeName);
+        return valueConverter.convertBinary(connectValue);
       case GEOMETRY:
       case GEOGRAPHY:
-        return GeospatialValues.fromStruct(
-            connectValue, icebergFieldName, icebergType, config.geospatialAllowMissingSrid());
+        return GeospatialValues.fromStruct(connectValue, icebergFieldName, icebergType, config);
       case DATE:
         return valueConverter.convertDateValue(connectValue, logicalTypeName);
       case TIME:
@@ -288,15 +288,16 @@ public class IcebergStructConverter {
     String valueFieldName = fieldName == null ? null : fieldName + ".value";
     Map<Object, Object> result = new HashMap<>();
     map.forEach(
-        (k, v) ->
-            result.put(
-                convertValue(k, keyType, keyFieldName, keySchema),
-                convertValue(v, valueType, valueFieldName, valueSchema)));
+        (k, v) -> result.put(
+            convertValue(k, keyType, keyFieldName, keySchema),
+            convertValue(v, valueType, valueFieldName, valueSchema)));
     return result;
   }
 
-  private record SchemaCacheKey(Schema valueSchema, Schema keySchema) {}
+  private record SchemaCacheKey(Schema valueSchema, Schema keySchema) {
+  }
 
   private record DerivedSchema(
-      org.apache.iceberg.Schema schema, SortOrder sortOrder, boolean schemaChangeEvent) {}
+      org.apache.iceberg.Schema schema, SortOrder sortOrder, boolean schemaChangeEvent) {
+  }
 }

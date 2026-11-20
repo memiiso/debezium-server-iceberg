@@ -16,7 +16,7 @@ import org.apache.iceberg.data.GenericRecord;
  * Immutable result of converting a Kafka Connect {@link
  * org.apache.kafka.connect.source.SourceRecord} into Apache Iceberg structures in memory (Layer 1).
  *
- * @param destination Target topic / destination name from the source record.
+ * @param topic Source topic name from the Kafka Connect {@code SourceRecord}.
  * @param schema Derived Iceberg schema (may be {@code null} for tombstones without a value schema).
  * @param sortOrder Derived Iceberg sort order (or {@link SortOrder#unsorted()} when identifier
  *     fields are disabled/unavailable).
@@ -24,7 +24,7 @@ import org.apache.iceberg.data.GenericRecord;
  * @param schemaChangeEvent Whether the source record represents a Debezium DDL/schema-change event.
  */
 public record ConvertedIcebergRecord(
-    String destination,
+    String topic,
     Schema schema,
     SortOrder sortOrder,
     GenericRecord record,

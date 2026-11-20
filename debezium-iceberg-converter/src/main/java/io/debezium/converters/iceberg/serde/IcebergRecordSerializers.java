@@ -9,23 +9,30 @@
 package io.debezium.converters.iceberg.serde;
 
 import io.debezium.converters.iceberg.ConnectIcebergConverterConfig;
-import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergStructConverter;
 import io.debezium.converters.iceberg.spi.IcebergRecordSerializer;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.avro.message.SchemaStore;
 import org.apache.kafka.common.config.ConfigException;
 
-/** Factory resolving built-in or custom FQCN {@link IcebergRecordSerializer} implementations. */
+/**
+ * Factory resolving built-in or custom FQCN {@link IcebergRecordSerializer}
+ * implementations.
+ */
 public final class IcebergRecordSerializers {
 
   public static final String DEFAULT_TYPE = AvroEnvelopeRecordSerializer.TYPE;
 
-  private IcebergRecordSerializers() {}
+  private IcebergRecordSerializers() {
+  }
 
   /**
-   * Creates and configures an {@link IcebergRecordSerializer} for the given {@code serializerType}
-   * ({@code avro-envelope}, {@code avro-single-object}, or a fully-qualified class name
+   * Creates and configures an {@link IcebergRecordSerializer} for the given
+   * {@code serializerType}
+   * ({@code avro-envelope}, {@code avro-single-object}, or a fully-qualified
+   * class name
    * implementing {@link IcebergRecordSerializer}).
    */
   public static IcebergRecordSerializer create(String serializerType, Map<String, ?> configs) {
@@ -38,12 +45,11 @@ public final class IcebergRecordSerializers {
     }
     String trimmed = serializerType.trim();
 
-    IcebergRecordSerializer serializer =
-        switch (trimmed.toLowerCase(Locale.ROOT)) {
-          case AvroEnvelopeRecordSerializer.TYPE -> new AvroEnvelopeRecordSerializer();
-          case IcebergEncoderRecordSerializer.TYPE -> new IcebergEncoderRecordSerializer();
-          default -> instantiateCustom(trimmed);
-        };
+    IcebergRecordSerializer serializer = switch (trimmed.toLowerCase(Locale.ROOT)) {
+      case AvroEnvelopeRecordSerializer.TYPE -> new AvroEnvelopeRecordSerializer();
+      case AvroSingleObjectRecordSerializer.TYPE -> new AvroSingleObjectRecordSerializer();
+      default -> instantiateCustom(trimmed);
+    };
 
     serializer.configure(configs);
     return serializer;
@@ -53,7 +59,7 @@ public final class IcebergRecordSerializers {
     Objects.requireNonNull(configs, "configs must not be null");
     Object raw = configs.get(ConnectIcebergConverterConfig.SCHEMA_CACHE_SIZE.name());
     if (raw == null) {
-      return IcebergConverterConfig.DEFAULT_SCHEMA_CACHE_SIZE;
+      return IcebergStructConverter.DEFAULT_SCHEMA_CACHE_SIZE;
     }
     int parsed = raw instanceof Number n ? n.intValue() : Integer.parseInt(raw.toString().trim());
     if (parsed < 0) {
@@ -63,7 +69,29 @@ public final class IcebergRecordSerializers {
     return parsed;
   }
 
+  static SchemaStore instantiateSchemaStore(Map<String, ?> configs) {
+    Objects.requireNonNull(configs, "configs must not be null");
+    Object raw = configs.get(ConnectIcebergConverterConfig.AVRO_SCHEMA_STORE_CLASS.name());
+    if (raw == null) {
+      return null;
+    }
+    String className = raw.toString().trim();
+    if (className.isEmpty()) {
+      return null;
+    }
+    return instantiateByClassName(
+        ConnectIcebergConverterConfig.AVRO_SCHEMA_STORE_CLASS.name(), className, SchemaStore.class);
+  }
+
   private static IcebergRecordSerializer instantiateCustom(String className) {
+    return instantiateByClassName(
+        ConnectIcebergConverterConfig.SERIALIZER_TYPE.name(),
+        className,
+        IcebergRecordSerializer.class);
+  }
+
+  private static <T> T instantiateByClassName(
+      String configName, String className, Class<T> expectedType) {
     try {
       ClassLoader cl = Thread.currentThread().getContextClassLoader();
       Class<?> clazz;
@@ -74,20 +102,20 @@ public final class IcebergRecordSerializers {
       } catch (ClassNotFoundException e) {
         clazz = Class.forName(className);
       }
-      if (!IcebergRecordSerializer.class.isAssignableFrom(clazz)) {
+      if (!expectedType.isAssignableFrom(clazz)) {
         throw new ConfigException(
-            ConnectIcebergConverterConfig.SERIALIZER_TYPE.name(),
-            className,
-            "Class does not implement " + IcebergRecordSerializer.class.getName());
+            configName, className, "Class does not implement " + expectedType.getName());
       }
-      return (IcebergRecordSerializer) clazz.getDeclaredConstructor().newInstance();
+      return expectedType.cast(clazz.getDeclaredConstructor().newInstance());
     } catch (ConfigException e) {
       throw e;
     } catch (ReflectiveOperationException e) {
       throw new ConfigException(
-          ConnectIcebergConverterConfig.SERIALIZER_TYPE.name(),
+          configName,
           className,
-          "Failed to instantiate custom IcebergRecordSerializer '"
+          "Failed to instantiate "
+              + expectedType.getSimpleName()
+              + " '"
               + className
               + "': "
               + e.getMessage());

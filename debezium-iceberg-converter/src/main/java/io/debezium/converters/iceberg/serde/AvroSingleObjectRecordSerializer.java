@@ -8,7 +8,7 @@
 
 package io.debezium.converters.iceberg.serde;
 
-import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergStructConverter;
 import io.debezium.converters.iceberg.internal.LruCache;
 import io.debezium.converters.iceberg.spi.DeserializedIcebergRecord;
 import io.debezium.converters.iceberg.spi.IcebergRecordSerializer;
@@ -31,25 +31,35 @@ import org.apache.kafka.connect.errors.DataException;
  * Compact Avro single-object serializer built on Iceberg's {@link IcebergEncoder} and {@link
  * IcebergDecoder} (10-byte header: {@code 0xC3 0x01} + 8-byte little-endian CRC-64-AVRO
  * fingerprint).
+ *
+ * <p>Cross-JVM consumers must either register the exact Iceberg {@link Schema} via {@link
+ * #registerSchema(Schema)} or provide an Avro {@link SchemaStore} (via {@link
+ * #AvroSingleObjectRecordSerializer(SchemaStore)}, {@link #deserialize(byte[], SchemaStore)}, or
+ * the {@code avro.schema.store.class} converter property). Note that resolving unknown fingerprints
+ * through a generic Avro {@link SchemaStore} falls back to {@link
+ * AvroSchemaUtil#toIceberg(org.apache.avro.Schema)}, which cannot reconstruct Iceberg-only metadata
+ * such as {@code identifierFieldIds}, {@code VariantType}, or {@code GeometryType}/{@code
+ * GeographyType} CRS distinctions; use {@link AvroEnvelopeRecordSerializer} when full
+ * self-describing Iceberg schema fidelity is required across JVMs.
  */
-public class IcebergEncoderRecordSerializer implements IcebergRecordSerializer {
+public class AvroSingleObjectRecordSerializer implements IcebergRecordSerializer {
 
   public static final String TYPE = "avro-single-object";
   public static final byte HEADER_0 = (byte) 0xC3;
   public static final byte HEADER_1 = (byte) 0x01;
   private static final int HEADER_LENGTH = 10;
 
-  private final SchemaStore defaultSchemaStore;
+  private SchemaStore defaultSchemaStore;
   private LruCache<AvroSchemaKey, IcebergEncoder<GenericRecord>> encoderCache =
-      new LruCache<>(IcebergConverterConfig.DEFAULT_SCHEMA_CACHE_SIZE);
+      new LruCache<>(IcebergStructConverter.DEFAULT_SCHEMA_CACHE_SIZE);
   private LruCache<Long, DecoderEntry> fingerprintCache =
-      new LruCache<>(IcebergConverterConfig.DEFAULT_SCHEMA_CACHE_SIZE);
+      new LruCache<>(IcebergStructConverter.DEFAULT_SCHEMA_CACHE_SIZE);
 
-  public IcebergEncoderRecordSerializer() {
+  public AvroSingleObjectRecordSerializer() {
     this(null);
   }
 
-  public IcebergEncoderRecordSerializer(SchemaStore schemaStore) {
+  public AvroSingleObjectRecordSerializer(SchemaStore schemaStore) {
     this.defaultSchemaStore = schemaStore;
   }
 
@@ -63,6 +73,10 @@ public class IcebergEncoderRecordSerializer implements IcebergRecordSerializer {
     int cacheSize = IcebergRecordSerializers.schemaCacheSize(configs);
     this.encoderCache = cacheSize == 0 ? null : new LruCache<>(cacheSize);
     this.fingerprintCache = cacheSize == 0 ? null : new LruCache<>(cacheSize);
+    SchemaStore configuredStore = IcebergRecordSerializers.instantiateSchemaStore(configs);
+    if (configuredStore != null) {
+      this.defaultSchemaStore = configuredStore;
+    }
   }
 
   /**

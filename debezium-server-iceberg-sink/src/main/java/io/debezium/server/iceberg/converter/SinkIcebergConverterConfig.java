@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Adapts Quarkus SmallRye {@link GlobalConfig} to the pure-Java {@link IcebergConverterConfig}
+ * Adapts Quarkus SmallRye {@link GlobalConfig} to the pure-Java
+ * {@link IcebergConverterConfig}
  * contract.
  */
 public final class SinkIcebergConverterConfig implements IcebergConverterConfig {
@@ -82,7 +83,17 @@ public final class SinkIcebergConverterConfig implements IcebergConverterConfig 
   }
 
   @Override
-  public int schemaCacheSize() {
-    return 0;
+
+  public String propertyName(String connectKey) {
+    return sinkPropertyName(connectKey);
+  }
+
+  public static String sinkPropertyName(String connectKey) {
+    return switch (connectKey) {
+      case "geometry.crs" -> "debezium.sink.iceberg.geometry-crs";
+      case "geospatial.allow.missing.srid" -> "debezium.sink.iceberg.geospatial-allow-missing-srid";
+      case "create.identifier.fields" -> "debezium.sink.iceberg.create-identifier-fields";
+      default -> "debezium.sink.iceberg." + connectKey.replace('.', '-');
+    };
   }
 }

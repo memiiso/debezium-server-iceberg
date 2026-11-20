@@ -9,24 +9,50 @@
 package io.debezium.server.iceberg.converter.geospatial;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
 import io.debezium.converters.iceberg.geospatial.GeospatialValues;
+import io.debezium.server.iceberg.converter.SinkIcebergConverterConfig;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.iceberg.types.Type;
 
-/** Converts Debezium JSON geospatial payloads {@code {wkb, srid}} to Iceberg values. */
+/**
+ * Converts Debezium JSON geospatial payloads {@code {wkb, srid}} to Iceberg
+ * values.
+ */
 public final class JsonGeospatialValues {
 
   private static final String WKB_FIELD = "wkb";
   private static final String SRID_FIELD = "srid";
 
-  private JsonGeospatialValues() {}
+  private JsonGeospatialValues() {
+  }
 
   /**
-   * @param allowMissingSrid write values without SRID with the column CRS instead of failing
+   * @param allowMissingSrid write values without SRID with the column CRS instead
+   *                         of failing
    */
   public static ByteBuffer fromJson(
       JsonNode node, String fieldName, Type type, boolean allowMissingSrid) {
+    return fromJson(
+        node,
+        fieldName,
+        type,
+        new IcebergConverterConfig() {
+          @Override
+          public boolean geospatialAllowMissingSrid() {
+            return allowMissingSrid;
+          }
+
+          @Override
+          public String propertyName(String connectKey) {
+            return SinkIcebergConverterConfig.sinkPropertyName(connectKey);
+          }
+        });
+  }
+
+  public static ByteBuffer fromJson(
+      JsonNode node, String fieldName, Type type, IcebergConverterConfig config) {
     JsonNode wkb = node.get(WKB_FIELD);
     byte[] bytes;
     try {
@@ -44,7 +70,7 @@ public final class JsonGeospatialValues {
       throw GeospatialValues.invalid(fieldName, "srid is not an integer: " + srid, null);
     }
     GeospatialValues.checkSrid(
-        srid == null || srid.isNull() ? null : srid.intValue(), fieldName, type, allowMissingSrid);
+        srid == null || srid.isNull() ? null : srid.intValue(), fieldName, type, config);
     return isoWkb;
   }
 }

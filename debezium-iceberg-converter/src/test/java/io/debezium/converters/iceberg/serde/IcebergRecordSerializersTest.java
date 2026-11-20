@@ -47,36 +47,34 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class IcebergRecordSerializersTest {
 
-  private static final byte[] SAMPLE_ISO_WKB_POINT =
-      new byte[] {
-        0x01,
-        0x01,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        (byte) 0xF0,
-        0x3F,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x40
-      };
+  private static final byte[] SAMPLE_ISO_WKB_POINT = new byte[] {
+      0x01,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      (byte) 0xF0,
+      0x3F,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x40
+  };
 
   private static Schema buildRichSchema() {
-    Types.StructType nestedStruct =
-        Types.StructType.of(
-            Types.NestedField.optional(101, "street", Types.StringType.get()),
-            Types.NestedField.optional(102, "zip", Types.IntegerType.get()));
+    Types.StructType nestedStruct = Types.StructType.of(
+        Types.NestedField.optional(101, "street", Types.StringType.get()),
+        Types.NestedField.optional(102, "zip", Types.IntegerType.get()));
 
     return new Schema(
         List.of(
@@ -118,11 +116,10 @@ class IcebergRecordSerializersTest {
     nested.setField("street", "Main St");
     nested.setField("zip", 10115);
 
-    org.apache.kafka.connect.data.Schema connectVariantSchema =
-        SchemaBuilder.struct()
-            .field("k", org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
-            .field("n", org.apache.kafka.connect.data.Schema.INT32_SCHEMA)
-            .build();
+    org.apache.kafka.connect.data.Schema connectVariantSchema = SchemaBuilder.struct()
+        .field("k", org.apache.kafka.connect.data.Schema.STRING_SCHEMA)
+        .field("n", org.apache.kafka.connect.data.Schema.INT32_SCHEMA)
+        .build();
     Struct connectVariantStruct = new Struct(connectVariantSchema).put("k", "v").put("n", 7);
     StructVariantObject variantObj = new StructVariantObject(connectVariantStruct);
     Variant variant = Variant.of(variantObj.metadata(), variantObj);
@@ -136,7 +133,7 @@ class IcebergRecordSerializersTest {
     record.setField("str_col", "hello");
     record.setField("dec_col", new BigDecimal("12345.678"));
     record.setField("uuid_col", UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
-    record.setField("bin_col", ByteBuffer.wrap(new byte[] {1, 2, 3, 4}));
+    record.setField("bin_col", ByteBuffer.wrap(new byte[] { 1, 2, 3, 4 }));
     record.setField("date_col", LocalDate.of(2026, 11, 19));
     record.setField("time_col", LocalTime.of(14, 35, 12, 123_456_000));
     record.setField("ts_col", LocalDateTime.of(2026, 11, 19, 14, 35, 12, 123_456_000));
@@ -154,10 +151,9 @@ class IcebergRecordSerializersTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"avro-envelope", "avro-single-object"})
+  @ValueSource(strings = { "avro-envelope", "avro-single-object" })
   void roundTripAllIcebergTypes(String serializerType) {
-    IcebergRecordSerializer serializer =
-        IcebergRecordSerializers.create(serializerType, Collections.emptyMap());
+    IcebergRecordSerializer serializer = IcebergRecordSerializers.create(serializerType, Collections.emptyMap());
     assertEquals(serializerType, serializer.type());
 
     Schema schema = buildRichSchema();
@@ -180,7 +176,7 @@ class IcebergRecordSerializersTest {
     assertEquals("hello", out.getField("str_col"));
     assertEquals(new BigDecimal("12345.678"), out.getField("dec_col"));
     assertEquals(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"), out.getField("uuid_col"));
-    assertArrayEquals(new byte[] {1, 2, 3, 4}, toArray((ByteBuffer) out.getField("bin_col")));
+    assertArrayEquals(new byte[] { 1, 2, 3, 4 }, toArray((ByteBuffer) out.getField("bin_col")));
     assertEquals(LocalDate.of(2026, 11, 19), out.getField("date_col"));
     assertEquals(LocalTime.of(14, 35, 12, 123_456_000), out.getField("time_col"));
     assertEquals(LocalDateTime.of(2026, 11, 19, 14, 35, 12, 123_456_000), out.getField("ts_col"));
@@ -205,12 +201,11 @@ class IcebergRecordSerializersTest {
 
   @Test
   void avroEnvelopeIsSelfDescribingAcrossSeparateInstances() {
-    Schema schema =
-        new Schema(
-            List.of(
-                Types.NestedField.required(1, "id", Types.IntegerType.get()),
-                Types.NestedField.optional(2, "name", Types.StringType.get())),
-            Set.of(1));
+    Schema schema = new Schema(
+        List.of(
+            Types.NestedField.required(1, "id", Types.IntegerType.get()),
+            Types.NestedField.optional(2, "name", Types.StringType.get())),
+        Set.of(1));
     GenericRecord record = GenericRecord.create(schema);
     record.setField("id", 99);
     record.setField("name", "alice");
@@ -229,33 +224,46 @@ class IcebergRecordSerializersTest {
   @Test
   void avroEnvelopeRejectsCorruptOrTruncatedPayloads() {
     AvroEnvelopeRecordSerializer serializer = new AvroEnvelopeRecordSerializer();
-    assertThrows(DataException.class, () -> serializer.deserialize(new byte[] {0x49, 0x43}));
+    assertThrows(DataException.class, () -> serializer.deserialize(new byte[] { 0x49, 0x43 }));
     assertThrows(
         DataException.class,
-        () -> serializer.deserialize(new byte[] {0x00, 0x00, 0x01, 0, 0, 0, 1, 'x'}));
+        () -> serializer.deserialize(new byte[] { 0x00, 0x00, 0x01, 0, 0, 0, 1, 'x' }));
     assertThrows(
         DataException.class,
-        () -> serializer.deserialize(new byte[] {0x49, 0x43, 0x09, 0, 0, 0, 1, 'x'}));
+        () -> serializer.deserialize(new byte[] { 0x49, 0x43, 0x09, 0, 0, 0, 1, 'x' }));
     assertThrows(
         DataException.class,
-        () -> serializer.deserialize(new byte[] {0x49, 0x43, 0x01, 0, 0, 0, 50, '{', '}'}));
+        () -> serializer.deserialize(new byte[] { 0x49, 0x43, 0x01, 0, 0, 0, 50, '{', '}' }));
+    // Crafted schemaLen near Integer.MAX_VALUE must not overflow FIXED_HEADER_BYTES
+    // + schemaLen
+    assertThrows(
+        DataException.class,
+        () -> serializer.deserialize(
+            new byte[] {
+                0x49, 0x43, 0x01, 0x7F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, '{', '}'
+            }));
+    assertThrows(
+        DataException.class,
+        () -> serializer.deserialize(
+            new byte[] {
+                0x49, 0x43, 0x01, 0x7F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFA, '{', '}'
+            }));
   }
 
   @Test
   void singleObjectResolvesExternalSchemaStoreAndFailsWhenMissing() {
-    Schema schema =
-        new Schema(
-            Types.NestedField.required(1, "id", Types.IntegerType.get()),
-            Types.NestedField.optional(2, "name", Types.StringType.get()));
+    Schema schema = new Schema(
+        Types.NestedField.required(1, "id", Types.IntegerType.get()),
+        Types.NestedField.optional(2, "name", Types.StringType.get()));
     GenericRecord record = GenericRecord.create(schema);
     record.setField("id", 5);
     record.setField("name", "bob");
 
-    byte[] bytes = new IcebergEncoderRecordSerializer().serialize(schema, record);
-    assertEquals(IcebergEncoderRecordSerializer.HEADER_0, bytes[0]);
-    assertEquals(IcebergEncoderRecordSerializer.HEADER_1, bytes[1]);
+    byte[] bytes = new AvroSingleObjectRecordSerializer().serialize(schema, record);
+    assertEquals(AvroSingleObjectRecordSerializer.HEADER_0, bytes[0]);
+    assertEquals(AvroSingleObjectRecordSerializer.HEADER_1, bytes[1]);
 
-    IcebergEncoderRecordSerializer reader = new IcebergEncoderRecordSerializer();
+    AvroSingleObjectRecordSerializer reader = new AvroSingleObjectRecordSerializer();
     assertThrows(DataException.class, () -> reader.deserialize(bytes, null));
 
     SchemaStore.Cache store = new SchemaStore.Cache();
@@ -264,20 +272,35 @@ class IcebergRecordSerializersTest {
     assertEquals(5, decoded.record().getField("id"));
     assertEquals("bob", decoded.record().getField("name"));
 
-    IcebergEncoderRecordSerializer registeredReader = new IcebergEncoderRecordSerializer();
+    AvroSingleObjectRecordSerializer registeredReader = new AvroSingleObjectRecordSerializer();
     registeredReader.registerSchema(schema);
     DeserializedIcebergRecord decodedRegistered = registeredReader.deserialize(bytes);
     assertEquals(5, decodedRegistered.record().getField("id"));
     assertEquals("bob", decodedRegistered.record().getField("name"));
+
+    // Configured via avro.schema.store.class
+    TestSchemaStore.SHARED.addSchema(AvroSchemaUtil.convert(schema, "table"));
+    IcebergRecordSerializer configuredReader = IcebergRecordSerializers.create(
+        AvroSingleObjectRecordSerializer.TYPE,
+        Map.of("avro.schema.store.class", TestSchemaStore.class.getName()));
+    DeserializedIcebergRecord decodedFromConfig = configuredReader.deserialize(bytes);
+    assertEquals(5, decodedFromConfig.record().getField("id"));
+    assertEquals("bob", decodedFromConfig.record().getField("name"));
+
+    assertThrows(
+        ConfigException.class,
+        () -> IcebergRecordSerializers.create(
+            AvroSingleObjectRecordSerializer.TYPE,
+            Map.of("avro.schema.store.class", "java.lang.String")));
   }
 
   @Test
   void singleObjectRejectsInvalidHeaderOrTruncatedBytes() {
-    IcebergEncoderRecordSerializer serializer = new IcebergEncoderRecordSerializer();
-    assertThrows(DataException.class, () -> serializer.deserialize(new byte[] {(byte) 0xC3, 0x01}));
+    AvroSingleObjectRecordSerializer serializer = new AvroSingleObjectRecordSerializer();
+    assertThrows(DataException.class, () -> serializer.deserialize(new byte[] { (byte) 0xC3, 0x01 }));
     assertThrows(
         DataException.class,
-        () -> serializer.deserialize(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+        () -> serializer.deserialize(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }));
   }
 
   @Test
@@ -290,7 +313,7 @@ class IcebergRecordSerializersTest {
         AvroEnvelopeRecordSerializer.class,
         IcebergRecordSerializers.create("avro-envelope", Map.of()));
     assertInstanceOf(
-        IcebergEncoderRecordSerializer.class,
+        AvroSingleObjectRecordSerializer.class,
         IcebergRecordSerializers.create("AVRO-SINGLE-OBJECT", Map.of()));
     assertInstanceOf(
         TestCustomSerializer.class,
@@ -308,6 +331,15 @@ class IcebergRecordSerializersTest {
     byte[] bytes = new byte[dup.remaining()];
     dup.get(bytes);
     return bytes;
+  }
+
+  public static class TestSchemaStore implements SchemaStore {
+    static final SchemaStore.Cache SHARED = new SchemaStore.Cache();
+
+    @Override
+    public org.apache.avro.Schema findByFingerprint(long fingerprint) {
+      return SHARED.findByFingerprint(fingerprint);
+    }
   }
 
   public static class TestCustomSerializer implements IcebergRecordSerializer {

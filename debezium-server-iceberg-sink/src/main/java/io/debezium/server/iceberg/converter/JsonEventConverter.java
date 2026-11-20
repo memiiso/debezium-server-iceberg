@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.debezium.DebeziumException;
 import io.debezium.converters.iceberg.DateTimeUtils;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
 import io.debezium.converters.iceberg.IcebergValueConverter;
 import io.debezium.converters.iceberg.geospatial.GeospatialTypes;
 import io.debezium.embedded.EmbeddedEngineChangeEvent;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SortOrder;
@@ -48,148 +50,176 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema and key fields.
+ * Converts iceberg json event to Iceberg GenericRecord. Extracts event schema
+ * and key fields.
  * Converts event schema to Iceberg Schema.
  *
  * @author Ismail Simsek
  */
-public class JsonEventConverter extends IcebergValueConverter implements EventConverter {
+  public class JsonEventConverter implements EventConverter {
 
-  protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
-  protected static final ObjectMapper mapper = new ObjectMapper();
-  protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
-  protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
-  protected static Deserializer<JsonNode> valDeserializer;
-  protected static Deserializer<JsonNode> keyDeserializer;
+    protected static final Logger LOGGER = LoggerFactory.getLogger(JsonEventConverter.class);
+    protected static final ObjectMapper mapper = new ObjectMapper();
+    protected static final Serde<JsonNode> valSerde = DebeziumSerdes.payloadJson(JsonNode.class);
+    protected static final Serde<JsonNode> keySerde = DebeziumSerdes.payloadJson(JsonNode.class);
+    protected static Deserializer<JsonNode> valDeserializer;
+    protected static Deserializer<JsonNode> keyDeserializer;
 
-  protected final GlobalConfig config;
-  protected final String destination;
-  protected final byte[] valueData;
-  protected final byte[] keyData;
-  private final JsonNode value;
-  private final JsonNode key;
-  private boolean newKey = false;
-  private JsonSchemaConverter schemaConverter;
+    protected final GlobalConfig config;
+    private final IcebergConverterConfig converterConfig;
+    private final IcebergValueConverter valueConverter;
+    protected final String destination;
+    protected final byte[] valueData;
+    protected final byte[] keyData;
+    private final JsonNode value;
+    private final JsonNode key;
+    private boolean newKey = false;
+    private JsonSchemaConverter schemaConverter;
 
-  public static void initializeStaticSerdes() {
-    valSerde.configure(Collections.emptyMap(), false);
-    valDeserializer = valSerde.deserializer();
-    keySerde.configure(Collections.emptyMap(), true);
-    keyDeserializer = keySerde.deserializer();
-  }
-
-  public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
-    this(e.destination(), e.value(), e.key(), config);
-  }
-
-  public JsonEventConverter(BatchEvent e, GlobalConfig config) {
-    this(e.destination(), e.value(), e.key(), config);
-  }
-
-  // Testing only
-  public JsonEventConverter(
-      String destination, Object valueData, Object keyData, GlobalConfig config) {
-    super(SinkIcebergConverterConfig.from(config));
-    this.config = config;
-    this.destination = destination;
-    this.valueData = getBytes(valueData);
-    this.keyData = getBytes(keyData);
-    this.key = keyDeserializer.deserialize(destination, this.keyData);
-    this.value = valDeserializer.deserialize(destination, this.valueData);
-  }
-
-  protected byte[] getBytes(Object object) {
-    if (object instanceof byte[]) {
-      return (byte[]) object;
-    } else if (object instanceof String) {
-      return ((String) object).getBytes(StandardCharsets.UTF_8);
-    } else if (object == null) {
-      return null;
-    } else {
-      String type = object == null ? "null" : object.getClass().getName();
-      throw new DebeziumException("Unexpected data type '" + type + "'");
-    }
-  }
-
-  @Override
-  public JsonNode key() {
-    return key;
-  }
-
-  @Override
-  public boolean hasKeyData() {
-    return this.key() != null && !this.key().isNull();
-  }
-
-  @Override
-  public JsonNode value() {
-    return value;
-  }
-
-  @Override
-  public Long cdcSourceTsValue() {
-    String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
-    if (cdcSourceTsField.isBlank()) {
-      throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
+    public static void initializeStaticSerdes() {
+      valSerde.configure(Collections.emptyMap(), false);
+      valDeserializer = valSerde.deserializer();
+      keySerde.configure(Collections.emptyMap(), true);
+      keyDeserializer = keySerde.deserializer();
     }
 
-    final JsonNode element = value().get(cdcSourceTsField);
-    if (element == null) {
-      throw new DebeziumException(
-          "Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
+    public JsonEventConverter(EmbeddedEngineChangeEvent e, GlobalConfig config) {
+      this(e.destination(), e.value(), e.key(), config);
     }
 
-    try {
-      return element.asLong();
-    } catch (NumberFormatException e) {
-      throw new DebeziumException(
-          "Error converting field '"
-              + cdcSourceTsField
-              + "' value '"
-              + element
-              + "' to Long: "
-              + e.getMessage(),
-          e);
-    }
-  }
-
-  @Override
-  public Operation cdcOpValue() {
-    if (!value().has(config.iceberg().cdcOpField())) {
-      throw new DebeziumException(
-          "The value for field `"
-              + config.iceberg().cdcOpField()
-              + "` is missing. "
-              + "This field is required when updating or deleting data, when running in upsert mode.");
+    public JsonEventConverter(BatchEvent e, GlobalConfig config) {
+      this(e.destination(), e.value(), e.key(), config);
     }
 
-    final String opFieldValue = value().get(config.iceberg().cdcOpField()).asText("c");
+    public JsonEventConverter(
+        BatchEvent e,
+        GlobalConfig config,
+        IcebergConverterConfig converterConfig,
+        IcebergValueConverter valueConverter) {
+      this(e.destination(), e.value(), e.key(), config, converterConfig, valueConverter);
+    }
 
-    return switch (opFieldValue) {
-      case "u" -> Operation.UPDATE;
-      case "d" -> Operation.DELETE;
-      case "r" -> Operation.READ;
-      case "c" -> Operation.INSERT;
-      case "i" -> Operation.INSERT;
-      default ->
+    // Testing only
+    public JsonEventConverter(
+        String destination, Object valueData, Object keyData, GlobalConfig config) {
+      this(
+          destination,
+          valueData,
+          keyData,
+          config,
+          SinkIcebergConverterConfig.from(Objects.requireNonNull(config, "config must not be null")),
+          null);
+    }
+
+    public JsonEventConverter(
+        String destination,
+        Object valueData,
+        Object keyData,
+        GlobalConfig config,
+        IcebergConverterConfig converterConfig,
+        IcebergValueConverter valueConverter) {
+      this.config = Objects.requireNonNull(config, "config must not be null");
+      this.converterConfig = Objects.requireNonNull(converterConfig, "converterConfig must not be null");
+      this.valueConverter = valueConverter != null ? valueConverter : new IcebergValueConverter(this.converterConfig);
+      this.destination = destination;
+      this.valueData = getBytes(valueData);
+      this.keyData = getBytes(keyData);
+      this.key = keyDeserializer.deserialize(destination, this.keyData);
+      this.value = valDeserializer.deserialize(destination, this.valueData);
+    }
+
+    protected byte[] getBytes(Object object) {
+      if (object instanceof byte[]) {
+        return (byte[]) object;
+      } else if (object instanceof String) {
+        return ((String) object).getBytes(StandardCharsets.UTF_8);
+      } else if (object == null) {
+        return null;
+      } else {
+        String type = object == null ? "null" : object.getClass().getName();
+        throw new DebeziumException("Unexpected data type '" + type + "'");
+      }
+    }
+
+    @Override
+    public JsonNode key() {
+      return key;
+    }
+
+    @Override
+    public boolean hasKeyData() {
+      return this.key() != null && !this.key().isNull();
+    }
+
+    @Override
+    public JsonNode value() {
+      return value;
+    }
+
+    @Override
+    public Long cdcSourceTsValue() {
+      String cdcSourceTsField = config.iceberg().cdcSourceTsField().orElse("");
+      if (cdcSourceTsField.isBlank()) {
+        throw new DebeziumException("Property debezium.sink.iceberg.upsert-dedup-column is not set");
+      }
+
+      final JsonNode element = value().get(cdcSourceTsField);
+      if (element == null) {
+        throw new DebeziumException(
+            "Field '" + cdcSourceTsField + "' not found in JSON object: " + value());
+      }
+
+      try {
+        return element.asLong();
+      } catch (NumberFormatException e) {
+        throw new DebeziumException(
+            "Error converting field '"
+                + cdcSourceTsField
+                + "' value '"
+                + element
+                + "' to Long: "
+                + e.getMessage(),
+            e);
+      }
+    }
+
+    @Override
+    public Operation cdcOpValue() {
+      if (!value().has(config.iceberg().cdcOpField())) {
+        throw new DebeziumException(
+            "The value for field `"
+                + config.iceberg().cdcOpField()
+                + "` is missing. "
+                + "This field is required when updating or deleting data, when running in upsert mode.");
+      }
+
+      final String opFieldValue = value().get(config.iceberg().cdcOpField()).asText("c");
+
+      return switch (opFieldValue) {
+        case "u" -> Operation.UPDATE;
+        case "d" -> Operation.DELETE;
+        case "r" -> Operation.READ;
+        case "c" -> Operation.INSERT;
+        case "i" -> Operation.INSERT;
+        default ->
           throw new DebeziumException(
               "Unexpected `"
                   + config.iceberg().cdcOpField()
                   + "="
                   + opFieldValue
                   + "` operation value received, expecting one of ['u','d','r','c', 'i']");
-    };
-  }
+      };
+    }
 
-  @Override
-  public boolean isNewKey() {
-    return newKey;
-  }
+    @Override
+    public boolean isNewKey() {
+      return newKey;
+    }
 
-  @Override
-  public void setNewKey(boolean newKey) {
-    this.newKey = newKey;
-  }
+    @Override
+    public void setNewKey(boolean newKey) {
+      this.newKey = newKey;
+    }
 
   @Override
   public JsonSchemaConverter schemaConverter() {
@@ -199,7 +229,8 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
             new JsonSchemaConverter(
                 mapper.readTree(valueData).get("schema"),
                 keyData == null ? null : mapper.readTree(keyData).get("schema"),
-                config);
+                config,
+                converterConfig);
       } catch (IOException e) {
         throw new DebeziumException("Failed to get event schema", e);
       }
@@ -207,53 +238,55 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
     return this.schemaConverter;
   }
 
-  /**
-   * Checks if the current message represents a schema change event. Schema change events are
-   * identified by the presence of "ddl", "databaseName", and "tableChanges" fields.
-   *
-   * @return True if it's a schema change event, false otherwise.
-   */
-  @Override
-  public boolean isSchemaChangeEvent() {
-    return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
-  }
-
-  /**
-   * Converts the Kafka Connect schema to an Iceberg schema.
-   *
-   * @return The Iceberg schema.
-   */
-  @Override
-  public Schema icebergSchema(boolean withIdentifierFields) {
-    return schemaConverter().icebergSchema(withIdentifierFields);
-  }
-
-  @Override
-  public SortOrder sortOrder(Schema schema) {
-    return schemaConverter().sortOrder(schema);
-  }
-
-  @Override
-  public String destination() {
-    return destination;
-  }
-
-  @Override
-  public RecordWrapper convertAsAppend(Schema schema) {
-    if (value == null) {
-      throw new DebeziumException(
-          "Cannot convert null value Struct to Iceberg Record for APPEND operation.");
+    /**
+     * Checks if the current message represents a schema change event. Schema change
+     * events are
+     * identified by the presence of "ddl", "databaseName", and "tableChanges"
+     * fields.
+     *
+     * @return True if it's a schema change event, false otherwise.
+     */
+    @Override
+    public boolean isSchemaChangeEvent() {
+      return value().has("ddl") && value().has("databaseName") && value().has("tableChanges");
     }
-    GenericRecord row = convert(schema.asStruct(), value());
-    return new RecordWrapper(row, Operation.INSERT, true);
-  }
 
-  @Override
-  public RecordWrapper convert(Schema schema) {
-    GenericRecord row = convert(schema.asStruct(), value());
-    Operation op = cdcOpValue();
-    return new RecordWrapper(row, op, newKey);
-  }
+    /**
+     * Converts the Kafka Connect schema to an Iceberg schema.
+     *
+     * @return The Iceberg schema.
+     */
+    @Override
+    public Schema icebergSchema(boolean withIdentifierFields) {
+      return schemaConverter().icebergSchema(withIdentifierFields);
+    }
+
+    @Override
+    public SortOrder sortOrder(Schema schema) {
+      return schemaConverter().sortOrder(schema);
+    }
+
+    @Override
+    public String destination() {
+      return destination;
+    }
+
+    @Override
+    public RecordWrapper convertAsAppend(Schema schema) {
+      if (value == null) {
+        throw new DebeziumException(
+            "Cannot convert null value Struct to Iceberg Record for APPEND operation.");
+      }
+      GenericRecord row = convert(schema.asStruct(), value());
+      return new RecordWrapper(row, Operation.INSERT, true);
+    }
+
+    @Override
+    public RecordWrapper convert(Schema schema) {
+      GenericRecord row = convert(schema.asStruct(), value());
+      Operation op = cdcOpValue();
+      return new RecordWrapper(row, op, newKey);
+    }
 
   private GenericRecord convert(Types.StructType tableFields, JsonNode data) {
     GenericRecord record = GenericRecord.create(tableFields);
@@ -322,7 +355,7 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
                       + node.getNodeType());
             }
           }
-          return convertDecimal(decimalObj, (Types.DecimalType) field.type(), null);
+          return valueConverter.convertDecimal(decimalObj, (Types.DecimalType) field.type());
         }
       case BOOLEAN:
         return node.asBoolean();
@@ -350,7 +383,7 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
 
       case TIME:
         if (node.isTextual()) {
-          return switch (config.debezium().temporalPrecisionMode()) {
+          return switch (converterConfig.temporalPrecisionMode()) {
             // io.debezium.time.IsoTime
             case ISOSTRING -> LocalTime.parse(node.asText(), IsoTime.FORMATTER);
             // io.debezium.time.ZonedTime
@@ -360,7 +393,7 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
           };
         }
         if (node.isNumber()) {
-          return switch (config.debezium().temporalPrecisionMode()) {
+          return switch (converterConfig.temporalPrecisionMode()) {
             // io.debezium.time.MicroTime
             // Represents the time value in microseconds
             case MICROSECONDS -> LocalTime.ofNanoOfDay(node.asLong() * 1000);
@@ -381,18 +414,18 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
         boolean isTsWithZone = ((Types.TimestampType) field.type()).shouldAdjustToUTC();
         if (node.isNumber()) {
           if (isTsWithZone) {
-            return convertOffsetDateTime(node.numberValue(), null);
+            return valueConverter.convertOffsetDateTime(node.numberValue(), null);
           }
           if (DebeziumConfig.TS_MS_FIELDS.contains(field.name())) {
             return DateTimeUtils.timestamptzFromMillis(node.asLong());
           }
-          return convertLocalDateTime(node.numberValue(), null);
+          return valueConverter.convertLocalDateTime(node.numberValue(), null);
         }
         if (node.isTextual()) {
           if (isTsWithZone) {
-            return convertOffsetDateTime(node.asText(), null);
+            return valueConverter.convertOffsetDateTime(node.asText(), null);
           }
-          return convertLocalDateTime(node.asText(), null);
+          return valueConverter.convertLocalDateTime(node.asText(), null);
         }
       case BINARY:
         try {
@@ -403,8 +436,7 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
         }
       case GEOMETRY:
       case GEOGRAPHY:
-        return JsonGeospatialValues.fromJson(
-            node, field.name(), field.type(), config.iceberg().geospatialAllowMissingSrid());
+        return JsonGeospatialValues.fromJson(node, field.name(), field.type(), converterConfig);
       case LIST:
         Types.NestedField listItemsType = field.type().asListType().fields().get(0);
         if (GeospatialTypes.isGeospatial(listItemsType.type())) {
@@ -419,7 +451,7 @@ public class JsonEventConverter extends IcebergValueConverter implements EventCo
                                   element,
                                   field.name() + "[]",
                                   listItemsType.type(),
-                                  config.iceberg().geospatialAllowMissingSrid())));
+                                  converterConfig)));
           return listVal;
         }
         // recursive value mapping when list elements are nested type

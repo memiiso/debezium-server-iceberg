@@ -14,14 +14,23 @@ import java.util.List;
 import org.apache.iceberg.types.Types;
 
 /**
- * Pure-Java configuration contract for converting Kafka Connect / Debezium {@code Schema} and
- * {@code Struct} records into Apache Iceberg {@code Schema}, {@code SortOrder}, and {@code
+ * Pure-Java configuration contract for converting Kafka Connect / Debezium
+ * {@code Schema} and
+ * {@code Struct} records into Apache Iceberg {@code Schema}, {@code SortOrder},
+ * and {@code
  * GenericRecord} instances.
  */
 public interface IcebergConverterConfig {
 
   List<String> TS_MS_FIELDS = List.of("__ts_ms", "__source_ts_ms");
-  int DEFAULT_SCHEMA_CACHE_SIZE = 1024;
+
+  static IcebergConverterConfig defaults() {
+    return DefaultIcebergConverterConfig.defaults();
+  }
+
+  static DefaultIcebergConverterConfig.Builder builder() {
+    return DefaultIcebergConverterConfig.builder();
+  }
 
   default TemporalPrecisionMode temporalPrecisionMode() {
     return TemporalPrecisionMode.ISOSTRING;
@@ -63,7 +72,15 @@ public interface IcebergConverterConfig {
     return false;
   }
 
-  default int schemaCacheSize() {
-    return DEFAULT_SCHEMA_CACHE_SIZE;
+
+  /**
+   * Formats a dot-case converter property name for user-facing error messages.
+   * Adapters such as
+   * {@code SinkIcebergConverterConfig} override this to emit their native
+   * property naming (e.g.,
+   * {@code debezium.sink.iceberg.*}).
+   */
+  default String propertyName(String connectKey) {
+    return connectKey;
   }
 }

@@ -9,12 +9,16 @@
 package io.debezium.server.iceberg;
 
 import io.debezium.DebeziumException;
+import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergStructConverter;
+import io.debezium.converters.iceberg.IcebergValueConverter;
 import io.debezium.runtime.BatchEvent;
 import io.debezium.runtime.CapturingEvents;
 import io.debezium.server.api.DebeziumServerConsumer;
 import io.debezium.server.iceberg.batchsizewait.BatchSizeWait;
 import io.debezium.server.iceberg.converter.EventConverter;
 import io.debezium.server.iceberg.converter.JsonEventConverter;
+import io.debezium.server.iceberg.converter.SinkIcebergConverterConfig;
 import io.debezium.server.iceberg.converter.StructEventConverter;
 import io.debezium.server.iceberg.mapper.IcebergTableMapper;
 import io.debezium.server.iceberg.tableoperator.IcebergTableOperator;
@@ -73,24 +77,36 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   protected Threads.Timer logTimer = Threads.timer(clock, LOG_INTERVAL);
   protected static String keyValueChangeEventFormat;
 
-  @Inject @Any Instance<BatchSizeWait> batchSizeWaitInstances;
+  @Inject
+  @Any
+  Instance<BatchSizeWait> batchSizeWaitInstances;
   BatchSizeWait batchSizeWait;
   Catalog icebergCatalog;
-  @Inject IcebergTableOperator icebergTableOperator;
-  @Inject GlobalConfig config;
+  @Inject
+  IcebergTableOperator icebergTableOperator;
+  @Inject
+  GlobalConfig config;
 
-  @Inject @Any Instance<IcebergTableMapper> tableMappers;
+  @Inject
+  @Any
+  Instance<IcebergTableMapper> tableMappers;
   IcebergTableMapper tableMapper;
   private int numConcurrentUploads;
   private int concurrentUploadsTimeoutMinutes;
   ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
   private Semaphore concurrencyLimiter;
+  private IcebergConverterConfig converterConfig;
+  private IcebergStructConverter structConverter;
+  private IcebergValueConverter valueConverter;
 
   @PostConstruct
   void connect() {
     config.debezium().validateTemporalPrecisionMode();
     IcebergUtil.validateGeospatialConfig(config.iceberg());
 
+    this.converterConfig = SinkIcebergConverterConfig.from(config);
+    this.structConverter = new IcebergStructConverter(this.converterConfig, 0);
+    this.valueConverter = new IcebergValueConverter(this.converterConfig);
     JsonEventConverter.initializeStaticSerdes();
     keyValueChangeEventFormat = config.debezium().keyValueChangeEventFormat();
     LOGGER.info(
@@ -99,11 +115,9 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
     // pass iceberg properties to iceberg and hadoop
     config.iceberg().icebergConfigs().forEach(this.hadoopConf::set);
 
-    icebergCatalog =
-        CatalogUtil.buildIcebergCatalog(
-            config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
-    batchSizeWait =
-        IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
+    icebergCatalog = CatalogUtil.buildIcebergCatalog(
+        config.iceberg().catalogName(), config.iceberg().icebergConfigs(), hadoopConf);
+    batchSizeWait = IcebergUtil.selectInstance(batchSizeWaitInstances, config.batch().batchSizeWaitName());
     batchSizeWait.initizalize();
     tableMapper = IcebergUtil.selectInstance(tableMappers, config.iceberg().tableMapper());
 
@@ -137,22 +151,34 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   public void handle(CapturingEvents<BatchEvent> events) throws InterruptedException {
     Instant start = Instant.now();
 
+    IcebergConverterConfig effectiveConverterConfig = converterConfig != null ? converterConfig
+        : SinkIcebergConverterConfig.from(config);
+    IcebergStructConverter effectiveStructConverter = structConverter != null
+        ? structConverter
+        : new IcebergStructConverter(effectiveConverterConfig, 0);
+    IcebergValueConverter effectiveValueConverter = valueConverter != null
+        ? valueConverter
+        : new IcebergValueConverter(effectiveConverterConfig);
+
     // group events by destination (per iceberg table)
-    Map<String, List<EventConverter>> result =
-        events.records().stream()
-            .map(
-                (BatchEvent e) -> {
-                  return switch (keyValueChangeEventFormat) {
-                    case "json" -> new JsonEventConverter(e, config);
-                    case "connect" -> new StructEventConverter(e, config);
-                    default ->
-                        throw new DebeziumException(
-                            "Unsupported format:" + keyValueChangeEventFormat);
-                  };
-                })
-            .collect(
-                Collectors.groupingBy(
-                    EventConverter::destination, LinkedHashMap::new, Collectors.toList()));
+    Map<String, List<EventConverter>> result = events.records().stream()
+        .map(
+            (BatchEvent e) -> {
+              return switch (keyValueChangeEventFormat) {
+                case "json" ->
+                  new JsonEventConverter(
+                      e, config, effectiveConverterConfig, effectiveValueConverter);
+                case "connect" ->
+                  new StructEventConverter(
+                      e, config, effectiveConverterConfig, effectiveStructConverter);
+                default ->
+                  throw new DebeziumException(
+                      "Unsupported format:" + keyValueChangeEventFormat);
+              };
+            })
+        .collect(
+            Collectors.groupingBy(
+                EventConverter::destination, LinkedHashMap::new, Collectors.toList()));
 
     // consume list of events for each destination table
     if (numConcurrentUploads > 1) {
@@ -175,8 +201,9 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   /**
    * Processes events for each destination table sequentially in a single thread.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of
-   *     events for that table.
+   * @param eventsByDestination A map where keys are destination table names and
+   *                            values are lists of
+   *                            events for that table.
    */
   private void processTablesSequentially(Map<String, List<EventConverter>> eventsByDestination) {
     for (Map.Entry<String, List<EventConverter>> tableEvents : eventsByDestination.entrySet()) {
@@ -186,9 +213,8 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
         continue;
       }
 
-      Table icebergTable =
-          this.loadIcebergTable(
-              mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+      Table icebergTable = this.loadIcebergTable(
+          mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
       icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
     }
   }
@@ -196,10 +222,12 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   // In IcebergChangeConsumer.java
 
   /**
-   * Processes events for each destination table in parallel using a virtual thread pool.
+   * Processes events for each destination table in parallel using a virtual
+   * thread pool.
    *
-   * @param eventsByDestination A map where keys are destination table names and values are lists of
-   *     events for that table.
+   * @param eventsByDestination A map where keys are destination table names and
+   *                            values are lists of
+   *                            events for that table.
    */
   private void processTablesInParallel(Map<String, List<EventConverter>> eventsByDestination)
       throws InterruptedException {
@@ -226,9 +254,8 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
                   "Task for destination '{}' acquired permit. Starting processing.",
                   tableEvents.getKey());
 
-              Table icebergTable =
-                  this.loadIcebergTable(
-                      mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
+              Table icebergTable = this.loadIcebergTable(
+                  mapDestination(tableEvents.getKey()), tableEvents.getValue().get(0));
               icebergTableOperator.addToTable(icebergTable, tableEvents.getValue());
               return null; // Callable must return a value
             } catch (InterruptedException e) {
@@ -255,8 +282,7 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
     LOGGER.debug("Invoking {} parallel tasks and waiting for completion...", tasks.size());
     try {
       // Invoke all tasks and wait for them to complete, with a timeout.
-      List<Future<Void>> futures =
-          executor.invokeAll(tasks, concurrentUploadsTimeoutMinutes, TimeUnit.MINUTES);
+      List<Future<Void>> futures = executor.invokeAll(tasks, concurrentUploadsTimeoutMinutes, TimeUnit.MINUTES);
 
       // Track failures and re-throw to prevent silent data loss.
       // Without this, a failed parallel task is only logged: the loop exits normally,
@@ -285,14 +311,15 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
           LOGGER.error(
               "A task failed with an exception: {}", e.getCause().getMessage(), e.getCause());
           if (firstException == null) {
-            firstException =
-                new DebeziumException("Parallel table processing failed", e.getCause());
+            firstException = new DebeziumException("Parallel table processing failed", e.getCause());
           }
         }
       }
 
-      // Re-throw if any task failed: prevents Debezium from committing the source offset
-      // when at least one table write did not succeed. The whole batch is retried, which
+      // Re-throw if any task failed: prevents Debezium from committing the source
+      // offset
+      // when at least one table write did not succeed. The whole batch is retried,
+      // which
       // is the correct behavior since offsets are committed at batch granularity.
       if (hasFailures) {
         LOGGER.error(
@@ -311,11 +338,13 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
   }
 
   /**
-   * @param tableId iceberg table identifier
-   * @param sampleEvent sample debezium event. event schema used to create iceberg table when table
-   *     not found
-   * @return iceberg table, throws RuntimeException when table not found, and it's not possible to
-   *     create it
+   * @param tableId     iceberg table identifier
+   * @param sampleEvent sample debezium event. event schema used to create iceberg
+   *                    table when table
+   *                    not found
+   * @return iceberg table, throws RuntimeException when table not found, and it's
+   *         not possible to
+   *         create it
    */
   public Table loadIcebergTable(TableIdentifier tableId, EventConverter sampleEvent) {
     return IcebergUtil.loadIcebergTable(icebergCatalog, tableId)
@@ -362,18 +391,14 @@ public class IcebergChangeConsumer implements DebeziumServerConsumer<CapturingEv
         sortOrder = sampleEvent.sortOrder(schema);
       }
 
-      final List<String> partitionByOptions =
-          config.iceberg().partitionByForTable(sampleEvent.destination());
-      final boolean isTableSpecific =
-          config.iceberg().isPartitionByTableSpecific(sampleEvent.destination());
-      PartitionSpec spec =
-          IcebergUtil.createPartitionSpec(schema, partitionByOptions, isTableSpecific);
+      final List<String> partitionByOptions = config.iceberg().partitionByForTable(sampleEvent.destination());
+      final boolean isTableSpecific = config.iceberg().isPartitionByTableSpecific(sampleEvent.destination());
+      PartitionSpec spec = IcebergUtil.createPartitionSpec(schema, partitionByOptions, isTableSpecific);
 
       // for backward compatibility, to be removed and set to "3" with one of the next
       // releases
       // Format 3 will be used when variant data type is used
-      final String tableFormatVersion =
-          config.iceberg().nestedAsVariant() ? "3" : config.iceberg().formatVersion();
+      final String tableFormatVersion = config.iceberg().nestedAsVariant() ? "3" : config.iceberg().formatVersion();
       return IcebergUtil.createIcebergTable(
           icebergCatalog,
           tableId,

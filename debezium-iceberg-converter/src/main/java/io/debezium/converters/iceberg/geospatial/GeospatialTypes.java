@@ -17,19 +17,22 @@ import org.apache.iceberg.types.Types;
 
 /**
  * Maps Debezium geometry/geography types to Iceberg v3 geospatial types. {@code
- * io.debezium.data.geometry.Point} is not mapped: it is used for PostgreSQL native point (no CRS)
+ * io.debezium.data.geometry.Point} is not mapped: it is used for PostgreSQL
+ * native point (no CRS)
  * and for MySQL POINT, which can't be told apart.
  */
 public final class GeospatialTypes {
 
   public static final String GEOMETRY_LOGICAL_NAME = "io.debezium.data.geometry.Geometry";
   public static final String GEOGRAPHY_LOGICAL_NAME = "io.debezium.data.geometry.Geography";
-  // GeoParquet 2.0 readers must resolve <authority>:<code>, not srid:<N>: srid:0 is only used for
+  // GeoParquet 2.0 readers must resolve <authority>:<code>, not srid:<N>: srid:0
+  // is only used for
   // the unknown CRS
-  private static final Pattern GEOMETRY_CRS =
-      Pattern.compile("OGC:CRS84|EPSG:[1-9]\\d{0,8}|srid:0", Pattern.CASE_INSENSITIVE);
+  private static final Pattern GEOMETRY_CRS = Pattern.compile("OGC:CRS84|EPSG:[1-9]\\d{0,8}|srid:0",
+      Pattern.CASE_INSENSITIVE);
 
-  private GeospatialTypes() {}
+  private GeospatialTypes() {
+  }
 
   /** Returns null when disabled or not a geospatial type. */
   public static Type.PrimitiveType icebergType(
@@ -49,13 +52,16 @@ public final class GeospatialTypes {
     return icebergType(logicalTypeName, config) != null;
   }
 
-  /** SRID of a CRS ({@code OGC:CRS84}, {@code srid:N}, {@code EPSG:N}), null for other formats. */
+  /**
+   * SRID of a CRS ({@code OGC:CRS84}, {@code srid:N}, {@code EPSG:N}), null for
+   * other formats.
+   */
   public static Integer srid(String crs) {
     String normalized = crs.toLowerCase(Locale.ROOT);
     if (normalized.equals("ogc:crs84")) {
       return 4326;
     }
-    for (String prefix : new String[] {"srid:", "epsg:"}) {
+    for (String prefix : new String[] { "srid:", "epsg:" }) {
       if (normalized.startsWith(prefix)) {
         try {
           return Integer.parseInt(normalized.substring(prefix.length()));
@@ -72,7 +78,8 @@ public final class GeospatialTypes {
   }
 
   /**
-   * Returns true if {@code crs} is {@code OGC:CRS84}, {@code EPSG:<N> (N > 0)}, or {@code srid:0}.
+   * Returns true if {@code crs} is {@code OGC:CRS84}, {@code EPSG:<N> (N > 0)},
+   * or {@code srid:0}.
    */
   public static boolean isValidCrs(String crs) {
     return crs != null && GEOMETRY_CRS.matcher(crs).matches();
@@ -84,7 +91,8 @@ public final class GeospatialTypes {
     }
     if (!isValidCrs(config.geometryCrs())) {
       throw new DebeziumException(
-          "geometry.crs must be OGC:CRS84, EPSG:<N> (N > 0) or srid:0 (unknown CRS), got: "
+          config.propertyName("geometry.crs")
+              + " must be OGC:CRS84, EPSG:<N> (N > 0) or srid:0 (unknown CRS), got: "
               + config.geometryCrs());
     }
   }

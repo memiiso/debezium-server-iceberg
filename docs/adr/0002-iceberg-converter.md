@@ -562,6 +562,15 @@ Adopt **Option 4 (Pluggable `IcebergRecordSerializer` SPI)** with **`avro-envelo
 | *(New)* `IcebergConverterEmbeddedTest.java` | — | **Add** in `debezium-iceberg-converter` (test-scoped `debezium-embedded` or `ConverterBuilder` harness): verify `ConverterBuilder` with `ClientProvided.class` (both key & value `clientprovided` vs failure on `formatKey=connect` + `formatValue=clientprovided`) and Layer 1 with `Connect.class`. |
 | *(New)* `SinkIcebergConverterConfigTest.java` | — | **Add** in `sink`: verify `GlobalConfig` -> `IcebergConverterConfig` property mapping parity. |
 
+### 6.4 Implementation Notes (Reconciled With Implemented Branch)
+
+The implemented branch (`feat/issue-798-iceberg-converter`) follows Option 2A and Option 3B with the following concrete refinements over the initial proposal above:
+
+1. **Pure-Java Layer 1 Config (`DefaultIcebergConverterConfig`)**: Added `DefaultIcebergConverterConfig` (plus `IcebergConverterConfig.defaults()` and `IcebergConverterConfig.builder()`) for Layer 1 users without `ConverterConfig` coupling, keeping `ConnectIcebergConverterConfig extends ConverterConfig` for Layer 2 (`IcebergConverter`). `IcebergConverterConfig.propertyName(String)` lets `SinkIcebergConverterConfig` emit native `debezium.sink.iceberg.*` property names in error messages while standalone users see dot-case keys.
+2. **Removed `AbstractEventConverter` in Sink**: Instead of retaining a slim `AbstractEventConverter`, pure value conversion lives in `IcebergValueConverter`, and `JsonEventConverter` delegates to `IcebergValueConverter` via composition while owning its static JSON serdes directly. `IcebergChangeConsumer.connect()` hoists shared `SinkIcebergConverterConfig`, `IcebergStructConverter`, and `IcebergValueConverter` instances across events.
+3. **Layer 1 API Surface**: `ConvertedIcebergRecord` uses `topic()` (matching `SourceRecord.topic()`). `IcebergStructConverter` exposes `convert(SourceRecord)`, `convert(String, Schema, Struct, Schema)`, and `convertToIcebergRecord(Types.StructType, Struct)`, while `StructSchemaConverter` exposes instance method `isSchemaChangeEvent()`.
+4. **Layer 2 `toConnectData` & Built-in Serializers**: `IcebergConverter` is strictly Iceberg-oriented (`toConnectData` throws `UnsupportedOperationException`; callers decode payloads via `deserializeIcebergRecord(byte[])` or `IcebergRecordSerializer.deserialize(byte[])`). Built-in serializers are `AvroEnvelopeRecordSerializer` (`avro-envelope`, default) and `AvroSingleObjectRecordSerializer` (`avro-single-object`, supporting `avro.schema.store.class` with `AvroSchemaUtil.toIceberg` fallback caveats); a built-in `JsonRecordSerializer` is deferred since custom serializers can be plugged in via FQCN.
+
 ### 6.3 Review Checklist & Open Questions for Approval
 
 Before Phase 1 implementation begins, please confirm:

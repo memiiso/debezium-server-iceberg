@@ -8,7 +8,7 @@
 
 package io.debezium.converters.iceberg.serde;
 
-import io.debezium.converters.iceberg.IcebergConverterConfig;
+import io.debezium.converters.iceberg.IcebergStructConverter;
 import io.debezium.converters.iceberg.internal.LruCache;
 import io.debezium.converters.iceberg.spi.DeserializedIcebergRecord;
 import io.debezium.converters.iceberg.spi.IcebergRecordSerializer;
@@ -32,10 +32,14 @@ import org.apache.iceberg.data.avro.RawDecoder;
 import org.apache.kafka.connect.errors.DataException;
 
 /**
- * Self-describing Iceberg Avro envelope serializer (default for {@code IcebergConverter}).
+ * Self-describing Iceberg Avro envelope serializer (default for
+ * {@code IcebergConverter}).
  *
- * <p>Wire format: {@code [2B 0x49 0x43][1B 0x01][4B schemaJsonLen][UTF-8 SchemaParser JSON][Avro
- * DataWriter datum]}. Requires zero external Schema Registry while preserving Iceberg field IDs,
+ * <p>
+ * Wire format:
+ * {@code [2B 0x49 0x43][1B 0x01][4B schemaJsonLen][UTF-8 SchemaParser JSON][Avro
+ * DataWriter datum]}. Requires zero external Schema Registry while preserving
+ * Iceberg field IDs,
  * identifier fields, logical types, variants, and v3 geospatial types.
  */
 public class AvroEnvelopeRecordSerializer implements IcebergRecordSerializer {
@@ -47,9 +51,6 @@ public class AvroEnvelopeRecordSerializer implements IcebergRecordSerializer {
   private static final int FIXED_HEADER_BYTES = 7;
 
   private LruCache<AvroSchemaKey, WriteEntry> writeCache =
-      new LruCache<>(IcebergConverterConfig.DEFAULT_SCHEMA_CACHE_SIZE);
-  private LruCache<String, ReadEntry> readCache =
-      new LruCache<>(IcebergConverterConfig.DEFAULT_SCHEMA_CACHE_SIZE);
 
   @Override
   public String type() {
@@ -108,7 +109,7 @@ public class AvroEnvelopeRecordSerializer implements IcebergRecordSerializer {
     }
 
     int schemaLen = ByteBuffer.wrap(bytes, 3, 4).getInt();
-    if (schemaLen <= 0 || FIXED_HEADER_BYTES + schemaLen > bytes.length) {
+    if (schemaLen <= 0 || schemaLen > bytes.length - FIXED_HEADER_BYTES) {
       throw new DataException(
           "Invalid "
               + TYPE
@@ -163,7 +164,9 @@ public class AvroEnvelopeRecordSerializer implements IcebergRecordSerializer {
     }
   }
 
-  private record WriteEntry(byte[] headerBytes, DatumWriter<GenericRecord> writer) {}
+  private record WriteEntry(byte[] headerBytes, DatumWriter<GenericRecord> writer) {
+  }
 
-  private record ReadEntry(Schema schema, RawDecoder<GenericRecord> decoder) {}
+  private record ReadEntry(Schema schema, RawDecoder<GenericRecord> decoder) {
+  }
 }

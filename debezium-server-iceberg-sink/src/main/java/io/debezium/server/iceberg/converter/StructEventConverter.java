@@ -28,9 +28,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Thin sink {@link EventConverter} adapter over {@link IcebergStructConverter} and {@link
- * StructSchemaConverter}. Extracts sink-specific CDC metadata ({@code __op}, dedup timestamp,
- * {@code isNewKey}) and wraps converted {@link GenericRecord} instances into {@link RecordWrapper}.
+ * Thin sink {@link EventConverter} adapter over {@link IcebergStructConverter}
+ * and {@link
+ * StructSchemaConverter}. Extracts sink-specific CDC metadata ({@code __op},
+ * dedup timestamp,
+ * {@code isNewKey}) and wraps converted {@link GenericRecord} instances into
+ * {@link RecordWrapper}.
  *
  * @author Ismail Simsek
  */
@@ -53,10 +56,34 @@ public class StructEventConverter implements EventConverter {
     this(e.destination(), e.record(), config);
   }
 
+  public StructEventConverter(
+      BatchEvent e,
+      GlobalConfig config,
+      IcebergConverterConfig converterConfig,
+      IcebergStructConverter structConverter) {
+    this(e.destination(), e.record(), config, converterConfig, structConverter);
+  }
+
   public StructEventConverter(String destination, SourceRecord sourceRecord, GlobalConfig config) {
+    this(
+        destination,
+        sourceRecord,
+        config,
+        SinkIcebergConverterConfig.from(Objects.requireNonNull(config, "config must not be null")),
+        null);
+  }
+
+  public StructEventConverter(
+      String destination,
+      SourceRecord sourceRecord,
+      GlobalConfig config,
+      IcebergConverterConfig converterConfig,
+      IcebergStructConverter structConverter) {
     this.config = Objects.requireNonNull(config, "config must not be null");
-    IcebergConverterConfig converterConfig = SinkIcebergConverterConfig.from(config);
-    this.structConverter = new IcebergStructConverter(converterConfig);
+    IcebergConverterConfig effectiveConfig =
+        Objects.requireNonNull(converterConfig, "converterConfig must not be null");
+    this.structConverter =
+        structConverter != null ? structConverter : new IcebergStructConverter(effectiveConfig, 0);
     this.destination = destination;
     if (sourceRecord == null) {
       throw new DebeziumException(
@@ -77,7 +104,7 @@ public class StructEventConverter implements EventConverter {
     this.value = (Struct) sourceRecord.value();
     this.schemaConverter =
         new StructSchemaConverter(
-            sourceRecord.valueSchema(), sourceRecord.keySchema(), converterConfig);
+            sourceRecord.valueSchema(), sourceRecord.keySchema(), effectiveConfig);
   }
 
   @Override
@@ -156,12 +183,12 @@ public class StructEventConverter implements EventConverter {
       case "r" -> Operation.READ;
       case "c", "i" -> Operation.INSERT;
       default ->
-          throw new DebeziumException(
-              "Unexpected `"
-                  + config.iceberg().cdcOpField()
-                  + "="
-                  + opFieldValue
-                  + "` operation value received, expecting one of ['u','d','r','c', 'i']");
+        throw new DebeziumException(
+            "Unexpected `"
+                + config.iceberg().cdcOpField()
+                + "="
+                + opFieldValue
+                + "` operation value received, expecting one of ['u','d','r','c', 'i']");
     };
   }
 
