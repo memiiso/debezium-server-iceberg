@@ -67,7 +67,7 @@
         <!-- Test Dependency Versions -->
         <version.aws.sdk.bundle>1.11.1026</version.aws.sdk.bundle>
         <version.jakarta.servlet>5.0.0</version.jakarta.servlet>
-        <version.minio>8.6.0</version.minio>
+        <version.minio>9.0.4</version.minio>
         <version.fest.assert>1.4</version.fest.assert>
         <version.awaitility>4.3.0</version.awaitility>
     </properties>
