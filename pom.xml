@@ -60,6 +60,7 @@
         <version.maven.failsafe>3.6.0</version.maven.failsafe>
         <version.maven.license>2.5.0</version.maven.license>
         <version.maven.assembly>3.8.0</version.maven.assembly>
+        <version.maven.jacoco>0.8.12</version.maven.jacoco>
 
         <!-- Code Quality Tool Versions -->
         <version.google.java.format>1.36.1</version.google.java.format>
@@ -190,6 +191,11 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>${version.maven.assembly}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${version.maven.jacoco}</version>
                 </plugin>
                 <plugin>
                     <groupId>net.revelc.code.formatter</groupId>
